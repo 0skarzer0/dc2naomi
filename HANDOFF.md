@@ -13,16 +13,18 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Juego | Estado |
 |---|---|
 | Daytona USA 2001 (US) | ❌ Pantalla negra en placa real (sesión anterior). Parado. |
-| **Yu Suzuki Game Works Vol. 1 (Japón)** | 🧪 Imagen preparada y verificada (201 MB); **sin probar**: falta compilar el loader (KallistiOS) |
+| **Yu Suzuki Game Works Vol. 1 (Japón)** | 🧪 Imagen completa (`build/ysgw.bin`, 201 MB) con el loader compilado; **sin probar** (ni Flycast ni placa) |
 
 Sesión 2026-11-04:
 - Analizado YSGW entero (abajo). Es el nuevo banco de pruebas.
 - **Residente v2**: el disco se sirve **por rangos de sectores con sus FAD originales** (sin reconstruir la ISO),
   TOC real sacada del GDI, **parches protegidos por grupos** y **gancho de arranque de programa** con el UBC.
 - `build_image.py` con perfiles por juego (`tools/games.py`) y lectura directa del `.gdi`.
-- El residente compila con el `gcc-sh-elf` de Ubuntu (`apt install gcc-sh-elf libnewlib-sh-elf-dev`).
-  El **loader no se ha podido compilar** en esta sesión: en el entorno no estaba KallistiOS y no se permitió
-  compilarlo desde GitHub. Tampoco había Flycast para probar.
+- Toolchain: en el entorno de la nube los mirrors de GNU están bloqueados, así que no se puede usar kos-chain.
+  **`tools/ubuntu-toolchain.sh`** monta KallistiOS con el `gcc-sh-elf` 13 de Ubuntu (cabecera de
+  compatibilidad + `libc.a` sin los objetos que ya trae KOS). El loader compila y enlaza así.
+- Flycast (`7adbf3c` + `mame4all-naomi/naomi/flycast/flycast-mie-naomi.patch`) compilado, pero **falta la BIOS
+  de NAOMI (`naomi.zip`)** para probar. freetype se baja del espejo de GitHub (gitlab.freedesktop bloqueado).
 
 ## Cómo funciona
 
@@ -133,8 +135,8 @@ Para WiPi Netbooter: `gzip build/ysgw.bin` y una línea en `romsinfo.csv`.
 
 ## Siguientes pasos
 
-1. Compilar el loader con KallistiOS y generar `build/ysgw.bin`.
-2. Probar en Flycast (NAOMI, con el parche MIE) antes que en placa: ¿llega al menú? Mirar el log del
+1. Probar `build/ysgw.bin` en placa (WiPi Netbooter).
+2. Probar en Flycast (necesita `naomi.zip` en `home/.local/share/flycast/` del entorno de prueba) (NAOMI, con el parche MIE) antes que en placa: ¿llega al menú? Mirar el log del
    residente en `0x8dd80000` (entradas "PROG"/"PATC" del gancho, "RQ" de GD-ROM).
 3. Si hay pantalla negra: `SAMPLER=1` y foto de la pantalla (filas de bits: llamadas GD, última llamada,
    sondeos de maple, último sector, otras syscalls y los últimos PC).
