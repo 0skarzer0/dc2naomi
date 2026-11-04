@@ -1,4 +1,4 @@
-/* Daytona USA (Dreamcast) on the NAOMI: the loader the BIOS starts.
+/* Dreamcast games on the NAOMI: the loader the BIOS starts.
 
    KallistiOS brings the hardware up (the MIE and the JVS I/O board on the
    maple bus among it), then we put the resident part (the stand-in for the
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
     dbgio_dev_select("fb");
-    printf("\n\n  DAYTONA USA (Dreamcast) on NAOMI\n\n");
+    printf("\n\n  dc2naomi: Dreamcast game on NAOMI\n\n");
 
     cart_read(naomi_hdr, 0, sizeof naomi_hdr);
     if (memcmp(naomi_hdr, "NAOMI", 5) != 0) fail("no NAOMI header in the NetDIMM");
@@ -49,8 +49,9 @@ int main(int argc, char **argv) {
     cart_read(&hdr, base, sizeof hdr);
     if (hdr.magic[0] != DIMM_MAGIC0 || hdr.magic[1] != DIMM_MAGIC1) fail("no disc image after the program");
     hdr.archive_base = base;
-    printf("  disc image: %lu sectors at 0x%08lx\n", (unsigned long)hdr.image_sectors,
-           (unsigned long)(base + hdr.image_offset));
+    for (uint32_t i = 0; i < hdr.nranges && i < DIMM_RANGES; i++)
+        printf("  sectors: FAD %lu+%lu at 0x%08lx\n", (unsigned long)hdr.ranges[i].fad,
+               (unsigned long)hdr.ranges[i].count, (unsigned long)(base + hdr.ranges[i].offset));
     printf("  1ST_READ.BIN: FAD %lu, %lu bytes\n", (unsigned long)hdr.boot_fad, (unsigned long)hdr.boot_size);
 
     /* the resident part and the flash ROM image */

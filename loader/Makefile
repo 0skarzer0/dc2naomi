@@ -1,6 +1,7 @@
 # Needs the KallistiOS environment with KOS_SUBARCH=naomi.
 TARGET = loader.elf
 OBJS = loader.o resident_bin.o
+TITLE ?= DC2NAOMI
 NAOMIBINTOOL ?= $(KOS_BASE)/utils/naomibintool/naomibintool
 
 all: loader.bin
@@ -14,7 +15,7 @@ $(TARGET): $(OBJS)
 	kos-cc -o $(TARGET) $(OBJS)
 
 loader.bin: $(TARGET)
-	$(NAOMIBINTOOL) build $@ -t "DAYTONA USA DC" -d "0SKARZER0" -e $(TARGET)
+	$(NAOMIBINTOOL) build $@ -t "$(TITLE)" -d "0SKARZER0" -e $(TARGET)
 
 clean:
 	-rm -f $(OBJS) $(TARGET) loader.bin

@@ -7,3 +7,7 @@ __pycache__/
 files/
 disc/
 *.dis
+build/
+*.gdi
+*.chd
+*.raw

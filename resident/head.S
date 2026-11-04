@@ -135,3 +135,75 @@ _dbr_handler:
     .align 2
 .Lcnt:    .long _dbg_countdown
 .Lsample: .long _dbg_sample
+
+/* Program-start hook: the user break controller stops right after the first
+   instruction at one of the hook addresses (channels A and B, see
+   ubc_setup). BL=1 and RB=1: r0-r7 are bank 1; the program's stack takes
+   what we save. program_start(spc) patches what the game has just loaded. */
+    .global _dbr_hook
+    .align 2
+_dbr_hook:
+    mov.l   r0, @-r15
+    mov.l   r1, @-r15
+    mov.l   r2, @-r15
+    mov.l   r3, @-r15
+    mov.l   r4, @-r15
+    mov.l   r5, @-r15
+    mov.l   r6, @-r15
+    mov.l   r7, @-r15
+    sts.l   pr, @-r15
+    sts.l   mach, @-r15
+    sts.l   macl, @-r15
+    stc     spc, r4
+    mov.l   .Lprog, r0
+    jsr     @r0
+    nop
+    lds.l   @r15+, macl
+    lds.l   @r15+, mach
+    lds.l   @r15+, pr
+    mov.l   @r15+, r7
+    mov.l   @r15+, r6
+    mov.l   @r15+, r5
+    mov.l   @r15+, r4
+    mov.l   @r15+, r3
+    mov.l   @r15+, r2
+    mov.l   @r15+, r1
+    mov.l   @r15+, r0
+    rte
+    nop
+    .align 2
+.Lprog:   .long _program_start
+
+/* icache_inval(): the whole instruction cache, from P2 (CCR.ICI). */
+    .global _icache_inval
+    .align 2
+_icache_inval:
+    mova    1f, r0
+    mov.l   .Lp2mask_i, r1
+    and     r1, r0
+    mov.l   .Lp2_i, r1
+    or      r1, r0
+    jmp     @r0
+    nop
+    .align 2
+1:  mov.l   .Lccr_i, r1
+    mov.l   @r1, r0
+    mov.w   .Lici_i, r2
+    or      r2, r0
+    mov.l   r0, @r1
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    rts
+    nop
+    .align 2
+.Lici_i:    .word 0x0800
+    .align 2
+.Lp2mask_i: .long 0x1fffffff
+.Lp2_i:     .long 0xa0000000
+.Lccr_i:    .long 0xff00001c

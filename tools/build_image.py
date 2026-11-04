@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Daytona USA (Dreamcast) for the NAOMI: the NetDIMM archive.
+"""dc2naomi: the NetDIMM image for a Dreamcast game.
 
-    build_image.py <files dir from the disc> <work dir> <loader prog.bin> <out.bin>
+    build_image.py GAME SOURCE WORK LOADER.BIN OUT.BIN
 
-Re-encodes the music (ADXB_*.ADX, 44.1 kHz) at 32 kHz so the whole disc fits
-the 512 MB NetDIMM, rebuilds the high-density track as a compact ISO9660 image
-(sector 0 = LBA 45000 = FAD 45150, IP.BIN in the system area), makes a
-Dreamcast flash ROM image (US region, English), and appends the archive
-(see resident/resident.h) to the loader's netboot image.
+GAME is one of games.py (daytona, ysgw). SOURCE is the disc:
+- layout "gdi": the .gdi of your own dump (chdman extractcd -i game.chd -o game.gdi).
+  Every sector of the high-density area that holds anything is kept at its
+  original FAD (files keep their LBAs, nothing is rebuilt).
+- layout "rebuild": a directory with the files of the disc (and IP.BIN); the
+  high-density track is rebuilt as a compact ISO9660 image (sector 0 = LBA
+  45000), music re-encoded to fit.
+
+The archive (resident/resident.h) goes after the loader's netboot image.
+SAMPLER=1: diagnostics build (rows of bits drawn on screen; no program hook).
 """
 import os
 import shutil
@@ -16,39 +21,115 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from games import GAMES, HOOK  # noqa: E402
+from gdi import Gdi  # noqa: E402
+
 ALIGN = 0x10000
 BASE_LBA = 45000
-BASE_FAD = BASE_LBA + 150
-MUSIC_RATE = 32000
-
-# Patches applied after loading (address, size, value); value 0xffffffff
-# with size 4 = the resident maple hook.
-PATCHES = [
-    (0x8c008382, 2, 0xe000),   # IP.BIN bootstrap: cable type 0 (VGA): mov #0,r0
-    (0x8c1d21ee, 2, 0x000b),   # syCblCheck (copy 1): rts
-    (0x8c1d21f0, 2, 0xe000),   #   mov #0,r0 -> VGA
-    (0x8c1f6866, 2, 0x000b),   # syCblCheck (copy 2)
-    (0x8c1f6868, 2, 0xe000),
-    (0x8c1e966c, 4, 0xffffffff),  # maple driver's "address to physical" call: our hook
-    # The hardware init table would set the G1 bus timings for a GD-ROM drive;
-    # on the NAOMI they are the NetDIMM's, as the BIOS left them: aim those two
-    # entries at spare RAM instead.
-    (0x8c1f3764, 4, 0xac00fe00),  # (was 0xa05f7484: G1RWC..G1CWC)
-    (0x8c1f3778, 4, 0xac00fe40),  # (was 0xa05f74a0: G1GDRC, G1GDWC)
-    (0x8c1f3784, 4, 0xac00fe80),  # (was 0xa05f74b4: G1CRDYC and the next one)
-]
+FLASH_OFFSET = 0x1000
+DATA_OFFSET = 0x40000
+DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 4, 8, 64
+PATCH_CHECK, PATCH_W16, PATCH_W32 = 1, 2, 4
 
 
-def reencode(src, dst):
+# ---------------------------------------------------------------- disc: gdi
+
+def nonzero_runs(gdi, gap=256):
+    """(lba, count) runs of non-zero sectors in the high-density data tracks."""
+    runs = []
+    for num, start, ctrl, ss, fn, n in gdi.data_tracks():
+        with open(fn, "rb") as f:
+            for i in range(n):
+                f.seek(i * ss + (16 if ss == 2352 else 0))
+                s = f.read(2048)
+                if s.count(0) == 2048:
+                    continue
+                lba = start + i
+                if runs and lba <= runs[-1][1] + gap:
+                    runs[-1][1] = lba + 1
+                else:
+                    runs.append([lba, lba + 1])
+    return [(a, b - a) for a, b in runs]
+
+
+class GdiDisc:
+    def __init__(self, path):
+        self.gdi = Gdi(path)
+        self.runs = nonzero_runs(self.gdi)
+        if len(self.runs) > DIMM_RANGES:
+            # merge the closest runs until they fit
+            while len(self.runs) > DIMM_RANGES:
+                gaps = [self.runs[i + 1][0] - sum(self.runs[i]) for i in range(len(self.runs) - 1)]
+                i = gaps.index(min(gaps))
+                a, b = self.runs[i], self.runs[i + 1]
+                self.runs[i:i + 2] = [(a[0], b[0] + b[1] - a[0])]
+
+    def file(self, name):
+        if name == "IP.BIN":
+            return self.gdi.sectors(BASE_LBA, 16)
+        return self.gdi.read_file(name)
+
+    def boot(self):
+        lba, size = self.gdi.find("1ST_READ.BIN")
+        return lba + 150, size
+
+    def toc(self):
+        tracks = self.gdi.hd_tracks()
+        entries = [((0x41 if ctrl == 4 else 0x01) << 24) | (lba + 150) for num, lba, ctrl, ss, fn, n in tracks]
+        return tracks[0][0], entries, self.gdi.leadout() + 150
+
+    def ranges(self):
+        return [(lba + 150, n) for lba, n in self.runs]
+
+    def write_sectors(self, out):
+        for lba, n in self.runs:
+            for i in range(0, n, 512):
+                out.write(self.gdi.sectors(lba + i, min(512, n - i)))
+
+
+# ------------------------------------------------------ disc: rebuilt ISO
+
+class RebuiltDisc:
+    def __init__(self, files, work, game):
+        self.files_dir = files
+        self.iso = os.path.join(work, "track3.iso")
+        if not os.path.exists(self.iso) or os.environ.get("REBUILD"):
+            tree = os.path.join(work, "tree")
+            make_tree(files, tree, game.get("music_rate"))
+            subprocess.run(["genisoimage", "-quiet", "-iso-level", "2", "-l", "-C", f"0,{BASE_LBA}",
+                            "-G", os.path.join(files, "IP.BIN"), "-V", game.get("volume", "DISC"),
+                            "-o", self.iso, tree], check=True)
+        self.sectors = os.path.getsize(self.iso) // 2048
+
+    def file(self, name):
+        return open(os.path.join(self.files_dir, name), "rb").read()
+
+    def boot(self):
+        lba, size = iso_find(self.iso, "1ST_READ.BIN")
+        return lba + 150, size
+
+    def toc(self):
+        return 3, [0x41000000 | (BASE_LBA + 150)], BASE_LBA + 150 + self.sectors
+
+    def ranges(self):
+        return [(BASE_LBA + 150, self.sectors)]
+
+    def write_sectors(self, out):
+        with open(self.iso, "rb") as f:
+            shutil.copyfileobj(f, out, 1 << 20)
+
+
+def reencode(src, dst, rate):
     if os.environ.get("SMALL_MUSIC"):  # (diagnostic builds: the first 64 KB of each song)
         with open(src, "rb") as i, open(dst, "wb") as o:
             o.write(i.read(65536))
         return
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ar", str(MUSIC_RATE),
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ar", str(rate),
                     "-c:a", "adpcm_adx", "-f", "adx", dst], check=True)
 
 
-def make_tree(files, tree):
+def make_tree(files, tree, music_rate):
     if os.path.exists(tree):
         shutil.rmtree(tree)
     jobs = []
@@ -60,18 +141,13 @@ def make_tree(files, tree):
             if rel == "." and n == "IP.BIN":
                 continue
             s, d = os.path.join(root, n), os.path.join(out, n)
-            if n.upper().startswith("ADXB_") and n.upper().endswith(".ADX"):
+            if music_rate and n.upper().startswith("ADXB_") and n.upper().endswith(".ADX"):
                 jobs.append((s, d))
             else:
                 os.link(s, d)
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
-        list(ex.map(lambda j: reencode(*j), jobs))
-    print(f"{len(jobs)} music files at {MUSIC_RATE} Hz")
-
-
-def make_iso(tree, ip_bin, iso):
-    subprocess.run(["genisoimage", "-quiet", "-iso-level", "2", "-l", "-C", f"0,{BASE_LBA}",
-                    "-G", ip_bin, "-V", "DAYTONAUSA", "-o", iso, tree], check=True)
+        list(ex.map(lambda j: reencode(j[0], j[1], music_rate), jobs))
+    print(f"{len(jobs)} music files at {music_rate} Hz")
 
 
 def iso_find(iso, path):
@@ -99,6 +175,8 @@ def iso_find(iso, path):
     raise SystemExit(f"{path} not in the image")
 
 
+# ------------------------------------------------------------------ flash
+
 def crc_block(b):
     n = 0xffff
     for x in b[:62]:
@@ -109,9 +187,9 @@ def crc_block(b):
     return n
 
 
-def make_flash():
+def make_flash(region, language):
     fl = bytearray(b"\xff" * 0x20000)
-    sysinfo = b"00100Dreamcast  "  # (region '1': USA)
+    sysinfo = b"00" + bytes([0x30 + region]) + b"00Dreamcast  "  # (region digit: 0 Japan, 1 USA, 2 Europe)
     fl[0x1a000:0x1a010] = sysinfo
     fl[0x1a0a0:0x1a0b0] = sysinfo
     fl[0x1a056:0x1a05e] = bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0])  # system id
@@ -128,7 +206,7 @@ def make_flash():
     user_blocks = blocks - bitmap_blocks - 1
     blk = bytearray(64)
     secs = (2026 - 1950) * 365 * 86400  # (roughly)
-    struct.pack_into("<HHHbBBB", blk, 0, 5, secs & 0xffff, (secs >> 16) & 0xffff, 0, 1, 0, 1)
+    struct.pack_into("<HHHbBBB", blk, 0, 5, secs & 0xffff, (secs >> 16) & 0xffff, 0, language, 0, 1)
     struct.pack_into("<H", blk, 62, crc_block(blk))
     fl[off + 64:off + 128] = blk
     bm = bytearray(b"\xff" * 64)
@@ -138,20 +216,69 @@ def make_flash():
     return bytes(fl)
 
 
+# ---------------------------------------------------------------- patches
+
+def build_patches(disc, groups):
+    """(addr, kind, value, expect) entries, original values read from the disc."""
+    out = []
+    for g in groups:
+        data = disc.file(g["file"])
+        base = g["base"]
+
+        def word(addr, size):
+            o = addr - base
+            assert 0 <= o and o + size <= len(data), f"{g['file']}: {addr:#x} outside the file"
+            return int.from_bytes(data[o:o + size], "little")
+
+        touched = set()
+        for a, s, _v in g["patches"]:
+            touched.update(range(a, a + s))
+        check = g.get("check")
+        if check is None:  # an aligned word near the first patch that no patch touches
+            a0 = g["patches"][0][0] & ~3
+            for d in (-8, -12, -16, -4, 8, 12, 16, -20, -24, 20, 24):
+                c = a0 + d
+                if not touched & set(range(c, c + 4)) and word(c, 4) not in (0, 0xffffffff, 0x00090009):
+                    check = c
+                    break
+        out.append((check, PATCH_CHECK, word(check, 4), 0))
+        print(f"  {g['file']:<14} check {check:#010x} = {word(check, 4):#010x}")
+        for a, s, v in g["patches"]:
+            old = word(a, s)
+            new = "hook" if v == HOOK else f"{v:#x}"
+            assert v == HOOK or old != v, f"{g['file']} {a:#x}: already {v:#x}"
+            print(f"    {a:#010x} {s}: {old:#0{2 + 2 * s}x} -> {new}")
+            out.append((a, PATCH_W16 if s == 2 else PATCH_W32, v, old))
+    assert len(out) <= DIMM_PATCHES, "too many patches"
+    return out
+
+
+# ------------------------------------------------------------------- main
+
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         sys.exit(__doc__)
-    files, work, prog, out = sys.argv[1:]
+    name, source, work, prog, out = sys.argv[1:]
+    game = dict(GAMES[name])
+    if os.environ.get("SAMPLER"):  # diagnostics: the on-screen PC sampler instead of the program hook
+        game["flags"] = game["flags"] | 0x0001
     os.makedirs(work, exist_ok=True)
-    tree = os.path.join(work, "tree")
-    iso = os.path.join(work, "track3.iso")
-    ip_bin = os.path.join(files, "IP.BIN")
-    if not os.path.exists(iso) or os.environ.get("REBUILD"):
-        make_tree(files, tree)
-        make_iso(tree, ip_bin, iso)
-    sectors = os.path.getsize(iso) // 2048
-    boot_lba, boot_size = iso_find(iso, "1ST_READ.BIN")
-    print(f"image: {sectors} sectors ({sectors * 2048 / 1048576:.1f} MB), 1ST_READ.BIN at LBA {boot_lba}, {boot_size} bytes")
+    disc = GdiDisc(source) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
+
+    boot_fad, boot_size = disc.boot()
+    first_track, tracks, leadout = disc.toc()
+    ranges = disc.ranges()
+    print(f"{name}: 1ST_READ.BIN at FAD {boot_fad}, {boot_size} bytes")
+    print("  TOC: tracks " + ", ".join(f"{first_track + i}:{t:#010x}" for i, t in enumerate(tracks))
+          + f", leadout {leadout}")
+    offset = DATA_OFFSET
+    rtab = []
+    for fad, n in ranges:
+        rtab.append((fad, n, offset))
+        print(f"  sectors FAD {fad}+{n} ({n * 2048 / 1048576:.1f} MB) at +{offset:#x}")
+        offset += n * 2048
+    assert len(rtab) <= DIMM_RANGES and len(tracks) <= DIMM_TRACKS
+    patches = build_patches(disc, game["groups"])
 
     image = bytearray(open(prog, "rb").read())
     assert image[:5] == b"NAOMI"
@@ -160,26 +287,28 @@ def main():
     assert len(image) <= base
     image += b"\0" * (base - len(image))
 
-    flash_offset = 0x1000
-    image_offset = 0x40000
-    hdr = struct.pack("<8I", 0x47434459, 0x31474d49, 1, 0, image_offset, sectors, BASE_FAD,
-                      BASE_FAD + sectors)
-    hdr += struct.pack("<3I", boot_lba + 150, boot_size, flash_offset) + b"\0" * 20
-    pt = b""
-    for a, s, v in PATCHES:
-        pt += struct.pack("<3I", a, s, v)
-    pt += b"\0" * (32 * 12 - len(pt))
-    hdr += pt
+    hdr = struct.pack("<10I", 0x47434459, 0x32474d49, 2, 0, game["flags"], FLASH_OFFSET,
+                      boot_fad, boot_size, BASE_LBA + 150, len(rtab))
+    for i in range(DIMM_RANGES):
+        hdr += struct.pack("<3I", *(rtab[i] if i < len(rtab) else (0, 0, 0)))
+    hdr += struct.pack("<3I", first_track, len(tracks), leadout)
+    hdr += struct.pack(f"<{DIMM_TRACKS}I", *(tracks + [0] * (DIMM_TRACKS - len(tracks))))
+    hook = list(game.get("hook_pc", [])) + [0, 0]
+    hdr += struct.pack("<2I", *hook[:2]) + b"\0" * 32
+    for p in patches:
+        hdr += struct.pack("<4I", *p)
+    hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))
+    assert len(hdr) <= FLASH_OFFSET
     archive = bytearray(hdr)
-    archive += b"\0" * (flash_offset - len(archive))
-    archive += make_flash()
-    archive += b"\0" * (image_offset - len(archive))
+    archive += b"\0" * (FLASH_OFFSET - len(archive))
+    archive += make_flash(game["region"], game["language"])
+    archive += b"\0" * (DATA_OFFSET - len(archive))
+
     with open(out, "wb") as o:
         o.write(image)
         o.write(archive)
-        with open(iso, "rb") as f:
-            shutil.copyfileobj(f, o, 1 << 20)
-    total = len(image) + len(archive) + sectors * 2048
+        disc.write_sectors(o)
+    total = os.path.getsize(out)
     print(f"{out}: archive at 0x{base:08x}, {total} bytes ({total / 1048576:.1f} MB)")
     if total > 512 * 1048576:
         print("warning: larger than the 512 MB NetDIMM")

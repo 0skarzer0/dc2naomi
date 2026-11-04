@@ -1,4 +1,4 @@
-/* Daytona USA (Dreamcast) on the NAOMI: the resident part, standing in for
+/* Dreamcast games on the NAOMI: the resident part, standing in for
    the Dreamcast BIOS once the game runs (see resident.h).
 
    Built freestanding for the SH-4 without the FPU (the game calls the
@@ -154,15 +154,26 @@ static void cart_read(void *dst, u32 src, u32 len) {
     }
 }
 
+/* The NetDIMM address of sector fad, or 0 if no range holds it. */
+static u32 sector_addr(u32 fad) {
+    for (u32 i = 0; i < H.nranges && i < DIMM_RANGES; i++) {
+        const struct dimm_range *r = &H.ranges[i];
+        if (fad >= r->fad && fad - r->fad < r->count)
+            return H.archive_base + r->offset + (fad - r->fad) * 2048;
+    }
+    return 0;
+}
+
 /* count 2048-byte sectors from fad on to addr. dma: through P2, as the
    GD-ROM's DMA would write memory. */
 static void read_sectors(u32 addr, u32 fad, u32 count, int dma) {
     while (count) {
         u8 *dst = dma ? P2(addr) : (u8 *)addr;
+        u32 src = sector_addr(fad);
         if (dma) cache_purge((addr & 0x1fffffffu) | 0x80000000u, 2048);
         dbg_val[3] = fad;
-        if (fad >= H.base_fad && fad - H.base_fad < H.image_sectors)
-            cart_read(dst, H.archive_base + H.image_offset + (fad - H.base_fad) * 2048, 2048);
+        if (src)
+            cart_read(dst, src, 2048);
         else
             mset(dst, 0, 2048);
         addr += 2048;
@@ -233,10 +244,12 @@ static void gd_toc(u32 area, u32 dest) {
         toc[100] = 0x01020000u;
         toc[101] = 0x01000000u | (600 + 44550);
     } else {
-        toc[2] = 0x41000000u | H.base_fad;
-        toc[99] = 0x41030000u;
-        toc[100] = 0x41030000u;
-        toc[101] = 0x41000000u | H.leadout_fad;
+        u32 first = H.first_track, n = H.ntracks;
+        if (n > DIMM_TRACKS) n = DIMM_TRACKS;
+        for (u32 i = 0; i < n && first + i <= 99; i++) toc[first + i - 1] = H.tracks[i];
+        toc[99] = (H.tracks[0] & 0xff000000u) | first << 16;
+        toc[100] = (H.tracks[n - 1] & 0xff000000u) | (first + n - 1) << 16;
+        toc[101] = (H.tracks[n - 1] & 0xff000000u) | H.leadout;
     }
     for (int i = 0; i < 102; i++) put32(dest + i * 4, toc[i]);
 }
@@ -558,7 +571,7 @@ static s32 misc_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
         REG32(0xa05f8040) = 0x00c0bebcu;                        /* border colour */
         return 0x00c0bebc;
     case 2: /* check disc: reload part of IP.BIN */
-        read_sectors(0x8c008100, H.base_fad, 7, 0);
+        read_sectors(0x8c008100, H.ip_fad, 7, 0);
         return 0;
     }
     dlog(0x4d697363u, r4, r5, r6); /* exit to the BIOS menu etc.: ignored */
@@ -824,14 +837,82 @@ u32 maple_hook(u32 list) {
 extern void font_stub(void);
 extern void enter_game(u32 pc, u32 sp);
 
+extern void icache_inval(void);
+
+/* The patch list (see resident.h): at boot, and each time a program starts. */
+static u32 patches_done;
+
 static void apply_patches(void) {
-    for (int i = 0; i < DIMM_PATCHES && H.patches[i].size; i++) {
-        struct dimm_patch *p = &H.patches[i];
-        if (p->size == 2)
-            *(volatile u16 *)p->addr = (u16)p->value;
-        else
-            *(volatile u32 *)p->addr = p->value == 0xffffffffu ? (u32)maple_hook : p->value;
+    int skip = 0;
+    for (int i = 0; i < DIMM_PATCHES && H.patches[i].kind != PATCH_END; i++) {
+        const struct dimm_patch *p = &H.patches[i];
+        u32 kind = p->kind & 0x7f, always = p->kind & PATCH_ALWAYS;
+        if (kind == PATCH_CHECK) {
+            skip = *(volatile u32 *)p->addr != p->value;
+            continue;
+        }
+        if (skip) continue;
+        u32 v = p->value == PATCH_HOOK ? (u32)maple_hook : p->value;
+        if (kind == PATCH_W16) {
+            volatile u16 *a = (volatile u16 *)p->addr;
+            if (!always && *a != (u16)p->expect) continue;
+            *a = (u16)v;
+        } else if (kind == PATCH_W32) {
+            volatile u32 *a = (volatile u32 *)p->addr;
+            if (!always && *a != p->expect) continue;
+            *a = v;
+        } else {
+            continue;
+        }
+        __asm__ volatile("ocbwb @%0" : : "r"(p->addr & ~31u) : "memory");
+        patches_done++;
     }
+}
+
+/* The user break controller stops right after the first instruction of a
+   program at one of hook_pc[] (DBR, head.S): the program the game has just
+   loaded is all in memory, so patch it before it runs. */
+#define BARA  0xff200000u
+#define BAMRA 0xff200004u
+#define BBRA  0xff200008u
+#define BARB  0xff20000cu
+#define BAMRB 0xff200010u
+#define BBRB  0xff200014u
+#define BRCR  0xff200020u
+
+static u32 hook_hits;
+
+void program_start(u32 spc) {
+    hook_hits++;
+    dlog(0x50524f47u, spc, hook_hits, patches_done); /* "PROG" */
+    REG16(BRCR) &= (u16)~0xc000u;      /* CMFA, CMFB */
+    apply_patches();
+    icache_inval();
+    dlog(0x50415443u, spc, hook_hits, patches_done); /* "PATC" */
+}
+
+static void ubc_setup(void) {
+    extern void dbr_handler(void), dbr_hook(void);
+    if (H.flags & DIMM_SAMPLER) {
+        /* every instruction, after it runs: the sampler */
+        u32 h = (u32)dbr_handler;
+        __asm__ volatile("ldc %0,dbr" : : "r"(h));
+        REG32(BARA) = 0;
+        *(volatile u8 *)BAMRA = 0x07;     /* all address bits masked, ASID too */
+        REG16(BBRA) = 0x0010;             /* instruction access */
+        REG16(BRCR) = 0x0401;             /* channel A after execution, via DBR */
+        return;
+    }
+    if (H.flags & DIMM_NO_HOOK) return;
+    u32 h = (u32)dbr_hook;
+    __asm__ volatile("ldc %0,dbr" : : "r"(h));
+    REG32(BARA) = H.hook_pc[0];
+    *(volatile u8 *)BAMRA = 0x04;         /* all address bits, no ASID */
+    REG16(BBRA) = H.hook_pc[0] ? 0x0010 : 0;
+    REG32(BARB) = H.hook_pc[1];
+    *(volatile u8 *)BAMRB = 0x04;
+    REG16(BBRB) = H.hook_pc[1] ? 0x0010 : 0;
+    REG16(BRCR) = 0x0441;                 /* A and B after execution, via DBR */
 }
 
 void boot(const struct dimm_header *h) {
@@ -856,7 +937,7 @@ void boot(const struct dimm_header *h) {
     REG32(0xa0800000) = 0xeafffffe;
 
     /* IP.BIN and 1ST_READ.BIN */
-    read_sectors(0x8c008000, H.base_fad, 16, 0);
+    read_sectors(0x8c008000, H.ip_fad, 16, 0);
     boot_sectors = (H.boot_size + 2047) >> 11;
     read_sectors(0x8c010000, H.boot_fad, boot_sectors, 0);
     apply_patches();
@@ -881,15 +962,6 @@ void boot(const struct dimm_header *h) {
     for (u32 a = RES_BASE; a < RES_FLASH + 0x20000; a += 32)
         __asm__ volatile("ocbwb @%0" : : "r"(a) : "memory");
 
-    /* diagnostics: trap every instruction through DBR (see head.S) */
-    {
-        extern void dbr_handler(void);
-        u32 h = (u32)dbr_handler;
-        __asm__ volatile("ldc %0,dbr" : : "r"(h));
-        REG32(0xff200000) = 0;                     /* BARA */
-        *(volatile u8 *)0xff200004 = 0x07;          /* BAMRA: all address bits masked, ASID too */
-        *(volatile u16 *)0xff200008 = 0x0010;       /* BBRA: instruction access */
-        *(volatile u16 *)0xff200020 = 0x0401;       /* BRCR: channel A after execution, via DBR */
-    }
+    ubc_setup();
     enter_game(0xac008300, 0x8d000000);
 }

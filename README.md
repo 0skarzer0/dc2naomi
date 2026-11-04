@@ -11,14 +11,16 @@ los sustituye por software:
   coloca el residente en la memoria alta.
 - **`resident/`**: hace de BIOS de Dreamcast mientras corre el juego. Atiende sus llamadas al GD-ROM
   leyendo el disco desde la NetDIMM y traduce los mandos de Dreamcast a los controles JVS de la recreativa.
-- **`tools/build_image.py`**: monta la imagen `.bin` para netboot con el loader, los ficheros del juego,
-  una flash de Dreamcast y los parches propios de cada juego.
+- **`tools/build_image.py`**: monta la imagen `.bin` para netboot con el loader, el disco del juego
+  (directamente desde un `.gdi`, con sus sectores originales), una flash de Dreamcast y los parches propios
+  de cada juego (`tools/games.py`), verificados contra el disco al construir.
 
 ## Estado
 
 | Juego | Resultado |
 |---|---|
 | Daytona USA 2001 (US) | ❌ Pantalla negra en placa real |
+| Yu Suzuki Game Works Vol. 1 (JP) | 🧪 Imagen preparada (201 MB, disco con sus LBA originales); pendiente de probar |
 
 **Es un trabajo en curso.** Los detalles técnicos, las direcciones y los siguientes pasos están en
 [HANDOFF.md](HANDOFF.md).
@@ -33,10 +35,11 @@ Requiere [KallistiOS](https://github.com/KallistiOS/KallistiOS) con `KOS_SUBARCH
 
 ```sh
 source /opt/toolchains/dc/kos/environ.sh
-./build.sh      # residente + loader + imagen (ajusta las rutas del script)
+chdman extractcd -i juego.chd -o juego/disc.gdi
+./build.sh ysgw juego/disc.gdi      # -> build/ysgw.bin
 ```
 
-Necesitas los ficheros extraídos de **tu propio disco** del juego.
+Necesitas **tu propio volcado** del juego.
 
 ## Aviso legal
 
