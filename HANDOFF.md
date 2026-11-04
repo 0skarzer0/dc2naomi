@@ -101,6 +101,22 @@ Cosas a vigilar:
 - Pistas de audio 4 y 5 (CDDA, 8 y 11 s): el residente no reproduce CDDA.
 - Los overlays de cada juego (`OUTRUN.BIN`, `AB2.BIN`, `HANGON.EMU`, `HARRIER.PKS`) no tienen maple ni cable propios.
 
+## Pruebas en Flycast (2026-11-05)
+
+- **Placa real: pantalla negra** con `ysgw_dc2naomi.bin.gz`.
+- En Flycast **modo Dreamcast** (BIOS HLE `UseReios`) el CHD de YSGW arranca y llega al título: el disco y el
+  flujo menú/monitor funcionan con una BIOS que hace lo mismo que el residente.
+- Flycast `7adbf3c` + `tools/flycast/flycast-naomi2-bin.patch` (`FC_NAOMI2=1`: los `.bin` sueltos como NAOMI 2
+  con `naomi2.zip`, BIOS `epr-23608b`). **No sirve todavía**: la BIOS de NAOMI 2 corre (sus tareas cambian) pero
+  en 3 minutos no dibuja nada ni carga el programa, **ni siquiera el loader solo**. Es un problema de esa
+  combinación en Flycast, no del cargador. Hace falta la BIOS de NAOMI 1 (`naomi.zip`), como en las pruebas de
+  MAME4ALL.
+- Ojo: `FC_MIE_NODEVINFO` (parche de `mame4all-naomi`) hace que la BIOS de NAOMI se quede esperando al MIE
+  (bucle en `0x0c033904`); no definir la variable (ni vacía) salvo para probar el driver MIE de KOS sin BIOS.
+- `tools/flycast/run1.sh IMG SEG NOMBRE` (capturas cada `STEP` s en una cuadrícula) y `pcwatch.sh IMG SEG PASO`
+  (PC/PR con gdb sobre una compilación RelWithDebInfo y volcado de RAM con `DUMP=1`; el log del residente está en
+  `0x0dd80000`, magic del residente en `0x0dc00000`).
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):

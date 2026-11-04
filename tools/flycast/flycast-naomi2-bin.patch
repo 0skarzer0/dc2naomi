@@ -1,0 +1,33 @@
+diff --git a/core/emulator.cpp b/core/emulator.cpp
+index e196b0bd0..a778971ac 100644
+--- a/core/emulator.cpp
++++ b/core/emulator.cpp
+@@ -563,7 +563,8 @@ int getGamePlatform(const std::string& filename)
+ 	if (extension == "zip" || extension == "7z")
+ 		return naomi_cart_GetPlatform(filename.c_str());
+ 	if (extension == "bin" || extension == "dat" || extension == "lst")
+-		return DC_PLATFORM_NAOMI;
++		// (local test patch) FC_NAOMI2: netboot images on a NAOMI 2 board
++		return getenv("FC_NAOMI2") ? DC_PLATFORM_NAOMI2 : DC_PLATFORM_NAOMI;
+ 
+ 	return DC_PLATFORM_DREAMCAST;
+ }
+diff --git a/core/hw/naomi/naomi_cart.cpp b/core/hw/naomi/naomi_cart.cpp
+index 85fda8330..decf7d1db 100644
+--- a/core/hw/naomi/naomi_cart.cpp
++++ b/core/hw/naomi/naomi_cart.cpp
+@@ -456,10 +456,12 @@ static void loadMameRom(const std::string& path, const std::string& fileName, Lo
+ static void loadDecryptedRom(const std::string& path, const std::string& fileName, LoadProgress *progress)
+ {
+ 	// Try to load BIOS from naomi.zip
+-	if (!loadBios("naomi", NULL, NULL, config::Region))
++	// (local test patch) FC_NAOMI2: the NAOMI 2 BIOS (naomi2.zip)
++	const char *biosName = getenv("FC_NAOMI2") ? "naomi2" : "naomi";
++	if (!loadBios(biosName, NULL, NULL, config::Region))
+ 	{
+ 		WARN_LOG(NAOMI, "Warning: Region %d bios not found in naomi.zip", config::Region.get());
+-		if (!loadBios("naomi", NULL, NULL, -1))
++		if (!loadBios(biosName, NULL, NULL, -1))
+ 		{
+ 			if (!bios_loaded)
+ 				throw FlycastException(Ts("Error: cannot load BIOS from naomi.zip"));
