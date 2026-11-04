@@ -1,0 +1,9 @@
+*.bin
+*.elf
+*.o
+*.gz
+__pycache__/
+# nunca subir ficheros del disco del juego ni desensamblados
+files/
+disc/
+*.dis
