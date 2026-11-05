@@ -113,6 +113,14 @@ Imagen de diagnóstico `DIAG=1` (`flags | 0x0008`): cada 16 llamadas al resident
 dibuja filas de bits en el framebuffer mostrado (0 latido, 1 llamadas GD, 2 última llamada GD, 3 sondeos maple,
 4 último sector, 5 otras syscalls, 6 parches<<8|trampolines, 7 SPG_CONTROL, 8 FB_R_CTRL, 9 vueltas a VGA,
 10 SPG_LOAD) y, si el juego deja los 31 kHz, vuelve a poner los tiempos VGA que tenía el loader.
+**Resultado de DIAG en placa (foto 2026-11-05):** se congela con latido 79, 1044 llamadas GD, última EXEC_SERVER,
+202 sondeos de maple, último sector `..4F81` (= FAD 544641, último de `SPRITE/TITLE.GZ`), 18 otras syscalls,
+6 parches, **vídeo VGA intacto** (SPG_CONTROL 0x100, FB_R_CTRL 0x00800005, SPG_LOAD 0x020C0359), 0 vueltas a VGA.
+En Flycast, en ese mismo punto (sector 544641, 18 otras syscalls, ~170 sondeos) el juego sigue y saca los logos
+de SEGA/AM2. En placa el juego se para por completo (ni interrupciones de maple) antes del primer dibujado:
+pinta a bloqueo de bus o de una DMA (TA/PVR, AICA/G2). No es el modo de vídeo ni el UBC.
+Las rutinas TA-DMA del motor (p. ej. YSC `0x8c21248e`) escriben CHCR2/SB_C2D* por su cuenta.
+Siguiente: imagen `SAMPLER=1` (`ysgw_pc.bin`) para ver el PC en el cuelgue.
 YSGW lleva ahora `flags = 0x0004` (sin UBC): los parches van por trampolines y por la revisión en cada llamada
 al GD-ROM. Pendiente de confirmar en placa. El muestreador (`SAMPLER=1`) queda en entredicho por lo mismo.
 
