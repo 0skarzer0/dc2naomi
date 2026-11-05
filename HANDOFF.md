@@ -127,6 +127,15 @@ nuevos tras los del AICA en el sondeo 13; todas las lecturas GD a RAM; IML*EXT =
 **interrupciones de error del PVR en nivel 6 (IML6ERR = 0x0e)**, que Flycast no genera: sospechoso.
 Imagen `DIAG=1 MASKERR=1` (`ysgw_diag2.bin`): mantiene IML2/4/6ERR a 0 en cada llamada al residente y añade
 filas 11 ISTERR, 12 último ISTERR no nulo, 13 veces visto, 14 ISTNRM, 15 ISTEXT.
+**Resultado DIAG2 en placa:** mismo cuelgue (1133 GD, 209 maple, sector ..4F81) con **ISTERR = 0x10 = "TA: illegal
+parameter"**, pendiente desde mucho antes del cuelgue (contador de "veces visto" en centenares). En Flycast la
+máquina de estados del TA no ve ninguna transición ilegal y ningún PCW lleva el bit 27 (comando ELAN de NAOMI 2).
+El juego usa mucho la **ruta directa de texturas del canal 2 (`0x11xxxxxx`, LMMODE 0)**: subidas al principio y en
+los sondeos 1, 51 y 61. Hipótesis: en la NAOMI 2 esa ruta no llega a la VRAM y acaba en el TA (igual que el
+`pvr_txr_load_dma` colgado de Cannonball). Imagen `CH2TEST=1` (`ysgw_ch2.bin`): antes del juego hace 3 DMA de 64 bytes
+(A 0x11600000 LMMODE 0, B 0x13600000, C 0x11600000 LMMODE 1) y dibuja estado / ISTERR / primera palabra leída
+(filas 0-2, 4-6, 8-10) durante ~15 s. En Flycast: TE + fin de ch2, ISTERR 0, datos correctos en las tres.
+CCR: el propio juego lo pone (`0x90d` en `0x8c1f7002`), así que no influye lo que deje el residente.
 YSGW lleva ahora `flags = 0x0004` (sin UBC): los parches van por trampolines y por la revisión en cada llamada
 al GD-ROM. Pendiente de confirmar en placa. El muestreador (`SAMPLER=1`) queda en entredicho por lo mismo.
 

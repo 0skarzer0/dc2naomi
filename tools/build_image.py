@@ -270,6 +270,8 @@ def main():
         game["flags"] = game["flags"] | 0x0008
     if os.environ.get("MASKERR"):  # keep the ASIC error interrupts masked
         game["flags"] = game["flags"] | 0x0010
+    if os.environ.get("CH2TEST"):  # test DMA channel 2 to the texture paths before the game
+        game["flags"] = game["flags"] | 0x0020
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)

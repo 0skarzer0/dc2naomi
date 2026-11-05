@@ -998,9 +998,89 @@ static void ubc_setup(void) {
     REG16(BRCR) = 0x0441;                 /* A and B after execution, via DBR */
 }
 
+/* DMA channel 2 test (DIMM_CH2TEST), run once before the game with the
+   loader's frame buffer still on screen: 64 bytes of a known pattern from
+   RAM to a texture path, the way Katana programs it, then what arrived in
+   VRAM. Three rows per test, from the top:
+     status: bit 31 timed out, bit 30 SB_C2DST still 1, bit 29 CHCR2.TE,
+             bit 28 ISTNRM ch2-end (bit 19), bits 23-16 DMAOR low byte,
+             bits 4-0 words that arrived (of 16)
+     ISTERR after the transfer
+     first word read back from VRAM
+   Tests: A 0x11600000 LMMODE0=0, B 0x13600000 (mirror) LMMODE0=0,
+   C 0x11600000 LMMODE0=1 (32-bit path). Then about 15 s to take a photo. */
+#define SAR2    0xffa00020u
+#define DAR2    0xffa00024u
+#define DMATCR2 0xffa00028u
+#define CHCR2   0xffa0002cu
+#define DMAOR   0xffa00040u
+static void ch2_one(u32 dst, u32 lmmode, u32 vram, u32 out[3]) {
+    volatile u32 *src = (volatile u32 *)0xadd7e000u;   /* (RES_SCRATCH - 4 KB, uncached) */
+    volatile u32 *v = (volatile u32 *)vram;
+    for (u32 i = 0; i < 16; i++) {
+        src[i] = 0x5a000000u | (dst >> 16 & 0xff) << 16 | lmmode << 8 | i;
+        v[i] = 0;
+    }
+    REG32(0xa05f6808) = 0;                  /* SB_C2DST: stop */
+    REG32(CHCR2) = 0;
+    REG32(DMAOR) = 0x8201;
+    REG32(0xa05f6900) = 1u << 19;           /* ISTNRM: clear ch2 end */
+    REG32(0xa05f6908) = 0xffffffffu;        /* ISTERR: clear */
+    REG32(0xa05f6884) = lmmode;             /* SB_LMMODE0 */
+    REG32(0xa05f6888) = lmmode;             /* SB_LMMODE1 */
+    REG32(SAR2) = 0x0dd7e000u;
+    REG32(DMATCR2) = 64 / 32;
+    REG32(CHCR2) = 0x12c1;
+    REG32(0xa05f6800) = dst;                /* SB_C2DSTAT */
+    REG32(0xa05f6804) = 64;                 /* SB_C2DLEN */
+    REG32(0xa05f6808) = 1;                  /* SB_C2DST: go */
+    u32 t = 0;
+    while ((REG32(0xa05f6808) & 1) && t < 2000000) t++;
+    u32 ok = 0;
+    for (u32 i = 0; i < 16; i++) ok += v[i] == src[i];
+    out[0] = (t >= 2000000) << 31 | (REG32(0xa05f6808) & 1) << 30 | ((REG32(CHCR2) >> 1) & 1) << 29 |
+             ((REG32(0xa05f6900) >> 19) & 1) << 28 | (REG32(DMAOR) & 0xff) << 16 | ok;
+    out[1] = REG32(0xa05f6908);
+    out[2] = v[0];
+    /* put things back: stop, clear, TA reset */
+    REG32(0xa05f6808) = 0;
+    REG32(CHCR2) = 0;
+    REG32(DMAOR) = 0x8201;
+    REG32(0xa05f6884) = 0;
+    REG32(0xa05f6888) = 0;
+    REG32(0xa05f6908) = 0xffffffffu;
+    REG32(0xa05f6900) = 1u << 19;
+    REG32(0xa05f8008) = 1;                  /* SOFTRESET: TA */
+    REG32(0xa05f8008) = 0;
+}
+
+static void ch2_test(void) {
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+    u32 size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    for (u32 i = 0; i < 640 * 480 * 2 / 4; i++) REG32(0xa5000000u + sof + i * 4) = 0;
+    u32 r[3];
+    /* 64-bit texture path (LMMODE 0) lands in the 64-bit view (0xa4000000) of VRAM, 32-bit path in 0xa5000000 */
+    ch2_one(0x11600000u, 0, 0xa4600000u, r);
+    dbg_row(sof, line, 0, r[0], 32); dbg_row(sof, line, 1, r[1], 32); dbg_row(sof, line, 2, r[2], 32);
+    ch2_one(0x13600000u, 0, 0xa4600000u, r);
+    dbg_row(sof, line, 4, r[0], 32); dbg_row(sof, line, 5, r[1], 32); dbg_row(sof, line, 6, r[2], 32);
+    ch2_one(0x11600000u, 1, 0xa5600000u, r);
+    dbg_row(sof, line, 8, r[0], 32); dbg_row(sof, line, 9, r[1], 32); dbg_row(sof, line, 10, r[2], 32);
+    for (u32 n = 0; n < 15; n++) {           /* ~15 s: a countdown row, one tick a second */
+        dbg_row(sof, line, 12, 15 - n, 8);
+        for (u32 f = 0; f < 60; f++) {        /* vertical blank in, out (SPG_STATUS bit 13) */
+            while (!(REG32(0xa05f810c) & 0x2000)) {}
+            while (REG32(0xa05f810c) & 0x2000) {}
+        }
+    }
+}
+
 void boot(const struct dimm_header *h) {
     mcpy(&H, h, sizeof H);
     vga_save();                 /* the loader's 31 kHz timings (DIMM_DIAG) */
+    if (H.flags & DIMM_CH2TEST) ch2_test();
     gd_reset_state();
     log_pos = 0;
 

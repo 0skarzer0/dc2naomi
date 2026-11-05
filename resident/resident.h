@@ -39,6 +39,7 @@
 #define DIMM_DIAG       0x0008u       /* rows of bits on screen from the syscalls and the maple hook,
                                          and back to the loader's VGA timings if the game leaves them */
 #define DIMM_MASKERR    0x0010u       /* keep the ASIC error interrupts masked (IML2/4/6ERR = 0) */
+#define DIMM_CH2TEST    0x0020u       /* before the game: test DMA channel 2 to the texture paths, rows on screen */
 
 /* Patch kinds. The list is read in order every time a program starts (and
    once at boot). A CHECK opens a group: if the word at addr is not `value`
