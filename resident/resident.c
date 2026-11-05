@@ -87,6 +87,8 @@ static void dbg_row(u32 sof, u32 line, u32 r, u32 v, u32 bits) {
 
 /* Every 2^20 instructions (the user break trap, head.S): the PC into a
    ring, and everything on the screen. */
+static u32 patches_done, hook_hits;
+
 void dbg_sample(u32 spc) {
     dbg_countdown = 1u << 20;
     dbg_pc[dbg_samples & 7] = spc;
@@ -100,6 +102,7 @@ void dbg_sample(u32 spc) {
     dbg_row(sof, line, 0, dbg_samples, 16);
     for (u32 r = 0; r < 5; r++) dbg_row(sof, line, 1 + r, dbg_val[r], 16);
     for (u32 i = 0; i < 8; i++) dbg_row(sof, line, 6 + i, dbg_pc[(dbg_samples - 1 - i) & 7], 32);
+    dbg_row(sof, line, 14, (patches_done & 0xff) << 8 | (hook_hits & 0xff), 16); /* patches, program starts */
 }
 
 static void dbg_draw(void) {
@@ -843,7 +846,6 @@ extern void enter_game(u32 pc, u32 sp);
 extern void icache_inval(void);
 
 /* The patch list (see resident.h): at boot, and each time a program starts. */
-static u32 patches_done;
 extern void tramp0(void), tramp1(void), tramp2(void), tramp3(void);
 u32 tramp_target[TRAMPS];
 
@@ -894,7 +896,6 @@ static void apply_patches(void) {
 #define BBRB  0xff200014u
 #define BRCR  0xff200020u
 
-static u32 hook_hits;
 
 /* The second way in: every GD-ROM syscall checks the list too (a program
    always loads its files right after it starts). For emulators without the
@@ -940,7 +941,7 @@ static void ubc_setup(void) {
         REG16(BRCR) = 0x0401;             /* channel A after execution, via DBR */
         return;
     }
-    if (H.flags & DIMM_NO_HOOK) return;
+    if (H.flags & (DIMM_NO_HOOK | DIMM_NO_UBC)) return;
     u32 h = (u32)dbr_hook;
     __asm__ volatile("ldc %0,dbr" : : "r"(h));
     REG32(BARA) = H.hook_pc[0];

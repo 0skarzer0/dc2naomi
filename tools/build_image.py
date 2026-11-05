@@ -12,7 +12,7 @@ GAME is one of games.py (daytona, ysgw). SOURCE is the disc:
   45000), music re-encoded to fit.
 
 The archive (resident/resident.h) goes after the loader's netboot image.
-SAMPLER=1: diagnostics build (rows of bits drawn on screen; no program hook).
+SAMPLER=1: diagnostics build (rows of bits drawn on screen; no program hook). NOUBC=1: no user break.
 """
 import os
 import shutil
@@ -266,6 +266,8 @@ def main():
     game = dict(GAMES[name])
     if os.environ.get("SAMPLER"):  # diagnostics: the on-screen PC sampler instead of the program hook
         game["flags"] = game["flags"] | 0x0001
+    if os.environ.get("NOUBC"):  # no user break controller hook
+        game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)
     disc = GdiDisc(source) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
 

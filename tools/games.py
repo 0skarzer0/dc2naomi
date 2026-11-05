@@ -69,7 +69,9 @@ GAMES = {
         "region": 0,          # Japan
         "language": 0,        # Japanese
         "layout": "gdi",      # original sector layout (213 MB: track 6 + system area)
-        "flags": 0,
+        # no user break (0x0004): on the real board the program-start break (DBR) hung right as
+        # 1ST_READ.BIN started (license screen, then black). Trampolines + GD-ROM polls instead.
+        "flags": 0x0004,
         "hook_pc": [0x8C010000, 0x0C010000],
         "groups": [
             {"file": "IP.BIN", "base": 0x8C008000, "patches": [
