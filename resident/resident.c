@@ -71,7 +71,7 @@ static void dlog(u32 code, u32 a, u32 b, u32 c) {
    Row 0 GD-ROM calls, 1 last GD call (r7 << 8 | r4), 2 maple polls,
    3 last sector read (low 16 bits), 4 other syscalls. Stops after the game
    has polled the controls for about 10 s. */
-static u32 dbg_val[5], dbg_calls, dbg_off;
+static u32 dbg_val[5];
 static u32 dbg_pc[8], dbg_samples;
 u32 dbg_countdown = 1;
 
@@ -105,21 +105,9 @@ void dbg_sample(u32 spc) {
     dbg_row(sof, line, 14, (patches_done & 0xff) << 8 | (hook_hits & 0xff), 16); /* patches, program starts */
 }
 
+static void diag_draw(void);
 static void dbg_draw(void) {
-    return; /* (the sampler draws) */
-    if (dbg_off || (++dbg_calls & 31)) return;
-    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
-    u32 size = REG32(0xa05f805c);
-    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
-    if (line < 640 || line > 4096) return;
-    for (u32 r = 0; r < 5; r++)
-        for (u32 b = 0; b < 16; b++) {
-            u32 v = (dbg_val[r] >> (15 - b)) & 1 ? 0xffffffffu : 0x00000000u;
-            for (u32 y = 0; y < 10; y++) {
-                volatile u32 *p = (volatile u32 *)(0xa5000000u + sof + (40 + r * 16 + y) * line + (40 + b * 8) * 2);
-                for (u32 x = 0; x < 3; x++) p[x] = (y == 0 || y == 9) ? 0x84108410u : v;
-            }
-        }
+    diag_draw(); /* (DIMM_DIAG builds; the sampler draws on its own) */
 }
 
 /* ------------------------------------------------------------------ */
@@ -790,7 +778,6 @@ u32 maple_hook(u32 list) {
     const u32 *in = (const u32 *)list;
     hook_calls++;
     dbg_val[2]++;
-    if (dbg_val[2] > 600) dbg_off = 1;
     dbg_draw();
     mie_parse();
     for (int guard = 0; guard < 64; guard++) {
@@ -848,6 +835,48 @@ extern void icache_inval(void);
 /* The patch list (see resident.h): at boot, and each time a program starts. */
 extern void tramp0(void), tramp1(void), tramp2(void), tramp3(void);
 u32 tramp_target[TRAMPS];
+
+/* Diagnostics for the real board (DIMM_DIAG): every 16 calls into the
+   resident (syscalls, maple hook), rows of bits into the displayed frame
+   buffer, and if the game has left 31 kHz (VGA clock off, or interlace /
+   NTSC / PAL sync), the VGA timings the loader had, so that a 31 kHz monitor
+   shows something. Rows (white = 1, MSB first):
+   0 heartbeat, 1 GD-ROM calls, 2 last GD call (r7 << 8 | r4), 3 maple polls,
+   4 last sector (low 16), 5 other syscalls, 6 patches << 8 | trampolines,
+   7 SPG_CONTROL, 8 FB_R_CTRL (32), 9 times back to VGA, 10 SPG_LOAD (32). */
+static const u16 vga_reg_off[8] = {0xd0, 0xd4, 0xd8, 0xdc, 0xe0, 0xe8, 0xec, 0xf0};
+static u32 vga_reg[8], vga_saved, vga_restores, diag_calls;
+
+static void vga_save(void) {
+    for (int i = 0; i < 8; i++) vga_reg[i] = REG32(0xa05f8000u + vga_reg_off[i]);
+    vga_saved = (REG32(0xa05f8044) & 0x800000u) != 0;
+}
+
+static void diag_draw(void) {
+    if (!(H.flags & DIMM_DIAG) || (++diag_calls & 15)) return;
+    u32 spg = REG32(0xa05f80d0), fbr = REG32(0xa05f8044), load = REG32(0xa05f80d8);
+    if (vga_saved && (!(fbr & 0x800000u) || (spg & 0xd0u))) {
+        for (int i = 0; i < 8; i++) REG32(0xa05f8000u + vga_reg_off[i]) = vga_reg[i];
+        REG32(0xa05f8044) = fbr | 0x800001u;   /* VGA clock, frame buffer read on */
+        vga_restores++;
+    }
+    REG32(0xa05f80e8) &= ~0x8u;                /* video not blanked */
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+    u32 size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    dbg_row(sof, line, 0, diag_calls >> 4, 16);
+    dbg_row(sof, line, 1, dbg_val[0], 16);
+    dbg_row(sof, line, 2, dbg_val[1], 16);
+    dbg_row(sof, line, 3, dbg_val[2], 16);
+    dbg_row(sof, line, 4, dbg_val[3], 16);
+    dbg_row(sof, line, 5, dbg_val[4], 16);
+    dbg_row(sof, line, 6, (patches_done & 0xff) << 8 | (hook_hits & 0xff), 16);
+    dbg_row(sof, line, 7, spg, 16);
+    dbg_row(sof, line, 8, fbr, 32);
+    dbg_row(sof, line, 9, vga_restores, 16);
+    dbg_row(sof, line, 10, load, 32);
+}
 
 static void apply_patches(void) {
     static void (*const tramp[TRAMPS])(void) = {tramp0, tramp1, tramp2, tramp3};
@@ -955,6 +984,7 @@ static void ubc_setup(void) {
 
 void boot(const struct dimm_header *h) {
     mcpy(&H, h, sizeof H);
+    vga_save();                 /* the loader's 31 kHz timings (DIMM_DIAG) */
     gd_reset_state();
     log_pos = 0;
 

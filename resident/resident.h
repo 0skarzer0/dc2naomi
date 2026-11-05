@@ -36,6 +36,8 @@
 #define DIMM_SAMPLER    0x0001u       /* diagnostics: sample the PC every 2^20 instructions */
 #define DIMM_NO_HOOK    0x0002u       /* no program-start hook (patches at boot only) */
 #define DIMM_NO_UBC     0x0004u       /* no user break: patches on GD-ROM calls and trampolines only */
+#define DIMM_DIAG       0x0008u       /* rows of bits on screen from the syscalls and the maple hook,
+                                         and back to the loader's VGA timings if the game leaves them */
 
 /* Patch kinds. The list is read in order every time a program starts (and
    once at boot). A CHECK opens a group: if the word at addr is not `value`
