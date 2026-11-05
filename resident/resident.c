@@ -370,6 +370,8 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7);
    semaphore does) instead of running into it. */
 static volatile int gd_inside;
 
+static void patch_poll(void);
+
 static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     s32 r0;
     dbg_val[0]++;
@@ -384,6 +386,7 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
         return 0;
     }
     gd_inside = 1;
+    patch_poll();
     r0 = gd_syscall_body(r4, r5, r6, r7);
     gd_inside = 0;
     return r0;
@@ -841,9 +844,12 @@ extern void icache_inval(void);
 
 /* The patch list (see resident.h): at boot, and each time a program starts. */
 static u32 patches_done;
+extern void tramp0(void), tramp1(void), tramp2(void), tramp3(void);
+u32 tramp_target[TRAMPS];
 
 static void apply_patches(void) {
-    int skip = 0;
+    static void (*const tramp[TRAMPS])(void) = {tramp0, tramp1, tramp2, tramp3};
+    int skip = 0, ntramp = 0;
     for (int i = 0; i < DIMM_PATCHES && H.patches[i].kind != PATCH_END; i++) {
         const struct dimm_patch *p = &H.patches[i];
         u32 kind = p->kind & 0x7f, always = p->kind & PATCH_ALWAYS;
@@ -851,9 +857,17 @@ static void apply_patches(void) {
             skip = *(volatile u32 *)p->addr != p->value;
             continue;
         }
+        int t = kind == PATCH_TRAMP ? ntramp++ : 0; /* (fixed per entry, groups skipped or not) */
         if (skip) continue;
         u32 v = p->value == PATCH_HOOK ? (u32)maple_hook : p->value;
-        if (kind == PATCH_W16) {
+        if (kind == PATCH_TRAMP) {
+            /* (numbered in list order, the same every time) */
+            if (t >= TRAMPS) continue;
+            tramp_target[t] = p->expect;
+            volatile u32 *a = (volatile u32 *)p->addr;
+            if (*a != p->expect) continue;
+            *a = (u32)tramp[t];
+        } else if (kind == PATCH_W16) {
             volatile u16 *a = (volatile u16 *)p->addr;
             if (!always && *a != (u16)p->expect) continue;
             *a = (u16)v;
@@ -881,6 +895,29 @@ static void apply_patches(void) {
 #define BRCR  0xff200020u
 
 static u32 hook_hits;
+
+/* The second way in: every GD-ROM syscall checks the list too (a program
+   always loads its files right after it starts). For emulators without the
+   user break controller (Flycast), and in case the break is missed. */
+static void patch_poll(void) {
+    if (H.flags & DIMM_NO_HOOK) return;
+    u32 before = patches_done;
+    apply_patches();
+    if (patches_done != before) {
+        dlog(0x504f4c4cu, patches_done - before, patches_done, 0); /* "POLL" */
+        icache_inval();
+    }
+}
+
+/* A program jumping to the next one through a trampoline (head.S): patch
+   it before its first instruction, as the user break would. */
+u32 tramp_go(u32 t) {
+    hook_hits++;
+    dlog(0x5452414du, t, tramp_target[t], patches_done); /* "TRAM" */
+    apply_patches();
+    icache_inval();
+    return tramp_target[t];
+}
 
 void program_start(u32 spc) {
     hook_hits++;

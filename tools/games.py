@@ -19,6 +19,7 @@ How to find the three things a Katana game needs patched (see HANDOFF.md):
 """
 
 HOOK = 0xFFFFFFFF
+TRAMP = "tramp"  # value for a jump literal: through the resident (patches the next program first)
 SCRATCH = 0xADD7F000  # RES_SCRATCH in resident.h
 
 
@@ -79,6 +80,7 @@ GAMES = {
             {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
                 (0x8C1F58C6, 2, mov_imm0(2)),          # YSC cable: mov.w @r1,r2 (PDTRA) -> mov #0,r2
                 (0x8C1F1F60, 4, HOOK),                 # YSC maple: literal of the call before SB_MDSTAR
+                (0x8C053688, 4, TRAMP),                # YSC: jmp to PD.BIN at 0x8c010000 -> trampoline
             ]},
             {"file": "PD.BIN", "base": 0x8C010000, "patches": [
                 (0x8C01B766, 2, mov_imm0(4)),          # Power Drift cable: mov.w @r3,r4 -> mov #0,r4
@@ -87,6 +89,7 @@ GAMES = {
             {"file": "LOADER.BIN", "base": 0x8C800000, "patches": [
                 (0x8C80BCA6, 2, mov_imm0(2)),          # loader cable (runs at 0x0c80bca6)
                 (0x8C8112DC, 4, HOOK),                 # loader maple
+                (0x8C800480, 4, TRAMP),                # loader: jsr to 1ST_READ.BIN at 0x0c010000 -> trampoline
             ]},
         ],
     },

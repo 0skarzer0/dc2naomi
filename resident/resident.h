@@ -46,7 +46,10 @@
 #define PATCH_W16       2
 #define PATCH_W32       4
 #define PATCH_ALWAYS    0x80
+#define PATCH_TRAMP     8             /* W32 on a jump literal: through the resident, which
+                                         patches the next program, then on to `expect` */
 #define PATCH_HOOK      0xffffffffu   /* value for W32: the resident maple hook */
+#define TRAMPS          4
 
 struct dimm_patch {
     uint32_t addr;

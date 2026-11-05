@@ -20,7 +20,7 @@ los sustituye por software:
 | Juego | Resultado |
 |---|---|
 | Daytona USA 2001 (US) | ❌ Pantalla negra en placa real |
-| Yu Suzuki Game Works Vol. 1 (JP) | 🧪 Imagen preparada (201 MB, disco con sus LBA originales); pendiente de probar |
+| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona en Flycast (NAOMI, BIOS export): menú y Power Drift jugable; pendiente de placa |
 
 **Es un trabajo en curso.** Los detalles técnicos, las direcciones y los siguientes pasos están en
 [HANDOFF.md](HANDOFF.md).

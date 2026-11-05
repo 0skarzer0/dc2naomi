@@ -207,3 +207,24 @@ _icache_inval:
 .Lp2mask_i: .long 0x1fffffff
 .Lp2_i:     .long 0xa0000000
 .Lccr_i:    .long 0xff00001c
+
+/* Trampolines: a patched jump literal sends the program here instead of to
+   the next program; tramp_go(n) patches what is in memory and returns where
+   the jump was going. Registers other than r0/r4/pr as the jump left them
+   (the next program's entry needs none of r0-r7). */
+    .global _tramp0, _tramp1, _tramp2, _tramp3
+    .align 2
+_tramp0: bra 1f
+    mov     #0, r4
+_tramp1: bra 1f
+    mov     #1, r4
+_tramp2: bra 1f
+    mov     #2, r4
+_tramp3: mov #3, r4
+1:  mov.l   .Ltgo, r0
+    jsr     @r0
+    nop
+    jmp     @r0
+    nop
+    .align 2
+.Ltgo:    .long _tramp_go

@@ -31,3 +31,16 @@ index 85fda8330..decf7d1db 100644
  		{
  			if (!bios_loaded)
  				throw FlycastException(Ts("Error: cannot load BIOS from naomi.zip"));
+diff --git a/core/hw/naomi/naomi_roms.cpp b/core/hw/naomi/naomi_roms.cpp
+index 84f00d335..84cdfd44b 100644
+--- a/core/hw/naomi/naomi_roms.cpp
++++ b/core/hw/naomi/naomi_roms.cpp
+@@ -109,7 +109,7 @@ const BIOS_t BIOS[] =
+ 			//ROM_SYSTEM_BIOS( 10, "bios10", "epr-21578f (Export)" )
+ 			//{ 2, "epr-21578f.ic27", 0x000000, 0x200000, 0x628a27fd },
+ 			//ROM_SYSTEM_BIOS( 11, "bios11", "epr-21578e (Export)" )
+-			//{ 2, "epr-21578e.ic27", 0x000000, 0x200000, 0x087f09a3 },
++			{ 2, "epr-21578e.ic27", 0x000000, 0x200000, 0x087f09a3 },
+ 			//ROM_SYSTEM_BIOS( 12, "bios12", "epr-21578d (Export)" )
+ 			//{ 2, "epr-21578d.ic27", 0x000000, 0x200000, 0xdfd5f42a },
+ 			//ROM_SYSTEM_BIOS( 13, "bios13", "epr-21578a (Export)" )

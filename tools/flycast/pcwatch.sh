@@ -1,7 +1,8 @@
 #!/bin/bash
 # pcwatch.sh IMAGE SECONDS STEP : debug Flycast (interpreter), PC/PR every STEP s, screenshot at the end
 cd ${FCTEST:-$(dirname "$0")}
-export DISPLAY=:99 SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 HOME=${FCTEST:-$(dirname "$0")}/home FC_NAOMI2=1
+export DISPLAY=:99 SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 HOME=${FCTEST:-$(dirname "$0")}/home
+[ -n "$NAOMI2" ] && export FC_NAOMI2=1 || unset FC_NAOMI2
 [ -n "$MIEPATCH" ] && export FC_MIE_NODEVINFO=1
 pgrep -x Xvfb >/dev/null || { Xvfb :99 -screen 0 800x600x24 >/dev/null 2>&1 & sleep 1; }
 ${FCDBG:-../flycast/build-dbg/flycast} -config config:Dynarec.Enabled=${DYNAREC:-no} -config log:LogToConsole=yes -config log:Verbosity=${VERB:-3} "$1" > pc.log 2>&1 & FP=$!

@@ -13,7 +13,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Juego | Estado |
 |---|---|
 | Daytona USA 2001 (US) | ❌ Pantalla negra en placa real (sesión anterior). Parado. |
-| **Yu Suzuki Game Works Vol. 1 (Japón)** | 🧪 Imagen completa (`build/ysgw.bin`, 201 MB) con el loader compilado; **sin probar** (ni Flycast ni placa) |
+| **Yu Suzuki Game Works Vol. 1 (Japón)** | ✅ **Funciona en Flycast (NAOMI 1, BIOS export `epr-21578e`)**: menú, controles y Power Drift jugable. Pendiente: placa real |
 
 Sesión 2026-11-04:
 - Analizado YSGW entero (abajo). Es el nuevo banco de pruebas.
@@ -103,19 +103,35 @@ Cosas a vigilar:
 
 ## Pruebas en Flycast (2026-11-05)
 
-- **Placa real: pantalla negra** con `ysgw_dc2naomi.bin.gz`.
-- En Flycast **modo Dreamcast** (BIOS HLE `UseReios`) el CHD de YSGW arranca y llega al título: el disco y el
-  flujo menú/monitor funcionan con una BIOS que hace lo mismo que el residente.
-- Flycast `7adbf3c` + `tools/flycast/flycast-naomi2-bin.patch` (`FC_NAOMI2=1`: los `.bin` sueltos como NAOMI 2
-  con `naomi2.zip`, BIOS `epr-23608b`). **No sirve todavía**: la BIOS de NAOMI 2 corre (sus tareas cambian) pero
-  en 3 minutos no dibuja nada ni carga el programa, **ni siquiera el loader solo**. Es un problema de esa
-  combinación en Flycast, no del cargador. Hace falta la BIOS de NAOMI 1 (`naomi.zip`), como en las pruebas de
-  MAME4ALL.
-- Ojo: `FC_MIE_NODEVINFO` (parche de `mame4all-naomi`) hace que la BIOS de NAOMI se quede esperando al MIE
-  (bucle en `0x0c033904`); no definir la variable (ni vacía) salvo para probar el driver MIE de KOS sin BIOS.
-- `tools/flycast/run1.sh IMG SEG NOMBRE` (capturas cada `STEP` s en una cuadrícula) y `pcwatch.sh IMG SEG PASO`
-  (PC/PR con gdb sobre una compilación RelWithDebInfo y volcado de RAM con `DUMP=1`; el log del residente está en
-  `0x0dd80000`, magic del residente en `0x0dc00000`).
+Resultado: **YSGW funciona en Flycast** en modo NAOMI 1 con la BIOS de exportación `epr-21578e`: logos de NAOMI y
+SEGA → título "PRESS START BUTTON" → menú de juegos → Power Drift (programa aparte) arranca y se juega
+(acelerador, volante, pausa con START largo).
+
+La primera imagen que se probó en placa (pantalla negra) tenía dos fallos de **compilación de KallistiOS**, no
+del cargador:
+1. KallistiOS se había compilado para Dreamcast (`KOS_SUBARCH` sin poner): el loader quedaba enlazado en
+   `0x8c010000` y pisaba el código de copia de la BIOS de NAOMI (excepción con BL=1 en `0xac0195xx`). Los
+   programas de NAOMI van en **`0x8c020000`** (`LOAD_OFFSET`); `tools/ubuntu-toolchain.sh` ahora lo comprueba.
+2. `aligned_alloc` de newlib 3.3 ↔ `posix_memalign` de KOS: recursión infinita (la pila se comía la RAM).
+
+Cambios del residente en esta sesión:
+- **Revisión de parches en cada syscall de GD-ROM** (`patch_poll`): Flycast **no emula el UBC** (solo guarda
+  sus registros), así que el gancho de `hook_pc` nunca salta allí.
+- **Trampolines** (`PATCH_TRAMP`, hasta 4): el literal del salto con el que un programa lanza al siguiente se
+  cambia por un trampolín del residente, que aplica los parches y salta al destino original. Imprescindible
+  para Power Drift: inicializa su driver maple antes de su primera llamada al GD-ROM, y si el hook llega tarde
+  el juego ha visto el MIE en lugar de un mando y no responde. En YSGW: menú → PD (`0x8c053688`) y
+  LOADER → 1ST_READ (`0x8c800480`).
+
+Herramientas (`tools/flycast/`):
+- `flycast-naomi-bios.patch` sobre Flycast `7adbf3c` (además del parche MIE de `mame4all-naomi`): activa
+  `epr-21578e` en el juego de BIOS "naomi" (Flycast la tiene comentada) y, con `FC_NAOMI2=1`, arranca los
+  `.bin` sueltos como NAOMI 2 (**no funciona**: la BIOS de NAOMI 2 no carga ningún `.bin`, ni el loader solo).
+- `drive.py IMG NOMBRE pasos...`: Flycast sin pantalla guiado por lo que se ve (`menu` = START hasta que
+  aparece el menú, `key:K:seg`, `hold:K:seg`, `wait:seg`, `dump`). Teclas por defecto: Return = START,
+  flechas, J/L volante, `FC_PEDALS=1` + K = acelerador. START corto (< 20 fotogramas) = botón A.
+- `run1.sh`, `pcwatch.sh` (PC con gdb), `ramlog.py RAM.bin` (log y estado del residente en un volcado).
+- `FC_MIE_NODEVINFO` hace que la BIOS de NAOMI espere al MIE para siempre: no definirla (ni vacía).
 
 ## Cómo encontrar los parches en otro juego Katana
 
@@ -151,8 +167,8 @@ Para WiPi Netbooter: `gzip build/ysgw.bin` y una línea en `romsinfo.csv`.
 
 ## Siguientes pasos
 
-1. Probar `build/ysgw.bin` en placa (WiPi Netbooter).
-2. Probar en Flycast (necesita `naomi.zip` en `home/.local/share/flycast/` del entorno de prueba) (NAOMI, con el parche MIE) antes que en placa: ¿llega al menú? Mirar el log del
+1. Probar `build/ysgw.bin` en placa (WiPi Netbooter): menú, Power Drift, OutRun, Hang-On, volver al menú.
+2. En Flycast: probar OutRun, Hang-On, After Burner y Space Harrier, y la vuelta de Power Drift al menú (LOADER) (NAOMI, con el parche MIE) antes que en placa: ¿llega al menú? Mirar el log del
    residente en `0x8dd80000` (entradas "PROG"/"PATC" del gancho, "RQ" de GD-ROM).
 3. Si hay pantalla negra: `SAMPLER=1` y foto de la pantalla (filas de bits: llamadas GD, última llamada,
    sondeos de maple, último sector, otras syscalls y los últimos PC).

@@ -31,6 +31,7 @@ EOF
 cd $DC/kos
 cp doc/environ.sh.sample environ.sh
 sed -i 's/^#export KOS_SUBARCH="naomi"/export KOS_SUBARCH="naomi"/' environ.sh
+grep -q '^export KOS_SUBARCH="naomi"' environ.sh || { echo "KOS_SUBARCH not set"; exit 1; }
 cat >> environ.sh <<'EOF'
 export KOS_CFLAGS="${KOS_CFLAGS} -include /opt/toolchains/dc/compat/kos_gcc13.h"
 export KOS_LDFLAGS="${KOS_LDFLAGS} -L/opt/toolchains/dc/compat/lib"
@@ -47,6 +48,10 @@ cd $DC/compat/lib
 sh-elf-nm --defined-only $DC/kos/lib/dreamcast/libkallisti.a 2>/dev/null | awk '$2=="T"{print $3}' | sort -u > kos.syms
 objs=$(sh-elf-nm -A --defined-only libc.a 2>/dev/null | awk '{split($1,a,":"); if ($2=="T") print a[2], $3}' |
        while read o s; do grep -qx "$s" kos.syms && echo "$o"; done | sort -u)
-sh-elf-ar d libc.a lib_a-syscalls.o $objs
+sh-elf-ar d libc.a lib_a-syscalls.o lib_a-aligned_alloc.o $objs
 rm kos.syms
+# newlib 3.3's aligned_alloc calls posix_memalign, and KOS's posix_memalign calls aligned_alloc:
+# endless recursion (the stack eats the whole RAM). aligned_alloc = KOS's memalign instead.
+printf '#include <stddef.h>\nvoid *memalign(size_t, size_t);\nvoid *aligned_alloc(size_t a, size_t s) { return memalign(a, s); }\n' > aligned_alloc.c
+sh-elf-gcc -m4-single -ml -O2 -c aligned_alloc.c && sh-elf-ar r libc.a aligned_alloc.o && rm aligned_alloc.[co]
 echo "KOS ready: source $DC/kos/environ.sh"
