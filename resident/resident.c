@@ -106,7 +106,19 @@ void dbg_sample(u32 spc) {
 }
 
 static void diag_draw(void);
+static struct dimm_header H;
+static u32 err_seen, err_last;
 static void dbg_draw(void) {
+    if (H.flags & DIMM_MASKERR) {
+        u32 e = REG32(0xa05f6908);                 /* ISTERR */
+        if (e) {
+            err_seen++;
+            err_last = e;
+        }
+        REG32(0xa05f6918) = 0;                     /* IML2ERR */
+        REG32(0xa05f6928) = 0;                     /* IML4ERR */
+        REG32(0xa05f6938) = 0;                     /* IML6ERR */
+    }
     diag_draw(); /* (DIMM_DIAG builds; the sampler draws on its own) */
 }
 
@@ -117,7 +129,6 @@ static void dbg_draw(void) {
 #define CART_OFFSETL 0xa05f7004u
 #define CART_DATA    0xa05f7008u
 
-static struct dimm_header H;
 
 /* len bytes from NetDIMM address src (even) to dst (even), 4 KB at a time
    with interrupts off; 32-bit stores when dst is 4-aligned. */
@@ -721,7 +732,7 @@ static u32 read_be16(const u8 *p) {
 static void mie_parse(void) {
     u32 hdr = my_recv[0];
     if (mie_state == 0) return;
-    dlog(0x4d494500u | mie_state, hdr, my_recv[1], my_recv[2]);
+    /* (no log: one entry per frame would flush the GD-ROM ones out of the ring) */
     if (hdr == 0xffffffffu || (hdr & 0xff) != MIE_RESP_IO) {
         mie_state = 0;
         return;
@@ -876,6 +887,11 @@ static void diag_draw(void) {
     dbg_row(sof, line, 8, fbr, 32);
     dbg_row(sof, line, 9, vga_restores, 16);
     dbg_row(sof, line, 10, load, 32);
+    dbg_row(sof, line, 11, REG32(0xa05f6908), 32);  /* ISTERR now */
+    dbg_row(sof, line, 12, err_last, 32);           /* ISTERR last seen non-zero (MASKERR) */
+    dbg_row(sof, line, 13, err_seen, 16);           /* times seen */
+    dbg_row(sof, line, 14, REG32(0xa05f6900), 32);  /* ISTNRM */
+    dbg_row(sof, line, 15, REG32(0xa05f6904), 16);  /* ISTEXT */
 }
 
 static void apply_patches(void) {

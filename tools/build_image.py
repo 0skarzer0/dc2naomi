@@ -268,6 +268,8 @@ def main():
         game["flags"] = game["flags"] | 0x0001
     if os.environ.get("DIAG"):  # rows of bits on screen, back to VGA timings if the game leaves them
         game["flags"] = game["flags"] | 0x0008
+    if os.environ.get("MASKERR"):  # keep the ASIC error interrupts masked
+        game["flags"] = game["flags"] | 0x0010
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)

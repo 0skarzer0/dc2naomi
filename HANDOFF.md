@@ -120,7 +120,13 @@ En Flycast, en ese mismo punto (sector 544641, 18 otras syscalls, ~170 sondeos) 
 de SEGA/AM2. En placa el juego se para por completo (ni interrupciones de maple) antes del primer dibujado:
 pinta a bloqueo de bus o de una DMA (TA/PVR, AICA/G2). No es el modo de vídeo ni el UBC.
 Las rutinas TA-DMA del motor (p. ej. YSC `0x8c21248e`) escriben CHCR2/SB_C2D* por su cuenta.
-Siguiente: imagen `SAMPLER=1` (`ysgw_pc.bin`) para ver el PC en el cuelgue.
+`SAMPLER=1` (`ysgw_pc.bin`) en placa: negro justo tras la licencia, sin filas → **el UBC/DBR cuelga la placa
+real** (confirmado; probablemente también la pantalla negra de Daytona). Sin UBC se llega más lejos (DIAG).
+En Flycast nada cambia hacia los ~200 sondeos (TA-DMA ~1,5 por sondeo en toda la fase negra, sin registros
+nuevos tras los del AICA en el sondeo 13; todas las lecturas GD a RAM; IML*EXT = 0). El juego sí habilita
+**interrupciones de error del PVR en nivel 6 (IML6ERR = 0x0e)**, que Flycast no genera: sospechoso.
+Imagen `DIAG=1 MASKERR=1` (`ysgw_diag2.bin`): mantiene IML2/4/6ERR a 0 en cada llamada al residente y añade
+filas 11 ISTERR, 12 último ISTERR no nulo, 13 veces visto, 14 ISTNRM, 15 ISTEXT.
 YSGW lleva ahora `flags = 0x0004` (sin UBC): los parches van por trampolines y por la revisión en cada llamada
 al GD-ROM. Pendiente de confirmar en placa. El muestreador (`SAMPLER=1`) queda en entredicho por lo mismo.
 
