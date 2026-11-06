@@ -225,6 +225,12 @@ esperan los bits 0 y 4 de SB_FFST, Namco Museum (Shinobi 1.43) el bit 5.
 driver maple llama a su función de dirección física `0x8c16852e` con bsr desde `0x8c167666` y `0x8c1678ae`, sin
 literal; habría que parchear esos bsr). Usa los bits 0 y 4 de SB_FFST.
 
+**Ikaruga (Japón)**, perfil `ikaruga` (2026-11-06): sólo arranque (IP.BIN + cable `0x8c04d0e4` mov.w @r3,r0 → mov #0,r0).
+Imagen 36,6 MB; en Flycast llega al título (斑鳩). La versión NAOMI (GDL-0010, imagen DIMM de 32 MB, programa
+principal rom 0x0-0x100000 → 0x8c020000) lleva la misma Shinobi (cvFs/gdCi 1.03, syMng 1.04) más "NAOMI LIBRARY
+FOR AM" 2.22, y su espera de SB_FFST mira los bits 0 y 4 igual que la de Dreamcast: más indicios de que el bit 5
+de Namco Museum es el problema. También usa DMA de texturas a 0x11000000.
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):
