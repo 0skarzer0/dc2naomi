@@ -22,7 +22,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from games import GAMES, HOOK, TRAMP, R4FIX  # noqa: E402
+from games import GAMES, HOOK, TRAMP, R4FIX, TEXPATH  # noqa: E402
 from gdi import Gdi  # noqa: E402
 
 ALIGN = 0x10000
@@ -245,6 +245,10 @@ def build_patches(disc, groups):
         print(f"  {g['file']:<14} check {check:#010x} = {word(check, 4):#010x}")
         for a, s, v in g["patches"]:
             old = word(a, s)
+            if os.environ.get("NOFIX") and (v == R4FIX or v == TEXPATH):  # diagnostics: no texture-path fix
+                continue
+            if os.environ.get("NOR4FIX") and v == R4FIX:
+                continue
             if v == R4FIX:
                 print(f"    {a:#010x} {s}: {old:#0{2 + 2 * s}x} -> texture-path stub")
                 out.append((a, PATCH_R4FIX, 0, old))

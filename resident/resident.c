@@ -107,11 +107,12 @@ void dbg_sample(u32 spc) {
 
 static void diag_draw(void);
 static struct dimm_header H;
-static u32 err_seen, err_last;
+static u32 err_seen, err_last, err_first;
 static void dbg_draw(void) {
     if (H.flags & DIMM_MASKERR) {
         u32 e = REG32(0xa05f6908);                 /* ISTERR */
         if (e) {
+            if (!err_seen) err_first = dbg_val[0];
             err_seen++;
             err_last = e;
         }
@@ -866,7 +867,7 @@ static void vga_save(void) {
 }
 
 static void diag_draw(void) {
-    if (!(H.flags & DIMM_DIAG) || (++diag_calls & 15)) return;
+    if (!(H.flags & DIMM_DIAG) || (++diag_calls & 3)) return;
     u32 spg = REG32(0xa05f80d0), fbr = REG32(0xa05f8044), load = REG32(0xa05f80d8);
     if (vga_saved && (!(fbr & 0x800000u) || (spg & 0xd0u))) {
         for (int i = 0; i < 8; i++) REG32(0xa05f8000u + vga_reg_off[i]) = vga_reg[i];
@@ -878,7 +879,7 @@ static void diag_draw(void) {
     u32 size = REG32(0xa05f805c);
     u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
     if (line < 640 || line > 4096) line = 1280;
-    dbg_row(sof, line, 0, diag_calls >> 4, 16);
+    dbg_row(sof, line, 0, diag_calls >> 2, 16);
     dbg_row(sof, line, 1, dbg_val[0], 16);
     dbg_row(sof, line, 2, dbg_val[1], 16);
     dbg_row(sof, line, 3, dbg_val[2], 16);
@@ -887,7 +888,7 @@ static void diag_draw(void) {
     dbg_row(sof, line, 6, (patches_done & 0xff) << 8 | (hook_hits & 0xff), 16);
     dbg_row(sof, line, 7, spg, 16);
     dbg_row(sof, line, 8, fbr, 32);
-    dbg_row(sof, line, 9, vga_restores, 16);
+    dbg_row(sof, line, 9, (H.flags & DIMM_MASKERR) ? err_first : vga_restores, 16); /* GD call of the first ASIC error */
     dbg_row(sof, line, 10, load, 32);
     dbg_row(sof, line, 11, REG32(0xa05f6908), 32);  /* ISTERR now */
     dbg_row(sof, line, 12, err_last, 32);           /* ISTERR last seen non-zero (MASKERR) */

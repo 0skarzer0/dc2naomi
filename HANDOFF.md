@@ -149,6 +149,15 @@ el arreglo, todas las DMA de textura del juego van a 0x13 (las 50 a 0x11 que que
 hay escrituras por store queue a la ruta de texturas. Pendiente: overlays (OutRun, After Burner, Hang-On, Space
 Harrier) — tienen literales 0x11/0x13 propios (`OUTRUN.BIN` 0x4ddb0, `BURNER/PROG.BIN` 0x231a8, 0x24b3c, 0x31458,
 `HANGON.EMU` 0xca984); falta saber dónde se cargan.
+**Placa, tras el arreglo de texturas (2026-11-06):** la normal y DIAG (sin MASKERR) siguen en negro tras el logo
+de SEGA; DIAG no llega a pintar filas en 10 intentos (ya antes era intermitente sin MASKERR). DIAG2 (DIAG+MASKERR,
+sin arreglo) otra vez, decodificado: 0x53 latidos, 1117 llamadas GD, última 0x2c0? , 193 sondeos maple, sector
+…4f81, parches 6/tramp 0, SPG_CONTROL 0x100, FB_R_CTRL 0x800004, SPG_LOAD 0x020c0378, **ISTERR 0x10** (visto 1260
+veces), ISTNRM 0xc0001030, ISTEXT 0x8. Igual que la vez anterior. Hipótesis: sin MASKERR el error 0x10 (parámetro
+ilegal del TA) dispara la rutina de error del juego y se para antes; el error del TA no es el de las texturas.
+Siguientes imágenes: `ysgw_diag3` (DIAG+MASKERR con arreglo; fila 9 = nº de llamada GD del primer ISTERR con
+MASKERR; filas cada 4 llamadas), `ysgw_diag3_tex` (igual sin R4FIX, `NOR4FIX=1`) y `ysgw_tex` (normal sin R4FIX).
+`NOFIX=1` quita todo el arreglo. En Flycast las DIAG dejan la pantalla en negro (sólo filas) aunque el juego sigue.
 YSGW lleva ahora `flags = 0x0004` (sin UBC): los parches van por trampolines y por la revisión en cada llamada
 al GD-ROM. Pendiente de confirmar en placa. El muestreador (`SAMPLER=1`) queda en entredicho por lo mismo.
 
