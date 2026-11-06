@@ -220,6 +220,11 @@ así que el CH2TEST tenía un fallo de diseño (el caso A fue el primero, sin re
 Holly (`0xa05f6800-0xa05f7c80`) es idéntica en las dos versiones. La NAOMI no lleva Shinobi/syG2; CT1 y CT2 de DC
 esperan los bits 0 y 4 de SB_FFST, Namco Museum (Shinobi 1.43) el bit 5.
 
+**Crazy Taxi 2 (USA)**, perfil `ct2` (2026-11-06): sólo parches de arranque (IP.BIN + cable `0x8c15e656`). Imagen
+152,5 MB. En Flycast llega al logo de SEGA y a la pantalla de tarjetas de memoria (no responde a los mandos: el
+driver maple llama a su función de dirección física `0x8c16852e` con bsr desde `0x8c167666` y `0x8c1678ae`, sin
+literal; habría que parchear esos bsr). Usa los bits 0 y 4 de SB_FFST.
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):
