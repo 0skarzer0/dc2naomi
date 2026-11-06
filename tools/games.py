@@ -20,6 +20,13 @@ How to find the three things a Katana game needs patched (see HANDOFF.md):
 
 HOOK = 0xFFFFFFFF
 TRAMP = "tramp"  # value for a jump literal: through the resident (patches the next program first)
+# The channel 2 DMA to the direct texture path at 0x11000000 (LMMODE0 = 0) writes nothing to VRAM on a
+# NAOMI 2 (measured on the board, CH2TEST); its mirror at 0x13000000 (LMMODE1 = 0) works, and is the
+# same path on a Dreamcast. Texture DMA bases 0x11000000 -> 0x13000000.
+TEXPATH = 0x13000000
+# A call literal of a function taking such a destination in r4: through a resident stub that turns
+# 0x11xxxxxx into 0x13xxxxxx (only one shared function per program: up to 4 different targets).
+R4FIX = "r4fix"
 SCRATCH = 0xADD7F000  # RES_SCRATCH in resident.h
 
 
@@ -83,15 +90,21 @@ GAMES = {
                 (0x8C1F58C6, 2, mov_imm0(2)),          # YSC cable: mov.w @r1,r2 (PDTRA) -> mov #0,r2
                 (0x8C1F1F60, 4, HOOK),                 # YSC maple: literal of the call before SB_MDSTAR
                 (0x8C053688, 4, TRAMP),                # YSC: jmp to PD.BIN at 0x8c010000 -> trampoline
+                (0x8C2151B0, 4, TEXPATH),              # YSC texture DMA: 0x11000000 + VRAM offset
+                # YSC: every call of the ch2 DMA queue function 0x8c2122a0 (destination in r4)
+                (0x8C206338, 4, R4FIX), (0x8C2065F4, 4, R4FIX), (0x8C2098F0, 4, R4FIX),
+                (0x8C20CDCC, 4, R4FIX), (0x8C214698, 4, R4FIX), (0x8C2151B4, 4, R4FIX),
             ]},
             {"file": "PD.BIN", "base": 0x8C010000, "patches": [
                 (0x8C01B766, 2, mov_imm0(4)),          # Power Drift cable: mov.w @r3,r4 -> mov #0,r4
                 (0x8C032D44, 4, HOOK),                 # Power Drift maple
+                (0x8C02A404, 4, TEXPATH),              # Power Drift texture DMA
             ]},
             {"file": "LOADER.BIN", "base": 0x8C800000, "patches": [
                 (0x8C80BCA6, 2, mov_imm0(2)),          # loader cable (runs at 0x0c80bca6)
                 (0x8C8112DC, 4, HOOK),                 # loader maple
                 (0x8C800480, 4, TRAMP),                # loader: jsr to 1ST_READ.BIN at 0x0c010000 -> trampoline
+                (0x8C822B4C, 4, TEXPATH),              # loader texture DMA
             ]},
         ],
     },

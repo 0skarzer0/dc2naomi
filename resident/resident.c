@@ -845,6 +845,8 @@ extern void icache_inval(void);
 
 /* The patch list (see resident.h): at boot, and each time a program starts. */
 extern void tramp0(void), tramp1(void), tramp2(void), tramp3(void);
+extern void r4fix0(void), r4fix1(void), r4fix2(void), r4fix3(void);
+extern u32 r4fix_target[4];
 u32 tramp_target[TRAMPS];
 
 /* Diagnostics for the real board (DIMM_DIAG): every 16 calls into the
@@ -896,7 +898,8 @@ static void diag_draw(void) {
 
 static void apply_patches(void) {
     static void (*const tramp[TRAMPS])(void) = {tramp0, tramp1, tramp2, tramp3};
-    int skip = 0, ntramp = 0;
+    static void (*const r4fix[4])(void) = {r4fix0, r4fix1, r4fix2, r4fix3};
+    int skip = 0, ntramp = 0, nfix = 0;
     for (int i = 0; i < DIMM_PATCHES && H.patches[i].kind != PATCH_END; i++) {
         const struct dimm_patch *p = &H.patches[i];
         u32 kind = p->kind & 0x7f, always = p->kind & PATCH_ALWAYS;
@@ -905,9 +908,19 @@ static void apply_patches(void) {
             continue;
         }
         int t = kind == PATCH_TRAMP ? ntramp++ : 0; /* (fixed per entry, groups skipped or not) */
+        int fx = 0;
+        if (kind == PATCH_R4FIX) {        /* one stub per target function, in list order */
+            for (fx = 0; fx < nfix && r4fix_target[fx] != p->expect; fx++) {}
+            if (fx == nfix && nfix < 4) r4fix_target[nfix++] = p->expect;
+        }
         if (skip) continue;
         u32 v = p->value == PATCH_HOOK ? (u32)maple_hook : p->value;
-        if (kind == PATCH_TRAMP) {
+        if (kind == PATCH_R4FIX) {
+            if (fx >= nfix) continue;
+            volatile u32 *a = (volatile u32 *)p->addr;
+            if (*a != p->expect) continue;
+            *a = (u32)r4fix[fx];
+        } else if (kind == PATCH_TRAMP) {
             /* (numbered in list order, the same every time) */
             if (t >= TRAMPS) continue;
             tramp_target[t] = p->expect;

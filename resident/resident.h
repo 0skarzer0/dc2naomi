@@ -53,6 +53,8 @@
 #define PATCH_ALWAYS    0x80
 #define PATCH_TRAMP     8             /* W32 on a jump literal: through the resident, which
                                          patches the next program, then on to `expect` */
+#define PATCH_R4FIX     16            /* W32 on a call literal: through a stub that turns an r4 of
+                                         0x11xxxxxx into 0x13xxxxxx, then on to `expect` */
 #define PATCH_HOOK      0xffffffffu   /* value for W32: the resident maple hook */
 #define TRAMPS          4
 

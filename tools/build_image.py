@@ -22,7 +22,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from games import GAMES, HOOK, TRAMP  # noqa: E402
+from games import GAMES, HOOK, TRAMP, R4FIX  # noqa: E402
 from gdi import Gdi  # noqa: E402
 
 ALIGN = 0x10000
@@ -30,7 +30,7 @@ BASE_LBA = 45000
 FLASH_OFFSET = 0x1000
 DATA_OFFSET = 0x40000
 DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 4, 8, 64
-PATCH_CHECK, PATCH_W16, PATCH_W32, PATCH_TRAMP = 1, 2, 4, 8
+PATCH_CHECK, PATCH_W16, PATCH_W32, PATCH_TRAMP, PATCH_R4FIX = 1, 2, 4, 8, 16
 
 
 # ---------------------------------------------------------------- disc: gdi
@@ -245,6 +245,10 @@ def build_patches(disc, groups):
         print(f"  {g['file']:<14} check {check:#010x} = {word(check, 4):#010x}")
         for a, s, v in g["patches"]:
             old = word(a, s)
+            if v == R4FIX:
+                print(f"    {a:#010x} {s}: {old:#0{2 + 2 * s}x} -> texture-path stub")
+                out.append((a, PATCH_R4FIX, 0, old))
+                continue
             if v == TRAMP:
                 print(f"    {a:#010x} {s}: {old:#0{2 + 2 * s}x} -> trampoline")
                 out.append((a, PATCH_TRAMP, 0, old))

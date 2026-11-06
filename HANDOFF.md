@@ -136,6 +136,19 @@ los sondeos 1, 51 y 61. Hipótesis: en la NAOMI 2 esa ruta no llega a la VRAM y 
 (A 0x11600000 LMMODE 0, B 0x13600000, C 0x11600000 LMMODE 1) y dibuja estado / ISTERR / primera palabra leída
 (filas 0-2, 4-6, 8-10) durante ~15 s. En Flycast: TE + fin de ch2, ISTERR 0, datos correctos en las tres.
 CCR: el propio juego lo pone (`0x90d` en `0x8c1f7002`), así que no influye lo que deje el residente.
+
+**Resultado CH2TEST en placa (NAOMI 2, 2026-11-06):** A `0x11600000` LMMODE0=0 → la DMA termina (TE, fin de
+ch2, ISTERR 0) pero **no llega nada a la VRAM** (0/16, palabra 0). B `0x13600000` (LMMODE1=0) → 16/16 correcto.
+C `0x11600000` LMMODE0=1 → 16/16 en la vista de 32 bits. **En la NAOMI 2 la ruta directa de texturas por 0x11 con
+LMMODE0=0 no funciona; su réplica 0x13 sí** (y en Dreamcast es la misma ruta con LMMODE1). Probablemente es también
+lo que colgaba `pvr_txr_load_dma` en Cannonball.
+Arreglo (`TEXPATH`, `PATCH_R4FIX`): literales de destino `0x11000000` → `0x13000000` (YSC `0x8c2151b0`, PD
+`0x8c02a404`, LOADER `0x8c822b4c`) y las 6 llamadas a la función que encola DMA del menú (`0x8c2122a0`, destino en
+r4) pasan por un stub del residente (`r4fix0..3`, head.S) que cambia 0x11xxxxxx por 0x13xxxxxx. En Flycast, tras
+el arreglo, todas las DMA de textura del juego van a 0x13 (las 50 a 0x11 que quedan son de la BIOS de NAOMI) y no
+hay escrituras por store queue a la ruta de texturas. Pendiente: overlays (OutRun, After Burner, Hang-On, Space
+Harrier) — tienen literales 0x11/0x13 propios (`OUTRUN.BIN` 0x4ddb0, `BURNER/PROG.BIN` 0x231a8, 0x24b3c, 0x31458,
+`HANGON.EMU` 0xca984); falta saber dónde se cargan.
 YSGW lleva ahora `flags = 0x0004` (sin UBC): los parches van por trampolines y por la revisión en cada llamada
 al GD-ROM. Pendiente de confirmar en placa. El muestreador (`SAMPLER=1`) queda en entredicho por lo mismo.
 

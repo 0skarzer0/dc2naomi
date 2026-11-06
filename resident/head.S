@@ -228,3 +228,37 @@ _tramp3: mov #3, r4
     nop
     .align 2
 .Ltgo:    .long _tramp_go
+
+/* Texture DMA fix-up (PATCH_R4FIX): a call literal points here instead of
+   at a function taking a channel 2 DMA destination in r4. 0x11xxxxxx (the
+   direct texture path through LMMODE0, which writes nothing on a NAOMI 2)
+   becomes 0x13xxxxxx (the same path through LMMODE1), then on to the
+   function. Only r0 and r1 change (free at a call). */
+    .global _r4fix0, _r4fix1, _r4fix2, _r4fix3, _r4fix_target
+    .align 2
+_r4fix0: bra 1f
+    mov     #0, r0
+_r4fix1: bra 1f
+    mov     #1, r0
+_r4fix2: bra 1f
+    mov     #2, r0
+_r4fix3: mov #3, r0
+1:  shll2   r0
+    mov.l   .Lr4tab, r1
+    mov.l   @(r0,r1), r1
+    mov     r4, r0
+    shlr16  r0
+    shlr8   r0
+    cmp/eq  #0x11, r0
+    bf      2f
+    mov.l   .Lbit25, r0
+    or      r0, r4
+2:  jmp     @r1
+    nop
+    .align 2
+.Lr4tab:  .long _r4fix_target
+.Lbit25:  .long 0x02000000
+    .section .bss
+    .align 2
+_r4fix_target: .space 16
+    .text
