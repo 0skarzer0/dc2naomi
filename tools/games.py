@@ -127,6 +127,10 @@ GAMES = {
                 (0x8C0A8782, 2, mov_imm0(4)),          # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
                 (0x8C02E860, 4, HOOK),                 # maple: address-to-physical call before SB_MDSTAR
                 (0x8C01A0C0, 4, TEXPATH),              # KAMUI2 texture DMA: 0x11000000 | VRAM offset
+                # Shinobi 1.43 G2 library: CPU access to the AICA waits, with interrupts masked, for
+                # SB_FFST (0xa05f688c) bit 5 to clear (newer libraries and KOS test bits 0 and 4).
+                # Hang suspect on the NAOMI 2: tst #32,r0 -> tst #0,r0 (always ready).
+                (0x8C0A9944, 2, 0xC800),
             ]},
         ],
     },

@@ -201,6 +201,17 @@ maple `0x8c02e860` (literal de la función 0x8c02feb6 `and 0x0fffffff` antes de 
 menú y Pac-Man; en esa prueba no hace ninguna DMA de textura propia (sólo al TA, 0x10). Imágenes
 `nmus_dc2naomi` y `nmus_diag` (DIAG+MASKERR). Sirve para separar fallos del cargador de fallos de YSGW.
 
+**Placa (2026-11-06):** `nmus` en negro tras el logo de SEGA. `nmus_diag`: congelado (mismas filas a los 9 y 12 s)
+tras 80 llamadas GD, último sector 0x8566f (STREAM.MLT; antes MANATEE.DRV, el driver de sonido), última llamada
+0x280 (bucle del servidor GD), 51 sondeos maple, 6 parches, primer error ASIC en la llamada 23 (valor ilegible:
+las filas 12-15 salen desplazadas). En Flycast (traza `-DGDTRACE` en resident/Makefile) tras STREAM.MLT hay 35
+llamadas 0x280 y luego lee DATA0.BLT; en la placa hay 47 y todo se para (ni GD ni maple): bucle con interrupciones
+enmascaradas. Sospechoso: la librería G2 de Shinobi 1.43 (0x8c0a8fec lectura/escritura de 4 bytes del AICA, usada
+para ARMRST 0xa0702c00 en 0x8c020f60/0x8c020fdc) enmascara interrupciones y espera en 0x8c0a9878 a que
+SB_FFST (0xa05f688c) bit 5 se ponga a 0; YSGW y KOS miran los bits 0 y 4. Parche 0x8c0a9944 tst #32 → tst #0.
+Imágenes `nmus2` y `nmus2_diag`. DIAG con MASKERR ahora: fila 7 = SB_FFST, fila 10 = ISTERR del primer error,
+fila 11 = último ISTERR (las filas 0-11 se leen bien en el monitor).
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):
