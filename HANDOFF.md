@@ -212,6 +212,14 @@ SB_FFST (0xa05f688c) bit 5 se ponga a 0; YSGW y KOS miran los bits 0 y 4. Parche
 Imágenes `nmus2` y `nmus2_diag`. DIAG con MASKERR ahora: fila 7 = SB_FFST, fila 10 = ISTERR del primer error,
 fila 11 = último ISTERR (las filas 0-11 se leen bien en el monitor).
 
+**Crazy Taxi DC frente a NAOMI (2026-11-06)** (detalle en naomi-wheel-games `docs/crazy-taxi-dreamcast-vs-naomi.md`):
+la versión NAOMI de SEGA usa el mismo Kamui con `LMMODE0 = 0` y DMA ch2 a `0x11000000` → esa ruta funciona en NAOMI,
+así que el CH2TEST tenía un fallo de diseño (el caso A fue el primero, sin reinicio del TA; B y C después de uno).
+`CH2TEST` ahora: filas 0-2 = A sin reinicio previo, 4-6 = A tras reinicio del TA, 8-10 = B (0x13). Imagen
+`nmus_ch2`. Si A2 funciona, TEXPATH/R4FIX sobran y el problema era el estado del TA. La tabla de inicialización de
+Holly (`0xa05f6800-0xa05f7c80`) es idéntica en las dos versiones. La NAOMI no lleva Shinobi/syG2; CT1 y CT2 de DC
+esperan los bits 0 y 4 de SB_FFST, Namco Museum (Shinobi 1.43) el bit 5.
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):

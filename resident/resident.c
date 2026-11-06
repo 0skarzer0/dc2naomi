@@ -1081,9 +1081,11 @@ static void ch2_test(void) {
     /* 64-bit texture path (LMMODE 0) lands in the 64-bit view (0xa4000000) of VRAM, 32-bit path in 0xa5000000 */
     ch2_one(0x11600000u, 0, 0xa4600000u, r);
     dbg_row(sof, line, 0, r[0], 32); dbg_row(sof, line, 1, r[1], 32); dbg_row(sof, line, 2, r[2], 32);
-    ch2_one(0x13600000u, 0, 0xa4600000u, r);
+    /* second run of A: ch2_one ends with a TA soft reset, so A1 = TA as the BIOS/loader left it, A2 = TA reset
+       (Crazy Taxi for NAOMI uses 0x11000000 with LMMODE0 = 0, so A should work) */
+    ch2_one(0x11600000u, 0, 0xa4600000u, r);
     dbg_row(sof, line, 4, r[0], 32); dbg_row(sof, line, 5, r[1], 32); dbg_row(sof, line, 6, r[2], 32);
-    ch2_one(0x11600000u, 1, 0xa5600000u, r);
+    ch2_one(0x13600000u, 0, 0xa4600000u, r);
     dbg_row(sof, line, 8, r[0], 32); dbg_row(sof, line, 9, r[1], 32); dbg_row(sof, line, 10, r[2], 32);
     for (u32 n = 0; n < 15; n++) {           /* ~15 s: a countdown row, one tick a second */
         dbg_row(sof, line, 12, 15 - n, 8);
