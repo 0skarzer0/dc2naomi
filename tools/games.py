@@ -165,6 +165,7 @@ GAMES = {
     # Boot patches only (controls not adapted). SB_FFST waits test bits 0 and 4.
     "ikaruga": {
         "title": "IKARUGA",
+        "pads": "joy",        # standard NAOMI cabinet: 2 sticks, 6 buttons per player, 2 STARTs
         "region": 0,          # Japan
         "language": 0,        # Japanese
         "layout": "gdi",

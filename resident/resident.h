@@ -36,6 +36,8 @@
 #define DIMM_PAD_CT     0             /* Crazy Taxi 2: START = Y (hop), held 1 s = START; lever = B/A; wheel lock = d-pad */
 #define DIMM_PAD_MENU   1             /* Yu Suzuki GW: START plain (sent on release); START + lever = up/down; lever = B/A;
                                          wheel lock = left/right */
+#define DIMM_PAD_JOY    2             /* standard NAOMI cabinet, 2 players (Ikaruga): stick = d-pad, START = START,
+                                         buttons 1-6 = A B X Y L R; player 2 on maple port B */
 
 /* flags */
 #define DIMM_SAMPLER    0x0001u       /* diagnostics: sample the PC every 2^20 instructions */

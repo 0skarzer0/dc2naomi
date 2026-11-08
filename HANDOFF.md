@@ -264,6 +264,12 @@ PCTRA, el parche de SB_FFST bit 5 (`0x8c0a9944`) deja de ser parte de `nmus` y p
 Las dos llevan mandos `menu` (como YSGW). Imágenes `nmus3` (sin el parche) y `nmus3_ffst` (con él): probar primero
 `nmus3`.
 
+**Ikaruga para mueble NAOMI estándar (2026-11-09):** mandos `joy` (`pad_map` 2): palanca = cruceta, START = START,
+botones 1-6 = A B X Y L R (L/R a fondo); el jugador 2 (JVS P2, `jvs.p2` = bytes 30-31 de la respuesta del MIE) en
+el puerto maple B, que ahora también contesta (sólo con este reparto). Imágenes `ikaruga_joy` (perfil `ikaruga`,
+sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
+escritura de PCTRA aún puesta, así que probar primero la normal.
+
 ## Ikaruga y Virtua Tennis: la DMA G2 del AICA (2026-11-07 / 08)
 
 ### Ikaruga (Japón) — perfil `ikaruga`

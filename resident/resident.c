@@ -645,6 +645,7 @@ static s32 misc_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
 /* Inputs from the last JVS fetch. */
 static struct {
     u16 p1;        /* JVS player 1 switches (START 0x8000, UP 0x2000, DOWN 0x1000...) */
+    u16 p2;        /* JVS player 2 switches (same bits) */
     u16 analog[3]; /* wheel, accelerator, brake */
     u8 test;
     int valid;
@@ -715,10 +716,25 @@ static u32 wheel(u32 v) {
 
 static u32 start_frames, start_used, start_pulse;
 
-static void pad_state(u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
+static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
     u32 b = 0;
     u32 x = 128, acc = 0, brk = 0;
-    if (jvs.valid) {
+    if (jvs.valid && H.pad_map == DIMM_PAD_JOY) {
+        /* Standard NAOMI cabinet (Ikaruga, 2026-11-09): JVS stick and START as they are, buttons 1-6 = A B X Y L R
+           (L/R fully pressed), player 1 on port A and player 2 on port B. */
+        u32 p = port ? jvs.p2 : jvs.p1;
+        if (p & 0x8000) b |= DC_START;
+        if (p & 0x2000) b |= DC_UP;
+        if (p & 0x1000) b |= DC_DOWN;
+        if (p & 0x0800) b |= DC_LEFT;
+        if (p & 0x0400) b |= DC_RIGHT;
+        if (p & 0x0200) b |= DC_A;
+        if (p & 0x0100) b |= DC_B;
+        if (p & 0x0080) b |= DC_X;
+        if (p & 0x0040) b |= DC_Y;
+        if (p & 0x0020) brk = 255;
+        if (p & 0x0010) acc = 255;
+    } else if (jvs.valid) {
         x = wheel(jvs.analog[0]);
         acc = scale(1, jvs.analog[1], 255);
         brk = scale(2, jvs.analog[2], 255);
@@ -828,6 +844,7 @@ static void mie_parse(void) {
     if (d[0] == MIE_EMPTY || words < 8) return; /* not ready: fetch again */
     if (words * 4 >= 54 && d[0] == MIE_RESP && (d[18] & 0x80) && d[26] == 1) {
         jvs.p1 = (u16)read_be16(d + 28);
+        jvs.p2 = (u16)read_be16(d + 30);
         for (int i = 0; i < 3; i++) jvs.analog[i] = (u16)read_be16(d + 38 + i * 2);
         jvs.test = (d[6] & 0x10) == 0;
         jvs.valid = 1;
@@ -878,7 +895,7 @@ u32 maple_hook(u32 list) {
         u32 port = (dst >> 6) & 3;
         u32 out[32];
         u32 olen = 0;
-        int answer = port == 0 && (dst & 0x20) && (w0 >> 8 & 7) == 0;
+        int answer = (port == 0 || (port == 1 && H.pad_map == DIMM_PAD_JOY)) && (dst & 0x20) && (w0 >> 8 & 7) == 0;
         if (answer) {
             u32 rcmd = 7; /* ACK */
             if (cmd == 1 || cmd == 2) { /* DEVINFO / ALLINFO */
@@ -891,7 +908,7 @@ u32 maple_hook(u32 list) {
                 rcmd = 8;
                 olen = 3;
                 out[1] = 0x01000000u;
-                pad_state((u16 *)b, b + 2, b + 3, b + 4, b + 5);
+                pad_state(port, (u16 *)b, b + 2, b + 3, b + 4, b + 5);
                 b[6] = b[7] = 128;
             }
             out[0] = rcmd | (port << 6) << 8 | (0x20u | (port << 6)) << 16 | olen << 24;
