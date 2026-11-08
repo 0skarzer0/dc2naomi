@@ -119,6 +119,7 @@ GAMES = {
     # Shinobi 1.43 + KAMUI2 (1999), no G1 timing writes of its own. Has Pole Position.
     "nmus": {
         "title": "NAMCO MUSEUM",
+        "pads": "menu",       # plain START (on release), START + lever = up/down, wheel lock = left/right
         "region": 1,          # USA
         "language": 1,        # English
         "layout": "gdi",
@@ -134,10 +135,8 @@ GAMES = {
                 (0x8C0A8782, 2, mov_imm0(4)),          # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
                 (0x8C02E860, 4, HOOK),                 # maple: address-to-physical call before SB_MDSTAR
                 (0x8C01A0C0, 4, TEXPATH),              # KAMUI2 texture DMA: 0x11000000 | VRAM offset
-                # Shinobi 1.43 G2 library: CPU access to the AICA waits, with interrupts masked, for
-                # SB_FFST (0xa05f688c) bit 5 to clear (newer libraries and KOS test bits 0 and 4).
-                # Hang suspect on the NAOMI 2: tst #32,r0 -> tst #0,r0 (always ready).
-                (0x8C0A9944, 2, 0xC800),
+                # (2026-11-09) The SB_FFST bit 5 patch (0x8C0A9944 tst #32 -> tst #0) is now only in
+                # "nmus_ffst": the real hang was most likely the resident's PCTRA write (removed).
             ]},
         ],
     },
@@ -397,4 +396,11 @@ GAMES["ds_dbg"] = dict(GAMES["ds"], groups=[
     {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
         (0x8C25D504, 4, 0x8DC00000),           # arch_stack_32m (DEBUG core): top of RAM below the resident
     ]},
+])
+
+# Namco Museum with the old SB_FFST bit 5 patch (Shinobi 1.43 G2 library waits, interrupts masked, for bit 5 to
+# clear; newer libraries and KOS test bits 0 and 4): tst #32,r0 -> tst #0,r0.
+GAMES["nmus_ffst"] = dict(GAMES["nmus"], groups=[
+    GAMES["nmus"]["groups"][0],
+    dict(GAMES["nmus"]["groups"][1], patches=GAMES["nmus"]["groups"][1]["patches"] + [(0x8C0A9944, 2, 0xC800)]),
 ])

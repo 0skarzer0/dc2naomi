@@ -259,6 +259,11 @@ principal rom 0x0-0x100000 → 0x8c020000) lleva la misma Shinobi (cvFs/gdCi 1.0
 FOR AM" 2.22, y su espera de SB_FFST mira los bits 0 y 4 igual que la de Dreamcast: más indicios de que el bit 5
 de Namco Museum es el problema. También usa DMA de texturas a 0x11000000.
 
+**Namco Museum con el residente sin PCTRA (2026-11-09):** como YSGW ya funciona sólo con quitar la escritura de
+PCTRA, el parche de SB_FFST bit 5 (`0x8c0a9944`) deja de ser parte de `nmus` y pasa a un perfil aparte, `nmus_ffst`.
+Las dos llevan mandos `menu` (como YSGW). Imágenes `nmus3` (sin el parche) y `nmus3_ffst` (con él): probar primero
+`nmus3`.
+
 ## Ikaruga y Virtua Tennis: la DMA G2 del AICA (2026-11-07 / 08)
 
 ### Ikaruga (Japón) — perfil `ikaruga`
