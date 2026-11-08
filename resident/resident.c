@@ -12,6 +12,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int32_t s32;
 
+#define REG8(a) (*(volatile u8 *)(a))
 #define REG16(a) (*(volatile u16 *)(a))
 #define REG32(a) (*(volatile u32 *)(a))
 #define P2(a) ((void *)(((u32)(a) & 0x1fffffffu) | 0xa0000000u))
@@ -137,6 +138,14 @@ static void cart_read(void *dst, u32 src, u32 len) {
     u8 *o = dst;
     while (len) {
         u32 n = len > 4096 ? 4096 : len;
+        /* The game starts its G2 DMAs (sound banks to the AICA) and goes on reading the disc while
+           they run: in Flycast the first read after the ST01 bank comes during a batch of 11 of them,
+           which is exactly where the real board freezes. PIO on the G1 bus during a G2 DMA may lock
+           the bus there (the NAOMI library reads by G1 DMA instead): wait for the four G2 DMA
+           channels (SB_ADST, SB_E1ST, SB_E2ST, SB_DDST) to be idle first. */
+        if (H.flags & DIMM_G2IDLE)
+            for (u32 t = 0; t < 20000000u && ((REG32(0xa05f7818) | REG32(0xa05f7838) | REG32(0xa05f7858)
+                                               | REG32(0xa05f7878)) & 1); t++) {}
         u32 sr = irq_off();
         REG16(CART_OFFSETL) = (u16)src;
         REG16(CART_OFFSETH) = (u16)(0x8000 | ((src >> 16) & 0x1fff));
@@ -157,6 +166,43 @@ static void cart_read(void *dst, u32 src, u32 len) {
     }
 }
 
+/* The same read the way the NAOMI library does it (Ikaruga NAOMI, 0x8c071624): the G1 bus
+   DMA. 32-byte aligned source, destination and length. 0 = done, -1 = timed out (the caller
+   falls back to PIO). */
+#define G1_GDSTAR  0xa05f7404u
+#define G1_GDLEN   0xa05f7408u
+#define G1_GDDIR   0xa05f740cu
+#define G1_GDEN    0xa05f7414u
+#define G1_GDST    0xa05f7418u
+#define G1_GDAPRO  0xa05f74b8u
+#define CART_DMAH  0xa05f700cu
+#define CART_DMAL  0xa05f7010u
+#define CART_DMAN  0xa05f7014u
+static int cart_dma(u32 dst_phys, u32 src, u32 len) {
+    u32 sr = irq_off();
+    int ok = 0;
+    REG32(G1_GDAPRO) = 0x8843007fu;           /* the DMA range the NAOMI library sets */
+    for (u32 t = 0; REG32(G1_GDST) && t < 2000000u; t++) {}
+    if (!REG32(G1_GDST)) {
+        REG32(CART_OFFSETL) = 0;
+        REG32(CART_OFFSETH) = 0;
+        REG32(CART_DMAN) = len >> 5;
+        REG32(CART_DMAL) = src & 0xffffu;
+        REG32(CART_DMAH) = (src >> 16) | 0xa000u;
+        REG32(G1_GDSTAR) = dst_phys;
+        REG32(G1_GDLEN) = len;
+        REG32(G1_GDDIR) = 1;
+        REG32(G1_GDEN) = 1;
+        REG32(G1_GDST) = 1;
+        u32 t = 0;
+        while (REG32(G1_GDST) && t < 4000000u) t++;
+        ok = REG32(G1_GDST) == 0;
+        REG32(CART_DMAH) = 0xc000u;
+    }
+    irq_restore(sr);
+    return ok ? 0 : -1;
+}
+
 /* The NetDIMM address of sector fad, or 0 if no range holds it. */
 static u32 sector_addr(u32 fad) {
     for (u32 i = 0; i < H.nranges && i < DIMM_RANGES; i++) {
@@ -175,9 +221,11 @@ static void read_sectors(u32 addr, u32 fad, u32 count, int dma) {
         u32 src = sector_addr(fad);
         if (dma) cache_purge((addr & 0x1fffffffu) | 0x80000000u, 2048);
         dbg_val[3] = fad;
-        if (src)
-            cart_read(dst, src, 2048);
-        else
+        if (src) {
+            if (!((H.flags & DIMM_DMA) && dma && !(PHYS(addr) & 31) && !(src & 31)
+                  && cart_dma(PHYS(addr), src, 2048) == 0))
+                cart_read(dst, src, 2048);
+        } else
             mset(dst, 0, 2048);
         addr += 2048;
         fad++;
@@ -900,6 +948,106 @@ static void diag_draw(void) {
     dbg_row(sof, line, 15, REG32(0xa05f6904), 16);  /* ISTEXT */
 }
 
+/* G2 FIFO watch: a Shinobi "is the G2 FIFO empty" check (SB_FFST bit 0 or 4; called in a loop,
+   often with interrupts masked, with r4 = the loop's frame: [0] result, [1] the loop caller's PR)
+   that gives up after ~3M tries, counts that and draws rows 16-19 (white = 1, MSB first):
+   16 give-ups on bit 0, 17 on bit 4, 18 SB_FFST then (32), 19 the PR of the waiting function (32). */
+static u32 g2_stuck[2], g2_spin[2], g2_ffst, g2_pr;
+static void g2_draw(void) {
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+    u32 size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    REG32(0xa05f8044) |= 1;            /* frame buffer read on */
+    REG32(0xa05f80e8) &= ~0x8u;        /* video not blanked */
+    dbg_row(sof, line, 16, g2_stuck[0], 16);
+    dbg_row(sof, line, 17, g2_stuck[1], 16);
+    dbg_row(sof, line, 18, g2_ffst, 32);
+    dbg_row(sof, line, 19, g2_pr, 32);
+}
+static u32 g2chk(u32 *frame, u32 bit, int i) {
+    u32 v = REG32(0xa05f688c);
+    if (!(v & bit)) {
+        g2_spin[i] = 0;
+        frame[0] = 1;
+        return 0;
+    }
+    if (++g2_spin[i] >= 3000000u) {
+        g2_spin[i] = 0;
+        g2_stuck[i]++;
+        g2_ffst = v;
+        g2_pr = frame[1];
+        g2_draw();
+        frame[0] = 1;                  /* give up: go on as if the FIFO were empty */
+        return 0;
+    }
+    frame[0] = 0;
+    return 0;
+}
+u32 g2chk0(u32 *frame) { return g2chk(frame, 0x01, 0); }
+u32 g2chk4(u32 *frame) { return g2chk(frame, 0x10, 1); }
+
+/* Stand-in for a Shinobi-style G2 DMA start (Ikaruga 0x8c04522c, r4 = descriptor, r5 = flag),
+   for boards where the AICA G2 DMA never ends (ADST stays 1). The CPU copies the data (the source
+   is read through the cache: the game skips its own cache purge here) and the game's end-of-DMA
+   handler (0x8c044cbc: clears the channel, counts, calls the descriptor's callback) runs later
+   from TMU2, as the real interrupt would. Not at once: the caller (0x8c04f8de) books the transfer
+   in its queue after the start returns, and the callback undoes that booking.
+   Descriptor: [0] channel, [1] G2 address, [2] SH4 address, [3] length (bit 31 = end),
+   [4] direction, [7] callback, [8] its argument, [11] busy. */
+static u32 g2cpu_n, g2cpu_len, g2cpu_dst, g2cpu_done;
+static u32 *g2cpu_q[8];
+static u32 g2cpu_qh, g2cpu_qt;
+static void tmr_arm(void);
+u32 g2cpu(u32 *desc, u32 flag) {
+    (void)flag;
+    u32 sr;
+    __asm__ volatile("stc sr,%0" : "=r"(sr));
+    __asm__ volatile("ldc %0,sr" : : "r"(sr | 0xf0));
+    u32 ctx = REG32(0x8c0cf2f0);
+    u32 chan = desc[0] & 3;
+    u32 len = desc[3] & 0x7fffffe0u;
+    volatile u32 *g2 = (volatile u32 *)(0xa0000000u | (desc[1] & 0x1fffffffu));
+    volatile u32 *sh = (volatile u32 *)(0x80000000u | (desc[2] & 0x1fffffffu));
+    for (u32 i = 0; i < len / 4; i++) {
+        if ((i & 7) == 0) {
+            u32 t = 0;
+            while ((REG32(0xa05f688c) & 0x11) && ++t < 100000u) {}
+        }
+        if (desc[4] & 1) sh[i] = g2[i];
+        else g2[i] = sh[i];
+    }
+    desc[11] = 1;                                  /* busy, as the real start leaves it */
+    REG32(ctx + 0xdc + chan * 4) += 1;             /* started */
+    g2cpu_q[g2cpu_qt & 7] = desc;
+    g2cpu_qt++;
+    g2cpu_n++;
+    g2cpu_len = desc[3];
+    g2cpu_dst = desc[1];
+    tmr_arm();
+    __asm__ volatile("ldc %0,sr" : : "r"(sr));
+    return 0;
+}
+/* from tmu2_isr: finish one queued transfer per tick */
+static u32 g2cpu_ticks;
+static void g2cpu_tick(void) {
+    if ((H.flags & DIMM_DIAG) && !(++g2cpu_ticks & 31)) {
+        /* rows 20-22: transfers started | finished << 16, last length, last G2 address */
+        u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+        u32 size = REG32(0xa05f805c);
+        u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+        if (line < 640 || line > 4096) line = 1280;
+        dbg_row(sof, line, 20, g2cpu_n | g2cpu_done << 16, 32);
+        dbg_row(sof, line, 21, g2cpu_len, 32);
+        dbg_row(sof, line, 22, g2cpu_dst, 32);
+    }
+    if (g2cpu_qh == g2cpu_qt) return;
+    u32 *desc = g2cpu_q[g2cpu_qh & 7];
+    g2cpu_qh++;
+    g2cpu_done++;
+    ((void (*)(u32 *))0x8c044cbcu)(desc);          /* the game's end-of-DMA handler */
+}
+
 static void apply_patches(void) {
     static void (*const tramp[TRAMPS])(void) = {tramp0, tramp1, tramp2, tramp3};
     static void (*const r4fix[4])(void) = {r4fix0, r4fix1, r4fix2, r4fix3};
@@ -918,7 +1066,10 @@ static void apply_patches(void) {
             if (fx == nfix && nfix < 4) r4fix_target[nfix++] = p->expect;
         }
         if (skip) continue;
-        u32 v = p->value == PATCH_HOOK ? (u32)maple_hook : p->value;
+        u32 v = p->value == PATCH_HOOK ? (u32)maple_hook
+              : p->value == PATCH_G2CHK0 ? (u32)g2chk0
+              : p->value == PATCH_G2CHK4 ? (u32)g2chk4
+              : p->value == PATCH_G2CPU ? (u32)g2cpu : p->value;
         if (kind == PATCH_R4FIX) {
             if (fx >= nfix) continue;
             volatile u32 *a = (volatile u32 *)p->addr;
@@ -962,7 +1113,108 @@ static void apply_patches(void) {
 /* The second way in: every GD-ROM syscall checks the list too (a program
    always loads its files right after it starts). For emulators without the
    user break controller (Flycast), and in case the break is missed. */
+/* PC sampler without the UBC (DIMM_PCSAMPLE): TMU2 at priority 15, ~250 Hz, through the game's own
+   interrupt dispatcher. The Katana IP.BIN puts VBR at 0x8c00f400; its VBR+0x600 code hands every
+   interrupt to Shinobi's dispatcher (0x8c043d64 in Ikaruga), which saves everything, masks the
+   interrupts (IMASK 15, BL 0) and calls the handler in the slot VBR + 0x200 + (INTEVT - 0x200) / 8:
+   TMU2 (INTEVT 0x440) -> VBR + 0x248. SPC and SSR still hold the interrupted PC and SR there.
+   Rows (white = 1, MSB first): 16 samples, 17-24 the last 8 PCs (newest first), 25 SSR of the
+   newest one. Only interrupted code with IMASK < 15 is seen. */
+static u32 pcs_ring[8], pcs_n, pcs_ssr, dmac_fix, br_wait, br_calls, br_last;
+void tmu2_isr(void) {
+    REG16(0xffd80028) &= (u16)~0x0100u;           /* TCR2.UNF */
+    g2cpu_tick();
+    if (!(H.flags & DIMM_PCSAMPLE)) return;
+    u32 spc, ssr;
+    __asm__ volatile("stc spc,%0" : "=r"(spc));
+    __asm__ volatile("stc ssr,%0" : "=r"(ssr));
+    pcs_ring[pcs_n & 7] = spc;
+    pcs_ssr = ssr;
+    pcs_n++;
+    /* Interrupt bridge: a normal ASIC event (ISTNRM) unmasked at level 6/4/2 (IRL 9/11/13, INTEVT
+       0x320/0x360/0x3a0) that stays pending while the interrupted code runs with a lower IMASK was
+       not delivered (seen on the board: "AICA DMA end" pending and unmasked at level 4, the game
+       waiting for it). After ~4 samples, call the game's handler for that level ourselves, the way
+       the Katana dispatcher would: slot VBR + 0x200 + (INTEVT - 0x200) / 8, with the INTEVT in the
+       variable whose address is the literal at VBR + 0x64c (IP.BIN's VBR+0x600 code). */
+    {
+        u32 ist = REG32(0xa05f6900) & 0x3fffffffu, intevt = 0, prio = 0;
+        if (ist & REG32(0xa05f6930)) { intevt = 0x320; prio = 6; }
+        else if (ist & REG32(0xa05f6920)) { intevt = 0x360; prio = 4; }
+        else if (ist & REG32(0xa05f6910)) { intevt = 0x3a0; prio = 2; }
+        if (intevt && ((ssr >> 4) & 15) < prio) {
+            if (++br_wait >= 4) {
+                br_wait = 0;
+                u32 vbr;
+                __asm__ volatile("stc vbr,%0" : "=r"(vbr));
+                u32 h = REG32(vbr + 0x200 + ((intevt - 0x200) >> 3));
+                u32 *ivar = (u32 *)REG32(vbr + 0x64c);
+                if (h && ((u32)ivar >> 24) == 0x8c) {
+                    u32 old = *ivar;
+                    *ivar = intevt;
+                    ((void (*)(void))h)();
+                    *ivar = old;
+                    br_calls++;
+                    br_last = intevt;
+                }
+            }
+        } else {
+            br_wait = 0;
+        }
+    }
+    if (pcs_n & 15) return;
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+    u32 size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    dbg_row(sof, line, 16, pcs_n, 16);
+    for (u32 i = 0; i < 8; i++) dbg_row(sof, line, 17 + i, pcs_ring[(pcs_n - 1 - i) & 7], 32);
+    dbg_row(sof, line, 25, pcs_ssr, 32);
+    /* SH4 DMAC: Holly's DMAs from system RAM (G2, PVR channel 2) go through it (DDT). An address error
+       or an NMI sets DMAOR.AE / DMAOR.NMIF and stops every transfer until software clears them; a
+       Dreamcast game never expects an NMI. Clear them (count in the top half) and show DMAOR. */
+    u32 dmaor = REG32(0xffa00040);
+    if (dmaor & 6) {
+        dmac_fix++;
+        REG32(0xffa00040) = (dmaor & ~6u) | 0x8201u;
+    }
+    dbg_row(sof, line, 31, (dmaor & 0xffff) | dmac_fix << 16, 32);
+    /* the AICA G2 DMA channel: 26 = ADST | ADEN << 8 | ADSUSP << 16 | ADTSEL << 24, and bit 28/29/30
+       = "AICA DMA end" (bit 15) unmasked at level 2/4/6, bit 31 = that event pending in ISTNRM;
+       27 ADSTAR, 28 ADSTAG, 29 ADLEN, 30 ISTNRM */
+    u32 b15 = ((REG32(0xa05f6910) >> 15) & 1) << 28 | ((REG32(0xa05f6920) >> 15) & 1) << 29
+            | ((REG32(0xa05f6930) >> 15) & 1) << 30 | ((REG32(0xa05f6900) >> 15) & 1) << 31;
+    dbg_row(sof, line, 26, (REG32(0xa05f7818) & 0xff) | (REG32(0xa05f7814) & 0xff) << 8
+            | (REG32(0xa05f781c) & 0xff) << 16 | (REG32(0xa05f7810) & 0xf) << 24 | b15, 32);
+    /* 27 = ICR | IPRA << 16, 28 = ISTNRM, 29 = IML4NRM, 30 = bridged interrupts | last INTEVT << 16 */
+    dbg_row(sof, line, 27, REG16(0xffd00000) | (u32)REG16(0xffd00004) << 16, 32);
+    dbg_row(sof, line, 28, REG32(0xa05f6900), 32);
+    dbg_row(sof, line, 29, REG32(0xa05f6920), 32);
+    dbg_row(sof, line, 30, br_calls | br_last << 16, 32);
+}
+static void pcs_arm(void) {
+    if (!(H.flags & DIMM_PCSAMPLE)) return;
+    tmr_arm();
+}
+/* TMU2 interrupt through the game's dispatcher (sampler and g2cpu completions) */
+static void tmr_arm(void) {
+    u32 vbr;
+    __asm__ volatile("stc vbr,%0" : "=r"(vbr));
+    if (vbr != 0x8c00f400u) return;                /* the Katana dispatcher is not there yet */
+    REG32(vbr + 0x248) = (u32)tmu2_isr;
+    REG16(0xffd00004) = (u16)((REG16(0xffd00004) & ~0x00f0u) | 0x00f0u); /* IPRA: TMU2 priority 15 */
+    if (!(REG8(0xffd80004) & 4)) {                 /* TSTR: TMU2 not running */
+        REG16(0xffd80028) = 0x0024;                /* TCR2: UNIE, Pphi/1024 */
+        REG32(0xffd80020) = 195;                   /* TCOR2: ~250 Hz */
+        REG32(0xffd80024) = 195;                   /* TCNT2 */
+        REG8(0xffd80004) |= 4;
+    } else if (!(REG16(0xffd80028) & 0x0020)) {
+        REG16(0xffd80028) |= 0x0020;               /* the game may have rewritten TCR2 */
+    }
+}
+
 static void patch_poll(void) {
+    pcs_arm();
     if (H.flags & DIMM_NO_HOOK) return;
     u32 before = patches_done;
     apply_patches();
@@ -1096,9 +1348,64 @@ static void ch2_test(void) {
     }
 }
 
+/* NetDIMM read test (DIMM_READTEST), before the game: every sector of the image is read twice
+   through the same PIO path the game uses, and compared. A hang freezes the progress row where
+   the bus stalls. Rows (white = 1, MSB first): 0 sector number (every 16), 1 reads that differ,
+   2 sectors all 0xff or all 0, 3 pass number, 4 / 5 checksum of pass 1 / pass 2 (32 bits). */
+static u8 rt_a[2048] __attribute__((aligned(32)));
+static u8 rt_b[2048] __attribute__((aligned(32)));
+static void read_test(void) {
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+    u32 size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    for (u32 i = 0; i < 640 * 480 * 2 / 4; i++) REG32(0xa5000000u + sof + i * 4) = 0;
+    u32 bad = 0, flat = 0, sum[2] = {0, 0}, n = 0;
+    for (u32 pass = 0; pass < 2; pass++) {
+        u32 acc = 0;
+        n = 0;
+        for (u32 i = 0; i < H.nranges && i < DIMM_RANGES; i++) {
+            const struct dimm_range *r = &H.ranges[i];
+            for (u32 s = 0; s < r->count; s++, n++) {
+                u32 src = H.archive_base + r->offset + s * 2048;
+                cart_read(rt_a, src, 2048);
+                cart_read(rt_b, src, 2048);
+                u32 same = 1, ff = 1, z = 1;
+                for (u32 k = 0; k < 2048; k += 4) {
+                    u32 a = *(u32 *)(rt_a + k);
+                    if (a != *(u32 *)(rt_b + k)) same = 0;
+                    if (a != 0xffffffffu) ff = 0;
+                    if (a) z = 0;
+                    acc = (acc << 1 | acc >> 31) ^ a;
+                }
+                if (!same) bad++;
+                if (ff || z) flat++;
+                if (!(n & 15)) {
+                    dbg_row(sof, line, 0, n, 16);
+                    dbg_row(sof, line, 1, bad, 16);
+                    dbg_row(sof, line, 2, flat, 16);
+                }
+            }
+        }
+        sum[pass] = acc;
+        dbg_row(sof, line, 0, n, 16);
+        dbg_row(sof, line, 1, bad, 16);
+        dbg_row(sof, line, 2, flat, 16);
+        dbg_row(sof, line, 3, pass + 1, 16);
+        dbg_row(sof, line, 4 + pass, acc, 32);
+    }
+    for (u32 t = 0; t < 15; t++) {           /* ~15 s on the screen, then the game starts */
+        for (u32 f = 0; f < 60; f++) {
+            while (!(REG32(0xa05f810c) & 0x2000)) {}
+            while (REG32(0xa05f810c) & 0x2000) {}
+        }
+    }
+}
+
 void boot(const struct dimm_header *h) {
     mcpy(&H, h, sizeof H);
     vga_save();                 /* the loader's 31 kHz timings (DIMM_DIAG) */
+    if (H.flags & DIMM_READTEST) read_test();
     if (H.flags & DIMM_CH2TEST) ch2_test();
     gd_reset_state();
     log_pos = 0;

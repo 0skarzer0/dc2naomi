@@ -19,6 +19,9 @@ How to find the three things a Katana game needs patched (see HANDOFF.md):
 """
 
 HOOK = 0xFFFFFFFF
+G2CHK0 = 0xFFFFFFFE  # resident G2 FIFO check with a timeout (SB_FFST bit 0)
+G2CPU = 0xFFFFFFFC   # resident g2cpu: G2 DMA start done by the CPU
+G2CHK4 = 0xFFFFFFFD  # the same for bit 4
 TRAMP = "tramp"  # value for a jump literal: through the resident (patches the next program first)
 # The channel 2 DMA to the direct texture path at 0x11000000 (LMMODE0 = 0) writes nothing to VRAM on a
 # NAOMI 2 (measured on the board, CH2TEST); its mirror at 0x13000000 (LMMODE1 = 0) works, and is the
@@ -172,7 +175,70 @@ GAMES = {
             ]},
             {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
                 (0x8C04D0E4, 2, mov_imm0(0)),          # cable: mov.w @r3,r0 (PDTRA) -> mov #0,r0
+                # The game first asks the cable type the Dreamcast BIOS leaves in the AICA register
+                # 0xa0702c00 (bits 9:8; function 0x8c04d03c: shlr8; and #3,r0). A NAOMI never wrote it,
+                # and a 3 there sends the game on to a "composite" (15 kHz) mode, which a VGA monitor
+                # cannot show. and #3,r0 -> mov #0,r0: always VGA.
+                (0x8C04D05C, 2, mov_imm0(0)),
+                # maple: literal of the "address to physical" call (0x8c04ae50, and 0x0fffffff) right
+                # before the start of the maple DMA (r8 = SB_MDSTAR, then 1 -> SB_MDST) -> resident hook,
+                # so the game talks to the resident's controller (JVS inputs) instead of the MIE.
+                (0x8C048758, 4, HOOK),
             ]},
         ],
     },
+}
+
+# Ikaruga with the G2 FIFO watch (diagnostics): the two Shinobi "G2 FIFO empty?" checks
+# (0x8c044c28: SB_FFST bit 0, 0x8c045308: bit 4; each `mov.l @(12,pc),r2; mov.l @r2,r0; tst #n,r0;
+# movt r3; rts; mov.l r3,@r4`) become `mov.l @(4,pc),r0; jmp @r0; nop; nop; .long resident`, so a
+# wait that never ends gives up after ~1 s and draws rows 16-19 (see resident.c, g2chk).
+import copy as _copy
+GAMES["ikaruga_g2"] = _copy.deepcopy(GAMES["ikaruga"])
+GAMES["ikaruga_g2"]["groups"][1]["patches"] += [
+    (0x8C044C28, 2, 0xD001), (0x8C044C2A, 2, 0x402B), (0x8C044C2C, 2, 0x0009), (0x8C044C2E, 2, 0x0009),
+    (0x8C044C30, 4, G2CHK0),
+    (0x8C045308, 2, 0xD001), (0x8C04530A, 2, 0x402B), (0x8C04530C, 2, 0x0009), (0x8C04530E, 2, 0x0009),
+    (0x8C045310, 4, G2CHK4),
+]
+
+# Ikaruga without the sound uploads (test): the G2 DMA start function of the sound library
+# (0x8c04522c, the only caller 0x8c04f8de) returns 0 at once: no sound bank ever goes to the AICA.
+# Hangs in Flycast too (no end callback: the .MLT loader waits for it forever). Superseded by g2cpu.
+GAMES["ikaruga_nosnd"] = _copy.deepcopy(GAMES["ikaruga"])
+GAMES["ikaruga_nosnd"]["groups"][1]["patches"] += [
+    (0x8C04522C, 2, 0x000B),   # mov.l r14,@-r15 -> rts
+    (0x8C04522E, 2, 0xE000),   # mov.l r13,@-r15 -> mov #0,r0
+]
+
+# Ikaruga with the sound library's G2 DMA start (0x8c04522c) sent to the resident g2cpu: the data
+# goes to the AICA by CPU and the game's end-of-DMA handler (0x8c044cbc) runs a few ms later from
+# TMU2, as the interrupt would (on the board the AICA G2 DMA never ends: ADST stays 1). Reaches the
+# title in Flycast with no real G2 DMA at all. Build with tools/drvpatch.py (AICA 8 MB mode) on top.
+GAMES["ikaruga_g2cpu"] = _copy.deepcopy(GAMES["ikaruga"])
+GAMES["ikaruga_g2cpu"]["groups"][1]["patches"] += [
+    (0x8C04522C, 2, 0xD001), (0x8C04522E, 2, 0x402B), (0x8C045230, 2, 0x0009), (0x8C045232, 2, 0x0009),
+    (0x8C045234, 4, G2CPU),
+]
+
+# Virtua Tennis (USA; Hitmaker). One program: 1ST_READ.BIN 2 MB at 0x8c010000. Its sound goes to the
+# AICA by CPU, not by G2 DMA (Flycast trace: only the G2 DMA library's setup transfer), so it tells
+# whether the G2 DMA stall Ikaruga hits is what stops every game on the board. Boot patches only.
+GAMES["vt"] = {
+    "title": "VIRTUA TENNIS",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "gdi",
+    "flags": 0x0004,      # no user break
+    "hook_pc": [],
+    "groups": [
+        {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+            (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+            (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+            (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+        ]},
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C1EA8AA, 2, mov_imm0(4)),          # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
+        ]},
+    ],
 }

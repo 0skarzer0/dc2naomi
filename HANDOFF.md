@@ -8,12 +8,24 @@ Arrancar juegos de **Dreamcast** en una **NAOMI / NAOMI 2** por netboot (NetDIMM
 Dreamcast por un programa residente. Si funciona, sirve para recopilatorios (Yu Suzuki Game Works, Namco
 Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 
-## Estado (2026-11-04)
+## Estado (2026-11-08)
 
-| Juego | Estado |
-|---|---|
-| Daytona USA 2001 (US) | ❌ Pantalla negra en placa real (sesión anterior). Parado. |
-| **Yu Suzuki Game Works Vol. 1 (Japón)** | ✅ **Funciona en Flycast (NAOMI 1, BIOS export `epr-21578e`)**: menú, controles y Power Drift jugable. Pendiente: placa real |
+| Juego | Flycast | Placa real |
+|---|---|---|
+| Daytona USA 2001 (US) | — | ❌ Negro (probablemente el UBC, ver abajo). Parado |
+| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Menú y Power Drift jugable | ❌ Negro tras la licencia de SEGA |
+| Namco Museum (US) | ✅ Menú y Pac-Man | ❌ Congelado tras STREAM.MLT (sonido) |
+| Crazy Taxi 2 (US) | ✅ Hasta tarjetas de memoria | sin probar |
+| **Virtua Tennis (US)** | ✅ | ✅ **Primer juego de Dreamcast que arranca en la placa real** (2026-11-08): llega a "No VMU found in slot 1, port A" |
+| Ikaruga (JP) | ✅ Título | ❌ Logo de SEGA → negro: atascado en la DMA G2 del AICA. Imagen `ikaruga_g2cpu` (sin DMA G2) pendiente de placa |
+
+Resumen de lo aprendido en placa (detalles en "Ikaruga y Virtua Tennis", abajo):
+- **Loader + residente + NetDIMM funcionan en placa** (lo demuestra Virtua Tennis). Las lecturas PIO de la NetDIMM
+  son perfectas (prueba `READTEST`).
+- **El UBC (DBR) cuelga la placa**: todos los perfiles van con `flags 0x0004` (sin UBC).
+- **La DMA G2 del canal AICA (canal 0) no termina nunca en la NAOMI** cuando la lanza un juego de Dreamcast
+  (`ADST` se queda a 1). Es lo que para Ikaruga y muy probablemente Namco Museum (los dos cuelgan cargando sonido).
+  Virtua Tennis sube su sonido por CPU y por eso arranca. Solución en curso: `g2cpu` (copia por CPU).
 
 Sesión 2026-11-04:
 - Analizado YSGW entero (abajo). Es el nuevo banco de pruebas.
@@ -58,6 +70,15 @@ Rangos de sectores `{fad, count, offset}`, `ip_fad`, `boot_fad/size`, TOC (`firs
 - `CHECK` (1): abre un grupo; si `*(u32*)addr != value` se salta el grupo entero.
 - `W16` (2) / `W32` (4): escribe solo si el contenido actual es `expect` (`| 0x80` = siempre).
 - `value = 0xffffffff` en W32 = dirección del hook de maple del residente.
+- `value = 0xfffffffe / 0xfffffffd` (`PATCH_G2CHK0/4`) = `g2chk0/4`: espera del FIFO G2 (SB_FFST bit 0 / 4)
+  con tiempo límite y filas 16-19 (diagnóstico).
+- `value = 0xfffffffc` (`PATCH_G2CPU`) = `g2cpu`: sustituto de la función de arranque de DMA G2 de Shinobi
+  (ver "La solución g2cpu").
+
+`flags` (`resident.h`; `build_image.py` los añade con variables de entorno): `0x0001 SAMPLER` (UBC, cuelga la
+placa), `0x0002 NO_HOOK`, `0x0004 NO_UBC`, `0x0008 DIAG`, `0x0010 MASKERR`, `0x0020 CH2TEST`,
+`0x0040 DMA` (lecturas NetDIMM por DMA G1: no funcionó), `0x0080 READTEST`, `0x0100 G2IDLE`,
+`0x0200 PCSAMPLE` (muestreador de PC por TMU2, sí funciona en placa).
 
 ## Yu Suzuki Game Works Vol. 1 (Japón) — análisis
 
@@ -231,6 +252,131 @@ principal rom 0x0-0x100000 → 0x8c020000) lleva la misma Shinobi (cvFs/gdCi 1.0
 FOR AM" 2.22, y su espera de SB_FFST mira los bits 0 y 4 igual que la de Dreamcast: más indicios de que el bit 5
 de Namco Museum es el problema. También usa DMA de texturas a 0x11000000.
 
+## Ikaruga y Virtua Tennis: la DMA G2 del AICA (2026-11-07 / 08)
+
+### Ikaruga (Japón) — perfil `ikaruga`
+
+Un solo programa: `1ST_READ.BIN` de 1 MB en `0x8c010000`, Shinobi (cvFs/gdCi 1.03, syMng 1.04), driver de sonido
+ARM `MANATEE.DRV` y bancos `.MLT`. La versión NAOMI (GDL-0010) lleva la misma Shinobi más "NAOMI LIBRARY FOR AM"
+2.22. Parches (todos en `tools/games.py`):
+
+| Dónde | Dirección | Original → nuevo | Qué |
+|---|---|---|---|
+| IP.BIN | `0x8c008382`, `0x8c00dab4`, `0x8c00dac0` | como YSGW | cable VGA y tiempos G1 |
+| 1ST_READ | `0x8c04d0e4` | `mov.w @r3,r0` (PDTRA) → `mov #0,r0` | cable |
+| 1ST_READ | `0x8c04d05c` | `and #3,r0` → `mov #0,r0` | **el juego también lee el tipo de cable en el registro del AICA `0xa0702c00` (bits 9:8)**, que deja la BIOS de Dreamcast. En NAOMI vale 3 → modo compuesto de 15 kHz, que el monitor VGA no muestra |
+| 1ST_READ | `0x8c048758` | literal `0x8c04ae50` → hook | maple (función "a física" antes de `SB_MDSTAR`) |
+
+`tools/drvpatch.py IMAGEN [OFFSET]` cambia en `MANATEE.DRV` (dentro de la imagen ya montada, `0x96000` en Ikaruga)
+las tres escrituras `mov r1,#0/#15` a `0x00802800` por `mov r1,#0x200` (bit `MEM8MB`), como hace KallistiOS en
+hardware que no es una Dreamcast (`spu_ram_mode`). Imágenes `*_mem8`. No cambió nada en placa, pero se mantiene.
+
+### El cuelgue de Ikaruga en placa
+
+Síntoma: logo de SEGA (lo dibuja el IP.BIN) → negro. En Flycast llega al título.
+
+Con el muestreador de PC por TMU2 (`PCSAMPLE`, filas 16-31) en placa: el juego da vueltas en
+`0x8c050294` / `0x8c051376` y la DMA G2 del canal AICA está **arrancada y sin terminar**:
+fila 26 = `ADST 1, ADEN 1, ADSUSP 0, ADTSEL 4 o 5`, interrupción "fin de DMA AICA" (ISTNRM bit 15) habilitada en
+nivel 4 y **nunca pendiente**. `IML4NRM = 0x0007f000`. El puente de interrupciones (fila 30) nunca se activó,
+porque no había ninguna interrupción pendiente que reenviar: el hardware no termina la transferencia.
+
+Quién la lanza: la librería de sonido, en `0x8c04f8de` → **`0x8c04522c`** (arranque de DMA G2 de Shinobi,
+r4 = descriptor, r5 = flag). Secuencia en Flycast (`FC_G2TRACE=1`): una DMA de prueba de la propia librería en
+`0x8c045a70` (`EN=0`), luego `MANATEE.DRV` (0x9040 bytes a `0x00800000`), un comando de 0x20 bytes a
+`0x00812200` y unas 15 subidas de bancos `.MLT` (`0x00818000`…), todas con `ADTSEL 5`.
+
+Estructuras (Ikaruga, Shinobi):
+- Descriptor: `[0]` canal, `[4]` dirección G2, `[8]` dirección SH4, `[12]` longitud | 0x80000000, `[16]` dirección
+  (0 = SH4→G2), `[20]` TSEL, `[28]` callback, `[32]` su argumento, `[44]` ocupado, `[48]` terminado.
+- Contexto: `*(0x8c0cf2f0)`; `*ctx` apunta a los registros (`0xa05f7800`, 0x20 por canal); `ctx+0xdc+canal*4`
+  = transferencias empezadas, `ctx+0xec+canal*4` = terminadas.
+- `0x8c04522c`: mira si el canal está ocupado (`0x8c044d48`: bit 0 de `@(24,regs)` = ADST) y si lo está devuelve
+  `0x90180`; si no, purga la caché del origen (`0x8c0428ca`), escribe STAG/STAR/LEN/DIR/TSEL(|2 si r5)/EN=1,
+  `desc[44]=1`, `ctx+0xdc++` y ST=1. Devuelve 0.
+- Manejador de fin `0x8c044cbc(desc)` (registrado para los eventos 0xa60/0xa80/0xaa0/0xac0 en `0x8c045622`):
+  EN=0, `desc[44]=0`, `desc[48]=1`, `ctx+0xec++`, borra `ISTNRM` bit `canal+15` y llama a `desc[28](desc[32])`.
+- `0x8c04f8de` **apunta la transferencia en su cola después de que vuelva el arranque** (contador `+96` y anillo
+  en `0x8c112df0`); el callback deshace esa anotación.
+- `0x8c051370`: el cargador de `.MLT` hace `while (estado(handle) != 1)` (`0x8c050244`, lee `handle[8]`). Ese
+  estado solo llega a 1 por la cadena de callbacks de fin de DMA.
+
+### La solución g2cpu (perfil `ikaruga_g2cpu`)
+
+Entrada de `0x8c04522c` → `mov.l @(4,pc),r0; jmp @r0; nop; nop; .long g2cpu` (`PATCH_G2CPU`). `g2cpu` (residente):
+1. copia `desc[12] & 0x7fffffe0` bytes con la CPU. El origen SH4 se lee **por P1, con caché**, porque nos
+   saltamos la purga de caché del juego (leyendo por P2 se copiaban datos viejos). El destino es el AICA por
+   P2 (`0xa0800000+`), esperando al FIFO G2 cada 8 palabras;
+2. hace la misma contabilidad que el arranque real (`desc[44]=1`, `ctx+0xdc++`) y mete el descriptor en una cola;
+3. arranca TMU2 en el despachador del juego (`VBR+0x248`, prioridad 15, ~250 Hz). En cada tick se llama al
+   manejador de fin del juego `0x8c044cbc(desc)` para una transferencia de la cola, como haría la interrupción.
+
+**Por qué diferido**: llamando al manejador dentro de `g2cpu`, el callback corre antes de que `0x8c04f8de` apunte
+la transferencia en su cola, y el juego se queda esperando para siempre. **En Flycast ese fallo se cuelga
+exactamente en los mismos PC que la placa (`0x8c050294`/`0x8c051376`)**, lo que confirma qué espera el juego allí.
+Con el fin diferido, Flycast llega al título **sin ninguna DMA G2 real** (solo la de prueba con `EN=0`).
+En `_diag` las filas 20-22 son empezadas | terminadas<<16, última longitud y última dirección G2.
+
+Probar en Flycast: `ikaruga_nosnd` (el arranque devuelve 0 sin callback) también se cuelga: el juego necesita el
+fin de cada transferencia, no solo que no haya DMA.
+
+### Pruebas en placa hechas con Ikaruga (todas con logo de SEGA → negro)
+
+| Imagen | Qué probaba | Resultado |
+|---|---|---|
+| `ikaruga`, `_vga` | arranque + arreglo del cable del AICA (`0x8c04d05c`) | negro; el vídeo ya queda en VGA |
+| `_maple` | hook de maple | negro (el hook funciona en Flycast) |
+| `_dma` (`DMA`) | lecturas de la NetDIMM por DMA G1 | peor: el juego relee el directorio sin fin. Descartado |
+| `_readtest` | toda la imagen por PIO dos veces y comparar | **lecturas perfectas** |
+| `_g2` (`G2CHK0/4`) | esperas del FIFO G2 con tiempo límite | ninguna espera se atasca |
+| `_g2idle` (`G2IDLE`) | PIO de la NetDIMM solo sin DMA G2 en curso | igual |
+| `_nospu` (`NOSPU=1`) | el loader no inicializa el AICA ni la DMA G2 de KOS | igual |
+| `_pc_diag` (`PCSAMPLE`) | muestreador de PC por TMU2 | **funciona en placa**: PC en `0x8c0502xx`/`0x8c051376` |
+| `_aica_diag`, `_dmaor`, `_cpu`, `_bridge`, `_mem8` | registros AICA/DMAOR, disparo por CPU (TSEL), puente de interrupciones, modo 8 MB | DMA G2 sigue con ADST=1; DMAOR limpio; el puente nunca se activa |
+| `_g2cpu` | sin DMA G2 (copia por CPU) | **pendiente** |
+
+Descartado: el modo de vídeo, las lecturas de la NetDIMM, la DMAOR del SH4, interrupciones externas (ISTEXT),
+las esperas del FIFO G2, la concurrencia PIO/DMA, la inicialización del AICA de KOS, `MEM8MB` y que la
+interrupción exista pero no se entregue.
+
+### Virtua Tennis (USA) — perfil `vt` — ✅ arranca en placa
+
+Un programa de 2 MB en `0x8c010000`. Solo parches de arranque: IP.BIN y cable `0x8c1ea8aa` (`mov.w @r3,r4` →
+`mov #0,r4`). Se eligió porque en Flycast sube el sonido al AICA **por CPU**, sin DMA G2 (la traza solo muestra la
+DMA de preparación de la librería). **En placa, la normal y la diag llegan a "No VMU found in slot 1, port A"**
+(2026-11-08, en las dos NAOMI del usuario). Es la prueba de que el loader, el residente, la NetDIMM y el vídeo
+funcionan, y apunta a la DMA G2 del AICA como bloqueo de los demás. Falta el hook de maple para pulsar START.
+
+### Comparación Dreamcast / NAOMI (Crazy Taxi, Virtua Tennis, Ikaruga)
+
+Discos extraídos de las versiones NAOMI (imagen DIMM, ISO en `0x800000`, LBA base 45000). Las conversiones de SEGA
+usan la misma Shinobi/Kamui; lo que cambia es lo que hace la BIOS (cable, flash, GD) y la librería "NAOMI LIBRARY
+FOR AM". La tabla de inicialización de Holly es idéntica. No apareció ningún patrón de "protección" en el código del
+juego: la diferencia observable es la DMA G2 del AICA.
+
+### Herramientas añadidas
+
+- `tools/flycast/flycast-dc2naomi-debug.patch` (Flycast `7adbf3c`, incluye `flycast-naomi-bios.patch`; el parche
+  MIE de `mame4all-naomi` va aparte): `FC_G2TRACE=1` (cada arranque de DMA G2 con VBR/SR/PC/PR y registros,
+  escrituras IMLxEXT, offsets PIO de la NetDIMM), `FC_EXT3=1` (ISTEXT bit 3 siempre a 1), `FC_NOIRL11=1` (sin
+  interrupciones de nivel 4).
+- Para probar sin pantalla: Xvfb + `flycast IMAGEN` + `import -window root` cada N s; volcado de los 32 MB de RAM
+  con `gdb -p PID -batch -ex "dump binary memory ram.bin BASE BASE+0x2000000"` (BASE = `RAM(32 MB)` del log);
+  las variables del residente se leen con `sh-elf-nm resident/resident.elf`.
+- `tools/drvpatch.py` (arriba).
+- Muestreador TMU2 (`PCSAMPLE=1`): filas 16 muestras, 17-24 últimos 8 PC, 25 SSR, 26 DMA G2 AICA, 27 ICR|IPRA,
+  28 ISTNRM, 29 IML4NRM, 30 puente, 31 DMAOR. Instala su manejador en `VBR+0x248` (TMU2, INTEVT 0x440) cuando el
+  VBR es el de Katana (`0x8c00f400`): el código de `VBR+0x600` del IP.BIN guarda INTEVT y salta al despachador de
+  Shinobi, que llama al manejador de `VBR + 0x200 + (INTEVT-0x200)/8`.
+
+Construir Ikaruga g2cpu:
+```sh
+./build.sh ikaruga_g2cpu ika/disc.gdi build/ikaruga_g2cpu.bin
+DIAG=1 python3 tools/build_image.py ikaruga_g2cpu ika/disc.gdi build/ikaruga_g2cpu loader/loader.bin build/ikaruga_g2cpu_diag.bin
+python3 tools/drvpatch.py build/ikaruga_g2cpu.bin && python3 tools/drvpatch.py build/ikaruga_g2cpu_diag.bin
+gzip -k build/ikaruga_g2cpu.bin   # el nombre del .gz es el de romsinfo.csv (romname y audit_name)
+```
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):
@@ -261,14 +407,25 @@ Para WiPi Netbooter: `gzip build/ysgw.bin` y una línea en `romsinfo.csv`.
 
 - La VRAM real de NAOMI **no admite escrituras de byte** (Flycast sí): usar escrituras de 16/32 bits.
 - La DMA del PVR se cuelga en NAOMI.
+- **La DMA G2 del canal AICA que lanza un juego de Dreamcast no termina nunca en la NAOMI** (ADST se queda a 1,
+  no hay interrupción de fin). Copiar por CPU y simular el fin (`g2cpu`).
+- **El UBC (excepción DBR) cuelga la placa**; TMU2 por el despachador del juego sí funciona.
+- Algunos juegos leen el tipo de cable del registro del AICA `0xa0702c00` (bits 9:8), no solo de PDTRA.
 - En Flycast sin BIOS el driver MIE de KOS no se activa (ver parche en `mame4all-naomi/naomi/flycast`).
 
 ## Siguientes pasos
 
-1. Probar `build/ysgw.bin` en placa (WiPi Netbooter): menú, Power Drift, OutRun, Hang-On, volver al menú.
-2. En Flycast: probar OutRun, Hang-On, After Burner y Space Harrier, y la vuelta de Power Drift al menú (LOADER) (NAOMI, con el parche MIE) antes que en placa: ¿llega al menú? Mirar el log del
-   residente en `0x8dd80000` (entradas "PROG"/"PATC" del gancho, "RQ" de GD-ROM).
-3. Si hay pantalla negra: `SAMPLER=1` y foto de la pantalla (filas de bits: llamadas GD, última llamada,
-   sondeos de maple, último sector, otras syscalls y los últimos PC).
-4. Controles en el menú de YSGW: confirmar que START corto = A y que el volante mueve el cursor.
-5. Si YSGW funciona, volver a Daytona 2001 con la imagen por rangos (`layout: gdi`) y el gancho.
+1. **Probar en placa `ikaruga_g2cpu` / `ikaruga_g2cpu_diag`.** Si pasa del logo de SEGA, la DMA G2 del AICA queda
+   confirmada como el bloqueo y `g2cpu` es la receta. En la diag: fila 20 = empezadas | terminadas<<16,
+   21 = última longitud, 22 = última dirección G2. Si empezadas > terminadas, no llega la interrupción de TMU2.
+2. Si funciona, llevar `g2cpu` a **Namco Museum** (Shinobi 1.43; buscar la misma función: escribe
+   `0xa05f7800+canal*0x20` en el orden STAG/STAR/LEN/DIR/TSEL/EN/ST, y su manejador de fin, que escribe
+   `ISTNRM = 1 << (canal+15)` y llama a `desc[28](desc[32])`) y a YSGW (motor de Shenmue, librería propia).
+   Las direcciones de `ctx` (`0x8c0cf2f0`) y del manejador (`0x8c044cbc`) están fijas en `g2cpu` para Ikaruga:
+   para otro juego hay que pasarlas por el perfil.
+3. Un **hook de maple para Virtua Tennis** (pide START en "No VMU found"): mismo método que Ikaruga (literal de la
+   función "a física" antes de `SB_MDSTAR`).
+4. Entender **por qué** la DMA G2 no termina en la NAOMI (¿el AICA de NAOMI necesita algo que hace su BIOS o la
+   librería NAOMI, o es el modo de disparo de `ADTSEL`?). La versión NAOMI de Ikaruga sí usa DMA G2: comparar su
+   secuencia de inicio del AICA con la de Dreamcast.
+5. YSGW: además del sonido, queda el error del TA (ISTERR 0x10) y la ruta de texturas 0x11 (ver arriba).

@@ -280,6 +280,14 @@ def main():
         game["flags"] = game["flags"] | 0x0010
     if os.environ.get("CH2TEST"):  # test DMA channel 2 to the texture paths before the game
         game["flags"] = game["flags"] | 0x0020
+    if os.environ.get("DMA"):  # NetDIMM reads by G1 DMA, like the NAOMI library (PIO as the fallback)
+        game["flags"] = game["flags"] | 0x0040
+    if os.environ.get("PCSAMPLE"):  # PC sampler on TMU2 (rows 16-25)
+        game["flags"] = game["flags"] | 0x0200
+    if os.environ.get("G2IDLE"):  # NetDIMM PIO only while no G2 DMA runs
+        game["flags"] = game["flags"] | 0x0100
+    if os.environ.get("READTEST"):  # read the whole image twice by PIO and compare, before the game
+        game["flags"] = game["flags"] | 0x0080
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)

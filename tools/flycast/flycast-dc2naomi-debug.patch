@@ -1,0 +1,158 @@
+diff --git a/core/emulator.cpp b/core/emulator.cpp
+index e196b0bd0..a778971ac 100644
+--- a/core/emulator.cpp
++++ b/core/emulator.cpp
+@@ -563,7 +563,8 @@ int getGamePlatform(const std::string& filename)
+ 	if (extension == "zip" || extension == "7z")
+ 		return naomi_cart_GetPlatform(filename.c_str());
+ 	if (extension == "bin" || extension == "dat" || extension == "lst")
+-		return DC_PLATFORM_NAOMI;
++		// (local test patch) FC_NAOMI2: netboot images on a NAOMI 2 board
++		return getenv("FC_NAOMI2") ? DC_PLATFORM_NAOMI2 : DC_PLATFORM_NAOMI;
+ 
+ 	return DC_PLATFORM_DREAMCAST;
+ }
+diff --git a/core/hw/aica/aica_if.cpp b/core/hw/aica/aica_if.cpp
+index 92bfa83f5..d5058ffc1 100644
+--- a/core/hw/aica/aica_if.cpp
++++ b/core/hw/aica/aica_if.cpp
+@@ -9,6 +9,7 @@
+ #include "hw/holly/sb.h"
+ #include "hw/holly/holly_intc.h"
+ #include "hw/sh4/sh4_mem.h"
++#include "hw/sh4/sh4_if.h"
+ #include "hw/sh4/sh4_sched.h"
+ #include "profiler/dc_profiler.h"
+ #include "hw/sh4/dyna/blockmanager.h"
+@@ -352,6 +353,10 @@ static void Write_SB_ADST(u32 addr, u32 data)
+ 	//0x005F7818	SB_ADST		RW	AICA:G2-DMA start
+ 	//0x005F781C	SB_ADSUSP	RW	AICA:G2-DMA suspend 
+ 	
++	// (local trace) every start of the AICA G2 DMA
++	if (getenv("FC_G2TRACE"))
++		fprintf(stderr, "G2DMA start vbr=%08x sr=%08x pc=%08x pr=%08x data=%x ST=%x EN=%x STAG=%08x STAR=%08x LEN=%08x DIR=%x TSEL=%x SUSP=%x\n",
++			Sh4cntx.vbr, Sh4cntx.sr.getFull(), Sh4cntx.pc, Sh4cntx.pr, data, SB_ADST, SB_ADEN, SB_ADSTAG, SB_ADSTAR, SB_ADLEN, SB_ADDIR, SB_ADTSEL, SB_ADSUSP);
+ 	if ((data & 1) == 1 && (SB_ADST & 1) == 0)
+ 	{
+ 		if (SB_ADEN == 1)
+diff --git a/core/hw/holly/holly_intc.cpp b/core/hw/holly/holly_intc.cpp
+index a6d594657..3c28764d4 100644
+--- a/core/hw/holly/holly_intc.cpp
++++ b/core/hw/holly/holly_intc.cpp
+@@ -1,3 +1,5 @@
++#include <cstdio>
++#include <cstdlib>
+ #include "holly_intc.h"
+ #include "sb.h"
+ #include "hw/sh4/sh4_interrupts.h"
+@@ -8,8 +10,11 @@
+ */
+ 
+ //asic_RLXXPending: Update the intc flags for pending interrupts
++// (local test) FC_EXT3: ISTEXT bit 3 stuck high, as the NetDIMM keeps it on the real board
++static bool ext3_stuck() { static int v = -1; if (v < 0) v = getenv("FC_EXT3") != nullptr; return v; }
+ static void asic_RL6Pending()
+ {
++	if (ext3_stuck()) SB_ISTEXT |= 8;
+ 	bool t1 = (SB_ISTNRM & SB_IML6NRM) != 0;
+ 	bool t2 = (SB_ISTERR & SB_IML6ERR) != 0;
+ 	bool t3 = (SB_ISTEXT & SB_IML6EXT) != 0;
+@@ -20,16 +25,20 @@ static void asic_RL6Pending()
+ 
+ static void asic_RL4Pending()
+ {
++	if (ext3_stuck()) SB_ISTEXT |= 8;
+ 	bool t1 = (SB_ISTNRM & SB_IML4NRM) != 0;
+ 	bool t2 = (SB_ISTERR & SB_IML4ERR) != 0;
+ 	bool t3 = (SB_ISTEXT & SB_IML4EXT) != 0;
+ 	bool t4 = (SB_ISTNRM1 & SB_IML4NRM) != 0;
+ 
+-	InterruptPend(sh4_IRL_11, t1 || t2 || t3 || t4);
++	// (local test) FC_NOIRL11: the level 4 ASIC interrupt (IRL 11) never reaches the SH4
++	static int noirl11 = -1; if (noirl11 < 0) noirl11 = getenv("FC_NOIRL11") != nullptr;
++	InterruptPend(sh4_IRL_11, !noirl11 && (t1 || t2 || t3 || t4));
+ }
+ 
+ static void asic_RL2Pending()
+ {
++	if (ext3_stuck()) SB_ISTEXT |= 8;
+ 	bool t1 = (SB_ISTNRM & SB_IML2NRM) != 0;
+ 	bool t2 = (SB_ISTERR & SB_IML2ERR) != 0;
+ 	bool t3 = (SB_ISTEXT & SB_IML2EXT) != 0;
+@@ -187,6 +196,7 @@ static void Write_SB_IML6EXT(u32 addr, u32 data)
+ 	if (Naomi2 && (addr & 0x2000000) != 0)
+ 		// Ignore CLXB settings
+ 		return;
++	if (getenv("FC_G2TRACE")) fprintf(stderr, "IML6EXT=%x (ISTEXT=%x)\n", data, SB_ISTEXT);
+ 	SB_IML6EXT = data;
+ 
+ 	asic_RL6Pending();
+@@ -198,6 +208,7 @@ static void Write_SB_IML4EXT(u32 addr, u32 data)
+ 	if (Naomi2 && (addr & 0x2000000) != 0)
+ 		// Ignore CLXB settings
+ 		return;
++	if (getenv("FC_G2TRACE")) fprintf(stderr, "IML4EXT=%x (ISTEXT=%x)\n", data, SB_ISTEXT);
+ 	SB_IML4EXT = data;
+ 
+ 	asic_RL4Pending();
+@@ -209,6 +220,7 @@ static void Write_SB_IML2EXT(u32 addr, u32 data)
+ 	if (Naomi2 && (addr & 0x2000000) != 0)
+ 		// Ignore CLXB settings
+ 		return;
++	if (getenv("FC_G2TRACE")) fprintf(stderr, "IML2EXT=%x (ISTEXT=%x)\n", data, SB_ISTEXT);
+ 	SB_IML2EXT = data;
+ 
+ 	asic_RL2Pending();
+diff --git a/core/hw/holly/sb.cpp b/core/hw/holly/sb.cpp
+index 45c0ad6b9..fef9c878f 100644
+--- a/core/hw/holly/sb.cpp
++++ b/core/hw/holly/sb.cpp
+@@ -663,6 +663,8 @@ void sb_Reset(bool hard)
+ 		SB_SBREV = 0xB;
+ 		SB_G2ID = 0x12;
+ 		SB_G1SYSM = ((0 << 4) | 1);
++		if (settings.platform.isNaomi() && getenv("FC_MIE_NODEVINFO"))	// (local test patch) NAOMI system mode, as KOS reads it
++			SB_G1SYSM = ((0xa << 4) | 1);
+ 		SB_TFREM = 8;
+ 		SB_PDAPRO = 0x7f00;
+ 		SB_GDAPRO = 0x7f00;
+diff --git a/core/hw/naomi/naomi_cart.cpp b/core/hw/naomi/naomi_cart.cpp
+index 85fda8330..9228e7ed5 100644
+--- a/core/hw/naomi/naomi_cart.cpp
++++ b/core/hw/naomi/naomi_cart.cpp
+@@ -456,10 +456,12 @@ static void loadMameRom(const std::string& path, const std::string& fileName, Lo
+ static void loadDecryptedRom(const std::string& path, const std::string& fileName, LoadProgress *progress)
+ {
+ 	// Try to load BIOS from naomi.zip
+-	if (!loadBios("naomi", NULL, NULL, config::Region))
++	// (local test patch) FC_NAOMI2: the NAOMI 2 BIOS (naomi2.zip)
++	const char *biosName = getenv("FC_NAOMI2") ? "naomi2" : "naomi";
++	if (!loadBios(biosName, NULL, NULL, config::Region))
+ 	{
+ 		WARN_LOG(NAOMI, "Warning: Region %d bios not found in naomi.zip", config::Region.get());
+-		if (!loadBios("naomi", NULL, NULL, -1))
++		if (!loadBios(biosName, NULL, NULL, -1))
+ 		{
+ 			if (!bios_loaded)
+ 				throw FlycastException(Ts("Error: cannot load BIOS from naomi.zip"));
+@@ -1009,6 +1011,7 @@ void NaomiCartridge::WriteMem(u32 address, u32 data, u32 size)
+ 		RomPioAutoIncrement = (data & 0x8000) != 0;
+ 		RomPioOffset &= 0x0000ffff;
+ 		RomPioOffset |= (data << 16) & 0x7fff0000;
++		if (getenv("FC_G2TRACE") && (RomPioOffset & 0x7ff) == 0) fprintf(stderr, "PIO %08x\n", RomPioOffset);
+ 		PioOffsetChanged(RomPioOffset);
+ 		return;
+ 
+diff --git a/core/hw/naomi/naomi_roms.cpp b/core/hw/naomi/naomi_roms.cpp
+index 84f00d335..84cdfd44b 100644
+--- a/core/hw/naomi/naomi_roms.cpp
++++ b/core/hw/naomi/naomi_roms.cpp
+@@ -109,7 +109,7 @@ const BIOS_t BIOS[] =
+ 			//ROM_SYSTEM_BIOS( 10, "bios10", "epr-21578f (Export)" )
+ 			//{ 2, "epr-21578f.ic27", 0x000000, 0x200000, 0x628a27fd },
+ 			//ROM_SYSTEM_BIOS( 11, "bios11", "epr-21578e (Export)" )
+-			//{ 2, "epr-21578e.ic27", 0x000000, 0x200000, 0x087f09a3 },
++			{ 2, "epr-21578e.ic27", 0x000000, 0x200000, 0x087f09a3 },
+ 			//ROM_SYSTEM_BIOS( 12, "bios12", "epr-21578d (Export)" )
+ 			//{ 2, "epr-21578d.ic27", 0x000000, 0x200000, 0xdfd5f42a },
+ 			//ROM_SYSTEM_BIOS( 13, "bios13", "epr-21578a (Export)" )

@@ -11,3 +11,5 @@ build/
 *.gdi
 *.chd
 *.raw
+# Flycast home with the NAOMI BIOS (never upload BIOS files)
+tools/flycast/home/

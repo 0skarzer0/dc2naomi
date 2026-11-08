@@ -12,6 +12,15 @@
 
 extern const uint8_t resident_bin[], resident_bin_end[];
 
+#ifdef NOSPU
+/* Leave the sound chip (AICA) and the G2 DMA as the NAOMI BIOS left them, as a NAOMI game would find
+   them: KallistiOS would otherwise reset the ARM, switch the AICA to 8 MB mode, start an ARM loop and
+   set up the G2 DMA channels and their interrupts.
+   Built with -Wl,--wrap=spu_init -Wl,--wrap=g2_dma_init (build.sh, NOSPU=1). */
+int __wrap_spu_init(void) { return 0; }
+int __wrap_g2_dma_init(void) { return 0; }
+#endif
+
 #define CART_OFFSETH (*(volatile uint16_t *)0xA05F7000)
 #define CART_OFFSETL (*(volatile uint16_t *)0xA05F7004)
 #define CART_DATA    (*(volatile uint16_t *)0xA05F7008)

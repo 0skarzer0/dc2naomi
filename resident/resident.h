@@ -40,6 +40,10 @@
                                          and back to the loader's VGA timings if the game leaves them */
 #define DIMM_MASKERR    0x0010u       /* keep the ASIC error interrupts masked (IML2/4/6ERR = 0) */
 #define DIMM_CH2TEST    0x0020u       /* before the game: test DMA channel 2 to the texture paths, rows on screen */
+#define DIMM_PCSAMPLE   0x0200u       /* PC sampler on TMU2 through the game dispatcher, rows 16-25 */
+#define DIMM_G2IDLE     0x0100u       /* NetDIMM PIO only while no G2 DMA runs */
+#define DIMM_READTEST   0x0080u       /* before the game: read the whole image twice by PIO and compare, rows on screen */
+#define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
 
 /* Patch kinds. The list is read in order every time a program starts (and
    once at boot). A CHECK opens a group: if the word at addr is not `value`
@@ -56,6 +60,9 @@
 #define PATCH_R4FIX     16            /* W32 on a call literal: through a stub that turns an r4 of
                                          0x11xxxxxx into 0x13xxxxxx, then on to `expect` */
 #define PATCH_HOOK      0xffffffffu   /* value for W32: the resident maple hook */
+#define PATCH_G2CHK0    0xfffffffeu   /* value for W32: g2chk0, a G2 FIFO check (SB_FFST bit 0) with a timeout */
+#define PATCH_G2CHK4    0xfffffffdu   /* value for W32: g2chk4, the same for bit 4 */
+#define PATCH_G2CPU     0xfffffffcu   /* value for W32: g2cpu, a G2 DMA start done by the CPU (Ikaruga) */
 #define TRAMPS          4
 
 struct dimm_patch {

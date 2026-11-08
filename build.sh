@@ -10,5 +10,8 @@ mkdir -p build/$GAME
 TITLE=$(python3 -c "import sys; sys.path.insert(0,'tools'); from games import GAMES; print(GAMES['$GAME']['title'])")
 make -s -C resident
 [ -n "$KOS_BASE" ] || source /opt/toolchains/dc/kos/environ.sh
+if [ -n "$NOSPU" ]; then   # the loader leaves the AICA and the G2 DMA as the BIOS left them
+    export KOS_CFLAGS="$KOS_CFLAGS -DNOSPU" KOS_LDFLAGS="$KOS_LDFLAGS -Wl,--wrap=spu_init -Wl,--wrap=g2_dma_init"
+fi
 make -s -C loader clean >/dev/null; make -s -C loader TITLE="$TITLE"
 python3 tools/build_image.py "$GAME" "$SRC" build/$GAME loader/loader.bin "$OUT"

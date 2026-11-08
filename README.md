@@ -19,8 +19,15 @@ los sustituye por software:
 
 | Juego | Resultado |
 |---|---|
+| **Virtua Tennis (US)** | ✅ **Arranca en placa real** (2026-11-08) hasta "No VMU found"; falta adaptar los mandos |
+| Ikaruga (JP) | ✅ Flycast (título). Placa: logo de SEGA → negro, atascado en la DMA G2 del AICA; prueba sin DMA (`ikaruga_g2cpu`) pendiente |
+| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Flycast (menú y Power Drift jugable). ❌ Placa: negro tras la licencia |
+| Namco Museum (US) | ✅ Flycast. ❌ Placa: se congela cargando el sonido |
+| Crazy Taxi 2 (US) | ✅ Flycast hasta las tarjetas de memoria; sin probar en placa |
 | Daytona USA 2001 (US) | ❌ Pantalla negra en placa real |
-| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona en Flycast (NAOMI, BIOS export): menú y Power Drift jugable; pendiente de placa |
+
+Lo más importante aprendido en placa: el cargador funciona (Virtua Tennis), el UBC cuelga la placa y **la DMA G2
+hacia el chip de sonido (AICA) que lanzan los juegos de Dreamcast no termina nunca en la NAOMI**.
 
 **Es un trabajo en curso.** Los detalles técnicos, las direcciones y los siguientes pasos están en
 [HANDOFF.md](HANDOFF.md).
