@@ -382,3 +382,8 @@ GAMES["ds_emu"] = dict(GAMES["ds"], groups=[
         (0x8C15BA1E, 2, 0x0018),               # cdrom_init: cmp/eq #3,r0 (protection passed?) -> sett: skip the unlock
     ]},
 ])
+
+
+# dc2naomi/tools/dstest (built against the DC-SWAT KallistiOS fork, Dreamcast build): DreamShell's boot steps
+# with readable text on the screen. Same disc layout as "ds" (the DS/ folder), its own 1ST_READ.BIN.
+GAMES["dstest"] = dict(GAMES["ds"], title="DSTEST", groups=[GAMES["ds"]["groups"][0]])
