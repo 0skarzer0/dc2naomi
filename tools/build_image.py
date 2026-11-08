@@ -98,7 +98,8 @@ class RebuiltDisc:
         if not os.path.exists(self.iso) or os.environ.get("REBUILD"):
             tree = os.path.join(work, "tree")
             make_tree(files, tree, game.get("music_rate"))
-            subprocess.run(["genisoimage", "-quiet", "-iso-level", "2", "-l", "-C", f"0,{BASE_LBA}",
+            rr = ["-R"] if game.get("rock_ridge") else []   # (lower-case and long names: KallistiOS programs)
+            subprocess.run(["genisoimage", "-quiet", "-iso-level", "2", "-l"] + rr + ["-C", f"0,{BASE_LBA}",
                             "-G", os.path.join(files, "IP.BIN"), "-V", game.get("volume", "DISC"),
                             "-o", self.iso, tree], check=True)
         self.sectors = os.path.getsize(self.iso) // 2048
@@ -289,6 +290,8 @@ def main():
         game["flags"] = game["flags"] | 0x0100
     if os.environ.get("READTEST"):  # read the whole image twice by PIO and compare, before the game
         game["flags"] = game["flags"] | 0x0080
+    if os.environ.get("SYNCREAD"):  # GD DMA reads done in one call (KallistiOS programs)
+        game["flags"] = game["flags"] | 0x0400
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)

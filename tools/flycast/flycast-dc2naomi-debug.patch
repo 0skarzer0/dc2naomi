@@ -104,7 +104,7 @@ index a6d594657..3c28764d4 100644
  
  	asic_RL2Pending();
 diff --git a/core/hw/holly/sb.cpp b/core/hw/holly/sb.cpp
-index 45c0ad6b9..9bebbf7ba 100644
+index 45c0ad6b9..3ec1767e7 100644
 --- a/core/hw/holly/sb.cpp
 +++ b/core/hw/holly/sb.cpp
 @@ -13,6 +13,8 @@
@@ -116,7 +116,20 @@ index 45c0ad6b9..9bebbf7ba 100644
  #include "serialize.h"
  #include <map>
  
-@@ -192,6 +194,14 @@ void sb_WriteMem(u32 addr, u32 data)
+@@ -179,6 +181,12 @@ u32 sb_ReadMem(u32 addr)
+ {
+ 	// All Holly accesses are 32-bit for now
+ 	u32 rv = hollyRegs.read<u32>(addr);
++	{	// (local) FC_SYSM_RAM: NAOMI system mode (0xa1) for code running from RAM above 0x8c010000 (as
++		// a real board reads it), the Dreamcast value for the BIOS (Flycast's NAOMI BIOS needs that)
++		static int on = -1; if (on < 0) on = getenv("FC_SYSM_RAM") != nullptr;
++		if (on && (addr & 0x1fff) == 0x14b0 && (Sh4cntx.pc & 0x1fffffff) >= 0x0c010000 && (Sh4cntx.pc & 0x1fffffff) < 0x0e000000)
++			rv = 0xa1;
++	}
+ 
+ 	if ((addr & 0xffffff) != 0x5f6c18) // SB_MDST
+ 		DEBUG_LOG(HOLLY, "read %s.%c == %x", regName(addr),
+@@ -192,6 +200,14 @@ void sb_WriteMem(u32 addr, u32 data)
  	DEBUG_LOG(HOLLY, "write %s.%c = %x", regName(addr),
  			((addr >> 26) & 7) == 2 ? 'b' : (addr & 0x2000000) ? '1' : '0',
  					data);
@@ -131,7 +144,7 @@ index 45c0ad6b9..9bebbf7ba 100644
  	// All Holly accesses are 32-bit for now
  	hollyRegs.write<u32>(addr, data);
  }
-@@ -663,6 +673,8 @@ void sb_Reset(bool hard)
+@@ -663,6 +679,8 @@ void sb_Reset(bool hard)
  		SB_SBREV = 0xB;
  		SB_G2ID = 0x12;
  		SB_G1SYSM = ((0 << 4) | 1);
@@ -272,3 +285,22 @@ index 0538b3c8a..202fd7f95 100644
  	DEBUG_LOG(PVR, "write %s.%c = %x", regName(paddr),
  			((paddr >> 26) & 7) == 2 ? 'b' : (paddr & 0x2000000) ? '1' : '0',
  					data);
+diff --git a/core/hw/sh4/modules/serial.cpp b/core/hw/sh4/modules/serial.cpp
+index a36d95b8e..ee25e0463 100644
+--- a/core/hw/sh4/modules/serial.cpp
++++ b/core/hw/sh4/modules/serial.cpp
+@@ -644,8 +644,12 @@ void SCIRegisters::init()
+ 	setRW<SCI_SCSMR1_addr, u8>();
+ 	setRW<SCI_SCBRR1_addr, u8>();
+ 	setRW<SCI_SCSCR1_addr, u8>();
+-	setRW<SCI_SCTDR1_addr, u8>();
+-	setRW<SCI_SCSSR1_addr, u8, 0xf9>();
++	// (local) SCI as a clocked synchronous port with nothing attached: every byte sent
++	// is "received" back as 0xff at once (KallistiOS's SD-over-SCI probe waits for RDRF).
++	setHandlers<SCI_SCTDR1_addr, u8>(+[](u32 addr) -> u8 { return SCI_SCTDR1; },
++		+[](u32 addr, u8 data) { SCI_SCTDR1 = (u8)data; SCI_SCRDR1 = 0xff; SCI_SCSSR1 |= 0xc4; });
++	setHandlers<SCI_SCSSR1_addr, u8>(+[](u32 addr) -> u8 { return SCI_SCSSR1 | 0x84; },
++		+[](u32 addr, u8 data) { SCI_SCSSR1 = (SCI_SCSSR1 & ~0xf9) | (data & 0xf9 & SCI_SCSSR1); SCI_SCSSR1 |= 0x84; });
+ 	setReadOnly<SCI_SCRDR1_addr, u8>();
+ 	setRW<SCI_SCSPTR1_addr, u8, 0x8f>();
+ 

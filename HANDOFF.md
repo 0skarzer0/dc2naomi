@@ -537,6 +537,28 @@ Lo que dice el hilo "DreamShell on NAOMI" del foro de dc-swat (oct. 2025 - oct. 
 Fuentes del isoldr para NAOMI: `firmware/isoldr/loader/{main.c,syscalls.c,utils.c,cdda.c,naomi.c}` (ramas
 `!is_dreamcast()`); MIE: `firmware/mie`; mapeo JVS: `modules/isoldr/mie_pad.c`.
 
+### DreamShell por netboot (perfil `ds`, 2026-11-08) — paso 1: llega al menú en Flycast
+
+Idea: DreamShell 4.0.4 ya resuelve lo difícil (syscalls, sonido, IRQ, puente JVS). Su KallistiOS (compilado como
+Dreamcast "pristine") **también monta `/cd` en NAOMI** y lee el disco con las syscalls GD de la BIOS, que nuestro
+residente ya imita leyendo de la NetDIMM. Así DreamShell arranca por netboot sin BIOS HollySH ni SD/IDE.
+
+Construcción: carpeta fuente con `IP.BIN` (uno estándar de SEGA; se usa el del disco del usuario con los parches de
+Virtua Tennis), `1ST_READ.BIN` = `DS_CORE.BIN` de la release y la carpeta `DS/` de la release.
+`./build.sh ds CARPETA build/ds.bin`. La ISO se hace con Rock Ridge (`"rock_ridge": True`, nombres en minúsculas).
+
+Cambios necesarios:
+- `DIMM_SYNCREAD` (0x0400, en el perfil): las lecturas DMA del GD terminan en una sola llamada a EXEC_SERVER
+  (KallistiOS espera una interrupción de fin de DMA G1 si el comando sigue "procesando") y la TOC de baja densidad
+  devuelve la de alta (KallistiOS busca la sesión ISO9660 en la TOC del área 0).
+- `arch_stack_32m` de KallistiOS (`0x8c25d4c4` en la 4.0.4: `0x8e000000`) → `0x8dc00000`, para que no pise al residente.
+
+En Flycast (con dos ajustes locales en `tools/flycast/flycast-dc2naomi-debug.patch`: SCI que contesta como puerto
+síncrono sin nada conectado, porque el sondeo de SD por SCI espera RDRF sin límite; y `FC_SYSM_RAM=1`, modo de sistema
+NAOMI `0xa1` en `0xa05f74b0` para código en RAM, como la placa real): "Root directory is /cd/DS", detecta la MIE
+("JVS I/O 315-6149") y llega al menú "DreamShell 4.0.4 NAOMI". Pendiente: probar en placa.
+Siguiente: lanzar un juego de Dreamcast desde el ISO Loader leyendo de la NetDIMM (paso 2) y el puente JVS (paso 3).
+
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
 1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
    lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.

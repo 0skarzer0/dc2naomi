@@ -341,3 +341,30 @@ GAMES["ct2h"] = _copy.deepcopy(GAMES["ct2"])
 GAMES["ct2h"]["groups"][1]["patches"] += [
     (0x8C166EE0, 4, HOOK),
 ]
+
+
+# DreamShell (DC-SWAT, https://github.com/DC-SWAT/DreamShell) by netboot: a KallistiOS program, so the loader
+# and the resident just play the Dreamcast BIOS. SOURCE is a directory with IP.BIN (a standard SEGA one, here
+# taken from the user's own disc: the boot patches below are those of Virtua Tennis), 1ST_READ.BIN = DS_CORE.BIN
+# with KallistiOS's top of RAM lowered from 0x8e000000 to 0x8dc00000 (the resident lives there) and the DS/
+# folder of the release. DreamShell finds its root at /cd/DS (KallistiOS iso9660 through the GD syscalls).
+GAMES["ds"] = {
+    "title": "DREAMSHELL",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "DREAMSHELL",
+    "flags": 0x0404,      # no user break, GD DMA reads in one call
+    "hook_pc": [],
+    "groups": [
+        {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+            (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+            (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+            (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+        ]},
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C25D4C4, 4, 0x8DC00000),           # arch_stack_32m (4.0.4 release): top of RAM below the resident
+        ]},
+    ],
+}

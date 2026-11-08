@@ -290,8 +290,9 @@ static void put32(u32 addr, u32 v) {
 static void gd_toc(u32 area, u32 dest) {
     u32 toc[102];
     for (int i = 0; i < 102; i++) toc[i] = 0xffffffffu;
-    if (area == 0) {
-        /* single density: track 1 (data) and 2 (audio) */
+    if (area == 0 && !(H.flags & DIMM_SYNCREAD)) {
+        /* single density: track 1 (data) and 2 (audio). (KallistiOS programs read this area's
+           TOC to find the ISO9660 session: they get the high-density one, where the data is.) */
         toc[0] = 0x41000000u | 150;
         toc[1] = 0x01000000u | 600;
         toc[99] = 0x41010000u;
@@ -355,7 +356,7 @@ static void gd_command(void) {
             gd.result[2] = gd.result[3] = 0;
         }
         {
-            u32 n = gd.read_count < READ_CHUNK ? gd.read_count : READ_CHUNK;
+            u32 n = (H.flags & DIMM_SYNCREAD) || gd.read_count < READ_CHUNK ? gd.read_count : READ_CHUNK;
             read_sectors(gd.read_addr, gd.read_fad, n, 1);
             gd.read_fad += n;
             gd.read_addr += n * 2048;

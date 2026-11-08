@@ -43,6 +43,9 @@
 #define DIMM_PCSAMPLE   0x0200u       /* PC sampler on TMU2 through the game dispatcher, rows 16-25 */
 #define DIMM_G2IDLE     0x0100u       /* NetDIMM PIO only while no G2 DMA runs */
 #define DIMM_READTEST   0x0080u       /* before the game: read the whole image twice by PIO and compare, rows on screen */
+#define DIMM_SYNCREAD   0x0400u       /* KallistiOS programs: GD DMA reads finish in one EXEC_SERVER call (KOS
+                                         waits for a G1 DMA interrupt we never give when a read is still busy),
+                                         and the single-density TOC is the high-density one */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
 
 /* Patch kinds. The list is read in order every time a program starts (and
