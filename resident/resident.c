@@ -1522,12 +1522,14 @@ void boot(const struct dimm_header *h) {
     sys_syscall(0, 0, 0, 0);
 
     /* hardware as the BIOS leaves it */
-    REG32(0xa070289c) = 0x48;      /* AICA SCIEB */
-    REG32(0xa07028a8) = 0x18;      /* SCILV0 */
-    REG32(0xa07028ac) = 0x50;      /* SCILV1 */
-    REG32(0xa07028b0) = 0x08;      /* SCILV2 */
-    REG32(0xffa00040) = 0x8201;    /* DMAC DMAOR */
-    REG32(0xff80002c) = 0x000a03f0; /* PCTRA */
+    if (!(H.flags & DIMM_NOBIOSHW)) {
+        REG32(0xa070289c) = 0x48;      /* AICA SCIEB */
+        REG32(0xa07028a8) = 0x18;      /* SCILV0 */
+        REG32(0xa07028ac) = 0x50;      /* SCILV1 */
+        REG32(0xa07028b0) = 0x08;      /* SCILV2 */
+        REG32(0xffa00040) = 0x8201;    /* DMAC DMAOR */
+        if (!(H.flags & DIMM_NOPCTRA)) REG32(0xff80002c) = 0x000a03f0; /* PCTRA */
+    }
 
     /* flush everything we wrote to the program area (enter_game then
        invalidates the instruction cache) */
@@ -1539,5 +1541,5 @@ void boot(const struct dimm_header *h) {
         __asm__ volatile("ocbwb @%0" : : "r"(a) : "memory");
 
     ubc_setup();
-    enter_game(0xac008300, 0x8d000000);
+    enter_game((H.flags & DIMM_NOIPBOOT) ? 0xac010000 : 0xac008300, 0x8d000000);
 }

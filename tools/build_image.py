@@ -294,6 +294,12 @@ def main():
         game["flags"] = game["flags"] | 0x0400
     if os.environ.get("CONSOLE"):  # KallistiOS programs: their log drawn on screen (fake dcload)
         game["flags"] = game["flags"] | 0x0800
+    if os.environ.get("NOIPBOOT"):  # no IP.BIN bootstrap: straight to 1ST_READ.BIN
+        game["flags"] = game["flags"] | 0x1000
+    if os.environ.get("NOPCTRA"):  # leave PCTRA alone
+        game["flags"] = game["flags"] | 0x2000
+    if os.environ.get("NOBIOSHW"):  # skip AICA SCI*/DMAOR/PCTRA writes
+        game["flags"] = game["flags"] | 0x4000
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)

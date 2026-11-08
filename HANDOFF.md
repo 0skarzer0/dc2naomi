@@ -621,6 +621,11 @@ La tabla de inicialización del IP.BIN no toca el PVR/TA. KallistiOS normal (Can
 `PVR_RESET_ALL` y funciona arrancando desde la BIOS. Experimento: la misma prueba con KallistiOS de NAOMI
 (`tools/pvrnaomi`): `pvrtest_nb` (imagen NAOMI directa, como Cannonball) y `pvrtest_np` (por loader + residente +
 IP.BIN, con un salto de 64 KB delante porque KallistiOS NAOMI enlaza en `0x8c020000`).
+**Resultado en placa: `pvrtest_nb` dibuja (cuadrado rojo), `pvrtest_np` no (texto).** El TA se queda sin
+responder por algo de **nuestro camino de arranque**, no por KallistiOS ni DreamShell. Sospechosos y flags nuevos del
+residente: `DIMM_NOIPBOOT` 0x1000 (saltar a 1ST_READ sin el bootstrap del IP.BIN), `DIMM_NOPCTRA` 0x2000 (no escribir
+PCTRA `0x000a03f0`), `DIMM_NOBIOSHW` 0x4000 (no escribir AICA SCI*, DMAOR ni PCTRA). Imágenes
+`pvrtest_np_noipboot`, `pvrtest_np_nopctra`, `pvrtest_np_nobioshw`.
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
