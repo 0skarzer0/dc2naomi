@@ -43,6 +43,22 @@ static void regs(void) {
 }
 
 static uint16_t tex_src[64 * 64] __attribute__((aligned(32)));
+static volatile uint32_t vbl;
+static void vbl_cb(uint32_t c, void *d) { (void)c; (void)d; vbl++; }
+static void irqinfo(const char *tag) {
+    uint32_t sr; __asm__ volatile("stc sr,%0" : "=r"(sr));
+    say("%s ISTNRM=%08lx EXT=%08lx ERR=%08lx SR=%08lx ICR=%04x\n", tag, REG(0xa05f6900), REG(0xa05f6904),
+        REG(0xa05f6908), sr, *(volatile uint16_t *)0xffd00000);
+    say("   IML2 %08lx %08lx %08lx  IML4 %08lx %08lx %08lx  IML6 %08lx %08lx %08lx\n", REG(0xa05f6910),
+        REG(0xa05f6914), REG(0xa05f6918), REG(0xa05f6920), REG(0xa05f6924), REG(0xa05f6928), REG(0xa05f6930),
+        REG(0xa05f6934), REG(0xa05f6938));
+}
+static void elaninfo(void) {
+    uint32_t id = REG(0xa8800000);
+    if (id != 0xe1ad0000) { say("   ELAN: none (id=%08lx)\n", id); return; }
+    say("   ELAN: rev=%08lx IFCTL=%08lx IRQSTAT=%08lx IRQMASK=%08lx\n", REG(0xa8800004), REG(0xa8800010),
+        REG(0xa8800074), REG(0xa8800078));
+}
 
 int main(int argc, char **argv) {
     (void)argc; (void)argv;
@@ -53,6 +69,10 @@ int main(int argc, char **argv) {
     say("1 SYSMODE=%08lx  PVR ID=%08lx REV=%08lx\n", REG(0xa05f74b0), REG(0xa05f8000), REG(0xa05f8004));
     regs();
 
+    vblank_handler_add(vbl_cb, NULL);
+    irqinfo("1b"); elaninfo();
+    { uint64_t t = timer_ms_gettime64(); uint32_t v0 = vbl; while (timer_ms_gettime64() - t < 1000) {}
+      say("1c vblank IRQs in 1 s: %lu\n", (unsigned long)(vbl - v0)); }
     say("2 pvr_init_defaults... ");
     int r = pvr_init_defaults();
     say("rv=%d\n", r); regs();
@@ -88,7 +108,17 @@ int main(int argc, char **argv) {
         t0 = timer_ms_gettime64();
         while (pvr_check_ready() != 0) {
             if (timer_ms_gettime64() - t0 > 3000) {
-                fg = 0xf800; say("\n  frame %d: NOT READY after 3 s\n", f); fg = 0xffff; regs();
+                fg = 0xf800; say("\n  frame %d: NOT READY after 3 s (vblank IRQs %lu)\n", f, (unsigned long)vbl); fg = 0xffff;
+                irqinfo("  "); elaninfo();
+                static int tries;
+                if (++tries == 2 && REG(0xa8800000) == 0xe1ad0000) {
+                    say("  experiment: ELAN IRQMASK=0, IRQSTAT cleared\n");
+                    REG(0xa8800078) = 0; REG(0xa8800074) = REG(0xa8800074);
+                }
+                if (tries == 4) {
+                    say("  experiment: all external IRQ masks 0\n");
+                    REG(0xa05f6914) = 0; REG(0xa05f6924) = 0; REG(0xa05f6934) = 0;
+                }
                 t0 = timer_ms_gettime64();
             }
         }
@@ -107,6 +137,13 @@ int main(int argc, char **argv) {
         pvr_list_finish();
         pvr_scene_finish();
         if (f < 4 || (f % 60) == 0) say("submitted\n");
+        if (f == 0) {
+            uint32_t seen = 0; uint64_t t = timer_ms_gettime64();
+            while (timer_ms_gettime64() - t < 500) seen |= REG(0xa05f6900);
+            say("  after frame 0: ISTNRM bits seen in 0.5 s = %08lx (0-2 render done, 7 opaque list)\n", seen);
+            irqinfo("  "); elaninfo();
+            say("  vblank IRQs so far: %lu\n", (unsigned long)vbl);
+        }
     }
     return 0;
 }

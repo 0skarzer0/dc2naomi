@@ -596,6 +596,13 @@ el texto de la consola: lo que DreamShell dibuja con el PVR (3D) no llega a la p
 (SWAT: "en NAOMI 2 aún no hay vídeo, la salida hay que configurarla aparte"; su BIOS HollySH inicializa ELAN). Flycast
 no puede emular NAOMI 2 sin su BIOS. Siguiente: `tools/pvrtest` (imagen `pvrtest`): los pasos de vídeo de DreamShell
 (`pvr_init_defaults`, `pvr_dma_init`, textura por SQ y por DMA ch2, fotogramas con límite de tiempo) con texto.
+**`pvrtest` en placa (vídeo):** pvr_init_defaults, pvr_dma_init, textura por SQ y por DMA ch2: todo bien. El fotograma
+0 se envía pero **el 1 nunca está listo** ("NOT READY after 3 s" sin fin). `ISTNRM = 0x40000030` en cada lectura:
+vblank in/out pendientes sin atender y una interrupción externa pendiente (bit 30); nunca los bits de render terminado.
+Parece que las interrupciones de Holly no llegan a KallistiOS (o algo externo de la NAOMI 2 las bloquea).
+`pvrtest2`: contador de IRQ de vblank, bits de ISTNRM tras el fotograma 0, IML*, ISTEXT, SR, ICR, registros de ELAN
+(`0xa8800000`: ID `0xe1ad0000`, IFCTL `+0x10`, IRQSTAT `+0x74`, IRQMASK `+0x78`) y dos experimentos (máscara de ELAN a
+0; máscaras externas a 0).
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
