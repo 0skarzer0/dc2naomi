@@ -46,6 +46,8 @@
 #define DIMM_SYNCREAD   0x0400u       /* KallistiOS programs: GD DMA reads finish in one EXEC_SERVER call (KOS
                                          waits for a G1 DMA interrupt we never give when a read is still busy),
                                          and the single-density TOC is the high-density one */
+#define DIMM_CONSOLE    0x0800u       /* KallistiOS programs: play dcload (magic 0xdeadbeef at 0x8c004004, syscall at
+                                         0x8c004008) so their dbglog/printf is drawn on the screen as text */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
 
 /* Patch kinds. The list is read in order every time a program starts (and

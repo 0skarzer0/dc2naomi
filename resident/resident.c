@@ -1419,6 +1419,62 @@ static void read_test(void) {
     }
 }
 
+
+/* ------------------------------------------------------------------ */
+/* DIMM_CONSOLE: a fake dcload for KallistiOS programs. KallistiOS sends its dbglog and stdout to
+   dcload when it finds 0xdeadbeef at 0x8c004004, through the function at 0x8c004008; here every
+   write is drawn as text (8x16 font) on the frame buffer being shown, wrapping from the bottom
+   back to the top. The other dcload calls fail, so /pc never finds anything. */
+#include "font8x16.h"
+static u32 con_x, con_y;
+static void con_char(u32 sof, u32 line, u32 bpp4, u32 col, u32 row, u32 c) {
+    if (c < 32 || c > 126) c = '?';
+    const unsigned char *g = font8x16[c - 32];
+    for (u32 y = 0; y < 16; y++) {
+        u32 a = 0xa5000000u + sof + (row * 16 + y) * line;
+        for (u32 x = 0; x < 8; x++) {
+            u32 on = g[y] & (0x80 >> x);
+            if (bpp4) *(volatile u32 *)(a + (col * 8 + x) * 4) = on ? 0x00ffff60u : 0;
+            else *(volatile u16 *)(a + (col * 8 + x) * 2) = on ? 0xffecu : 0;
+        }
+    }
+}
+static void con_write(const u8 *p, u32 n) {
+    u32 ctrl = REG32(0xa05f8044), depth = (ctrl >> 2) & 3;
+    u32 bpp4 = depth == 3, bpp = depth == 3 ? 4 : depth == 2 ? 3 : 2;
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc, size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    u32 cols = line >> (bpp4 ? 5 : 4), rows = (((size >> 10) & 0x3ff) + 1) >> 4;
+    if (bpp == 3 || cols == 0 || rows == 0) return;          /* (24 bpp: not drawn) */
+    if (cols > 100) cols = 100;
+    for (u32 i = 0; i < n; i++) {
+        u32 c = p[i];
+        if (c == '\r') continue;
+        if (c == '\n' || con_x >= cols) {
+            con_x = 0;
+            if (++con_y >= rows) con_y = 0;
+            for (u32 x = 0; x < cols; x++) con_char(sof, line, bpp4, x, con_y, ' ');
+            if (c == '\n') continue;
+        }
+        con_char(sof, line, bpp4, con_x++, con_y, c);
+    }
+}
+s32 dcl_syscall(u32 cmd, u32 a, u32 b, u32 c) {
+    (void)c;
+    switch (cmd) {
+    case 1: /* WRITE */
+        if (a == 1 || a == 2) { con_write((const u8 *)b, c); return (s32)c; }
+        return -1;
+    case 11: /* TIME */
+        return 0;
+    case 16: /* OPENDIR */
+    case 18: /* READDIR */
+        return 0;
+    default:  /* ASSIGNWRKMEM (-1 = "dcload-ip"), OPEN, STAT...: fail */
+        return -1;
+    }
+}
+
 void boot(const struct dimm_header *h) {
     mcpy(&H, h, sizeof H);
     vga_save();                 /* the loader's 31 kHz timings (DIMM_DIAG) */
@@ -1434,6 +1490,10 @@ void boot(const struct dimm_header *h) {
     REG32(0x8c0000b8) = (u32)flash_syscall;
     REG32(0x8c0000bc) = (u32)gd_syscall;
     REG32(0x8c0000e0) = (u32)misc_syscall;
+    if (H.flags & DIMM_CONSOLE) {
+        REG32(0x8c004004) = 0xdeadbeefu;
+        REG32(0x8c004008) = (u32)dcl_syscall;
+    }
     REG16(0x8c0010f0) = 0xd001; /* mov.l @(4,pc),r0 */
     REG16(0x8c0010f2) = 0x402b; /* jmp @r0 */
     REG16(0x8c0010f4) = 0x0009;

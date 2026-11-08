@@ -292,6 +292,8 @@ def main():
         game["flags"] = game["flags"] | 0x0080
     if os.environ.get("SYNCREAD"):  # GD DMA reads done in one call (KallistiOS programs)
         game["flags"] = game["flags"] | 0x0400
+    if os.environ.get("CONSOLE"):  # KallistiOS programs: their log drawn on screen (fake dcload)
+        game["flags"] = game["flags"] | 0x0800
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)

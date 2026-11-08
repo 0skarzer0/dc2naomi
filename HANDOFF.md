@@ -575,6 +575,18 @@ llamadas GD, último comando, último FAD y los primeros bytes del último secto
 probada por SWAT sigue siendo BIOS HollySH + SD en CN1 (MISO B45, MOSI A46, CLK A47, CS B50, 3,3 V) o CF/IDE.
 Siguiente: lanzar un juego de Dreamcast desde el ISO Loader leyendo de la NetDIMM (paso 2) y el puente JVS (paso 3).
 
+
+**`dstest` en placa (2026-11-08, foto):** SYSMODE `0xa0`, protección G1 **ya superada** (`0x5f74ec = 3`; el multibios
+arranca con `0xe6ff`, el bootstrap "mágico"), TOC correcta, PIO y DMA de sectores bien (`CD001`), iso9660 lista
+`/cd/DS`, `startup.lua` se lee y `curl.klf` (946 KB) a **2,4 MB/s**. Forzar a mano el desbloqueo G1 pone el estado en 2
+y la NetDIMM devuelve solo `ff`: el desbloqueo sí rompe el bus, pero DreamShell no lo hace porque el estado ya es 3.
+Conclusión: el camino de lectura de DreamShell funciona en placa; se para en algo posterior.
+
+**Consola en pantalla (`DIMM_CONSOLE` 0x0800, `CONSOLE=1`):** el residente se hace pasar por dcload (`0xdeadbeef`
+en `0x8c004004`, función en `0x8c004008`) y dibuja en el frame buffer todo el dbglog/printf de KallistiOS (fuente
+8x16 de `tools/dstest/font.h`). Imagen `dreamshell_con` (EMU core). En Flycast se ve el registro hasta
+"Initializing DreamShell Core...".
+
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
 1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
    lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.
