@@ -13,7 +13,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Juego | Flycast | Placa real |
 |---|---|---|
 | Daytona USA 2001 (US) | — | ❌ Negro (probablemente el UBC, ver abajo). Parado |
-| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Menú y Power Drift jugable | ❌ Negro tras la licencia de SEGA |
+| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Menú y Power Drift jugable | ✅ Funciona (residente sin PCTRA); ajustando mandos |
 | Namco Museum (US) | ✅ Menú y Pac-Man | ❌ Congelado tras STREAM.MLT (sonido) |
 | Crazy Taxi 2 (US) | ✅ Hasta tarjetas de memoria | sin probar |
 | Crazy Taxi 2 (US), Daytona 2001, Re-Volt | ✅ hasta tarjetas de memoria / VMU | ❌ logo de SEGA → negro (lote del 2026-11-08) |
@@ -651,6 +651,14 @@ START → Y al instante (Crazy Hop), mantenido 1 s (60 sondeos) → START (títu
 volver), atrás → A (marcha R / aceptar); volante en el último ~6 % del recorrido → cruceta izquierda+arriba /
 derecha+abajo (cursor de menús); botón JVS 0x0200 → X. (Es global en el residente: si otro juego necesita otro reparto,
 hacer el mapeo por perfil.)
+
+**Mandos por juego (`pad_map` en la cabecera, `"pads"` en `tools/games.py`):** el residente lee `pad_map` (antes
+`reserved[0]`) y elige el reparto. `ct` (0, por defecto) = el de CT2, ya dado por bueno en el mueble. `menu` (1) =
+Yu Suzuki Game Works: START normal pero se manda **al soltarlo** (8 sondeos) y solo si no se tocó la palanca mientras
+estaba pulsado; START + palanca adelante = arriba, START + palanca atrás = abajo (el menú necesita arriba/abajo limpios;
+con izquierda+arriba a la vez no se llegaba a OutRun ni a Space Harrier); palanca sola = B/A; volante a tope =
+izquierda/derecha. Motivo: en Power Drift el START mantenido del reparto CT (Y y luego START) no se reconocía.
+CT2: probado en el mueble y **terminado** (2026-11-08). Yu Suzuki: ya arranca y juega con el residente sin PCTRA.
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 

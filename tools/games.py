@@ -79,6 +79,7 @@ GAMES = {
     # 1ST_READ.BIN again and jumps to 0x0c010000.
     "ysgw": {
         "title": "YU SUZUKI GAME WORKS",
+        "pads": "menu",       # START plain (on release), START + lever = up/down, wheel lock = left/right
         "region": 0,          # Japan
         "language": 0,        # Japanese
         "layout": "gdi",      # original sector layout (213 MB: track 6 + system area)

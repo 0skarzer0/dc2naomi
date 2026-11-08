@@ -32,6 +32,11 @@
 #define DIMM_TRACKS     32            /* Windows CE discs (Midway Vol. 2) have 28 */
 #define DIMM_PATCHES    64
 
+/* pad_map: how the cabinet (wheel, pedals, lever, START) becomes a Dreamcast pad, per game */
+#define DIMM_PAD_CT     0             /* Crazy Taxi 2: START = Y (hop), held 1 s = START; lever = B/A; wheel lock = d-pad */
+#define DIMM_PAD_MENU   1             /* Yu Suzuki GW: START plain (sent on release); START + lever = up/down; lever = B/A;
+                                         wheel lock = left/right */
+
 /* flags */
 #define DIMM_SAMPLER    0x0001u       /* diagnostics: sample the PC every 2^20 instructions */
 #define DIMM_NO_HOOK    0x0002u       /* no program-start hook (patches at boot only) */
@@ -101,7 +106,8 @@ struct dimm_header {
     uint32_t first_track, ntracks, leadout;
     uint32_t tracks[DIMM_TRACKS];
     uint32_t hook_pc[2];              /* program entry points that re-apply the patches */
-    uint32_t reserved[8];
+    uint32_t pad_map;                 /* cabinet controls: DIMM_PAD_* */
+    uint32_t reserved[7];
     struct dimm_patch patches[DIMM_PATCHES];
 };
 

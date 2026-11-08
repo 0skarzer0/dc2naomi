@@ -713,7 +713,7 @@ static u32 wheel(u32 v) {
 #define DC_Y 0x0200
 #define DC_X 0x0400
 
-static u32 start_frames;
+static u32 start_frames, start_used, start_pulse;
 
 static void pad_state(u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
     u32 b = 0;
@@ -725,23 +725,45 @@ static void pad_state(u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
         /* small dead zones on the pedals */
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
-        /* Crazy Taxi cabinet mapping (tuned on Crazy Taxi 2, 2026-11-08):
-           START          -> Y at once (Crazy Hop); held for a second it becomes START (title, pause)
-           lever forward  -> B (drive gear; "back" in menus), lever back -> A (reverse gear; "accept")
-           wheel at the end of its travel -> d-pad left+up / right+down (menu cursor) */
-        if (jvs.p1 & 0x8000) {
-            if (start_frames < 1000) start_frames++;
-            b |= start_frames < 60 ? DC_Y : DC_START;
+        u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
+        if (H.pad_map == DIMM_PAD_MENU) {
+            /* Yu Suzuki Game Works (2026-11-08): START is a plain START, but it is sent when released, and only if
+               the lever was not used while it was held: START + lever forward = up, START + lever back = down
+               (the menu needs clean up/down). Lever alone = B/A; wheel at the end of its travel = left/right. */
+            if (start) {
+                if (fwd) b |= DC_UP;
+                if (back) b |= DC_DOWN;
+                if (fwd || back) start_used = 1;
+                start_frames = 1;
+            } else {
+                if (start_frames && !start_used) start_pulse = 8;   /* START for 8 polls after a clean tap */
+                start_frames = 0;
+                start_used = 0;
+                if (fwd) b |= DC_B;
+                if (back) b |= DC_A;
+            }
+            if (start_pulse) { start_pulse--; b |= DC_START; }
+            if (x < 16) b |= DC_LEFT;
+            if (x > 239) b |= DC_RIGHT;
         } else {
-            start_frames = 0;
+            /* Crazy Taxi cabinet mapping (tuned on Crazy Taxi 2, 2026-11-08):
+               START          -> Y at once (Crazy Hop); held for a second it becomes START (title, pause)
+               lever forward  -> B (drive gear; "back" in menus), lever back -> A (reverse gear; "accept")
+               wheel at the end of its travel -> d-pad left+up / right+down (menu cursor) */
+            if (start) {
+                if (start_frames < 1000) start_frames++;
+                b |= start_frames < 60 ? DC_Y : DC_START;
+            } else {
+                start_frames = 0;
+            }
+            if (fwd) b |= DC_B;
+            if (back) b |= DC_A;
+            if (x < 16) b |= DC_LEFT | DC_UP;
+            if (x > 239) b |= DC_RIGHT | DC_DOWN;
         }
-        if (jvs.p1 & 0x2000) b |= DC_B;    /* lever forward */
-        if (jvs.p1 & 0x1000) b |= DC_A;    /* lever back */
         if (jvs.p1 & 0x0800) b |= DC_LEFT;
         if (jvs.p1 & 0x0400) b |= DC_RIGHT;
         if (jvs.p1 & 0x0200) b |= DC_X;
-        if (x < 16) b |= DC_LEFT | DC_UP;
-        if (x > 239) b |= DC_RIGHT | DC_DOWN;
     }
     *buttons = (u16)~b;
     *rtrig = (u8)acc;
