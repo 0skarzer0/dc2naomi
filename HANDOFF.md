@@ -483,6 +483,30 @@ maple del MIE (CT2 no tenía hook) y las interrupciones de error. Perfil `ct2h` 
 sin filas del muestreador. Ni el hook de maple ni `MASKERR` lo arreglan en ese intento (falta saber la proporción en
 varios arranques). **Proyecto en pausa en este punto.**
 
+### CT2: análisis en Flycast tras la pausa (2026-11-08)
+
+Dato del usuario: en la placa **nunca** sale la pantalla "Now Loading" de CT2, ni siquiera la vez que llegó a la
+pantalla amarilla (pasó de negro directamente a la amarilla). En Flycast la secuencia es logo de SEGA → "Now
+Loading" (~2 s) → pantalla amarilla.
+
+Trazas nuevas en `tools/flycast/flycast-dc2naomi-debug.patch`:
+- `FC_REGTRACE=1`: escrituras en registros PVR (0x000-0x1ff, sin TA/render) y SB, solo cuando cambia el valor, con
+  PC/PR (con el recompilador dinámico el PC es aproximado: inicio de bloque).
+- `FC_PIOCYC=N`: cada lectura PIO de 16 bits de la NetDIMM cuesta N ciclos del SH4 (imitar la placa, donde el
+  residente copia por CPU y Flycast lo hace al instante).
+
+Resultados:
+- El juego configura el vídeo **una sola vez** (PC ~`0x8c154de4`): VO_CONTROL `0x00160008` (blanking), FB_R_CTRL
+  `0x00800004`, VO_STARTX `0xa8`, SPG_VBLANK_INT `0x00150208`, y lo enciende (`0x00160000` / `0x00800005`) antes del
+  primer frame. **No toca SPG_LOAD/HBLANK/VBLANK/WIDTH/CONTROL** (usa los que deja el IP.BIN) ni vuelve a cambiar el
+  modo para la pantalla amarilla: el "Now Loading" y la amarilla salen con la misma configuración de vídeo.
+- Con `FC_PIOCYC=40/120/1500` el "Now Loading" **sigue saliendo** (con 1500 dura ~25 s) y el juego llega a la
+  amarilla: la lentitud de las lecturas PIO por sí sola no explica el fallo. Hipótesis descartada.
+
+Queda abierto: qué tiene el "Now Loading" que en la placa no se ve (paleta ARGB8888, `PAL_RAM_CTRL=2`, textura
+subida por DMA ch2, cambio de framebuffer en la interrupción de vblank...). Hace falta el diag del punto 1 de abajo
+para ver si en ese tramo el juego está vivo.
+
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
 1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
    lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.

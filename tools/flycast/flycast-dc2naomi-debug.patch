@@ -104,10 +104,34 @@ index a6d594657..3c28764d4 100644
  
  	asic_RL2Pending();
 diff --git a/core/hw/holly/sb.cpp b/core/hw/holly/sb.cpp
-index 45c0ad6b9..fef9c878f 100644
+index 45c0ad6b9..9bebbf7ba 100644
 --- a/core/hw/holly/sb.cpp
 +++ b/core/hw/holly/sb.cpp
-@@ -663,6 +663,8 @@ void sb_Reset(bool hard)
+@@ -13,6 +13,8 @@
+ #include "hw/pvr/pvr_sb_regs.h"
+ #include "emulator.h"
+ #include "hw/bba/bba.h"
++#include "hw/sh4/sh4_if.h"
++#include <cstdio>
+ #include "serialize.h"
+ #include <map>
+ 
+@@ -192,6 +194,14 @@ void sb_WriteMem(u32 addr, u32 data)
+ 	DEBUG_LOG(HOLLY, "write %s.%c = %x", regName(addr),
+ 			((addr >> 26) & 7) == 2 ? 'b' : (addr & 0x2000000) ? '1' : '0',
+ 					data);
++	{	// (local) FC_REGTRACE: SB register writes, only on change
++		static int on = -1; if (on < 0) on = getenv("FC_REGTRACE") != nullptr;
++		static u32 last[0x800]; static bool seen[0x800];
++		u32 a = addr & 0x1fff;
++		if (on && (!seen[a/4] || last[a/4] != data))
++		{ seen[a/4] = true; last[a/4] = data;
++		  fprintf(stderr, "SBW %05x=%08x pc=%08x pr=%08x\n", 0x5f6000 + a, data, Sh4cntx.pc, Sh4cntx.pr); }
++	}
+ 	// All Holly accesses are 32-bit for now
+ 	hollyRegs.write<u32>(addr, data);
+ }
+@@ -663,6 +673,8 @@ void sb_Reset(bool hard)
  		SB_SBREV = 0xB;
  		SB_G2ID = 0x12;
  		SB_G1SYSM = ((0 << 4) | 1);
@@ -116,11 +140,63 @@ index 45c0ad6b9..fef9c878f 100644
  		SB_TFREM = 8;
  		SB_PDAPRO = 0x7f00;
  		SB_GDAPRO = 0x7f00;
+diff --git a/core/hw/maple/maple_jvs.cpp b/core/hw/maple/maple_jvs.cpp
+index d01240f94..74ab305ad 100644
+--- a/core/hw/maple/maple_jvs.cpp
++++ b/core/hw/maple/maple_jvs.cpp
+@@ -1304,6 +1304,14 @@ u32 BaseMIE::RawDma(const u32 *buffer_in, u32 buffer_in_len, u32 *buffer_out)
+ 
+ 	const u32 cmd = *(u8*)buffer_in;
+ 
++	if (cmd == MDC_DeviceRequest && getenv("FC_MIE_NODEVINFO"))
++	{
++		// (local test patch) no answer to the Dreamcast device info request, as
++		// KOS expects of the real MIE: it then probes the JVS bridge (0x82)
++		buffer_out[0] = 0xFFFFFFFF;
++		return 4;
++	}
++
+ 	// delegate to subclass first
+ 	dma_buffer_out += 4;
+ 	u32 resp = dma(cmd);
+@@ -1385,6 +1393,13 @@ u32 BaseMIE::RawDma(const u32 *buffer_in, u32 buffer_in_len, u32 *buffer_out)
+ 		{
+ 			DEBUG_LOG(JVS, "bus[%d] JVS Get Id", bus_id);
+ 			static const char ID[56] = "315-6149    COPYRIGHT SEGA ENTERPRISES CO,LTD.  1998";
++			if (getenv("FC_MIE_NODEVINFO"))
++			{
++				// (local test patch) one reply frame, as KOS's MIE driver expects
++				reply(MDRS_JVSGetIdReply, 12);
++				wptr(ID, 48);
++				break;
++			}
+ 			reply(MDRS_JVSGetIdReply, 7);
+ 			wptr(ID, 28);
+ 
+@@ -2061,6 +2076,10 @@ u16 jvs_io_board::read_analog_axis(int player_num, int player_axis, bool inverte
+ 		v = mapleInputState[player_num].fullAxes[player_axis] + 0x8000;
+ 	else
+ 		v = 0x8000;
++	if (getenv("FC_PEDALS") && player_num == 0) {	// (local test patch) pedals idle at 0, K = full throttle
++		if (player_axis == 1) v = mapleInputState[0].fullAxes[1] > 0 ? 0xffff : 0x2000;
++		else if (player_axis == 2) v = 0x2000;
++	}
+ 	return inverted ? 0xffff - v : v;
+ }
+ 
 diff --git a/core/hw/naomi/naomi_cart.cpp b/core/hw/naomi/naomi_cart.cpp
-index 85fda8330..9228e7ed5 100644
+index 85fda8330..7e1a81cf8 100644
 --- a/core/hw/naomi/naomi_cart.cpp
 +++ b/core/hw/naomi/naomi_cart.cpp
-@@ -456,10 +456,12 @@ static void loadMameRom(const std::string& path, const std::string& fileName, Lo
+@@ -46,6 +46,7 @@
+ #include "systemsp.h"
+ #include "hopper.h"
+ #include "midiffb.h"
++#include "hw/sh4/sh4_if.h"
+ #include "oslib/i18n.h"
+ 
+ using namespace i18n;
+@@ -456,10 +457,12 @@ static void loadMameRom(const std::string& path, const std::string& fileName, Lo
  static void loadDecryptedRom(const std::string& path, const std::string& fileName, LoadProgress *progress)
  {
  	// Try to load BIOS from naomi.zip
@@ -135,7 +211,18 @@ index 85fda8330..9228e7ed5 100644
  		{
  			if (!bios_loaded)
  				throw FlycastException(Ts("Error: cannot load BIOS from naomi.zip"));
-@@ -1009,6 +1011,7 @@ void NaomiCartridge::WriteMem(u32 address, u32 data, u32 size)
+@@ -949,6 +952,10 @@ u32 NaomiCartridge::ReadMem(u32 address, u32 size)
+ 	case NAOMI_ROM_DATA_addr:
+ 		{
+ 			u32 rv = 0;
++			{	// (local) FC_PIOCYC=N: each PIO data read costs N SH4 cycles, like the real NetDIMM
++				static int cyc = -1; if (cyc < 0) { const char *e = getenv("FC_PIOCYC"); cyc = e ? atoi(e) : 0; }
++				Sh4cntx.cycle_counter -= cyc;
++			}
+ 			Read(RomPioOffset, 2, &rv);
+ 			if (RomPioAutoIncrement)
+ 				RomPioOffset += 2;
+@@ -1009,6 +1016,7 @@ void NaomiCartridge::WriteMem(u32 address, u32 data, u32 size)
  		RomPioAutoIncrement = (data & 0x8000) != 0;
  		RomPioOffset &= 0x0000ffff;
  		RomPioOffset |= (data << 16) & 0x7fff0000;
@@ -156,3 +243,32 @@ index 84f00d335..84cdfd44b 100644
  			//ROM_SYSTEM_BIOS( 12, "bios12", "epr-21578d (Export)" )
  			//{ 2, "epr-21578d.ic27", 0x000000, 0x200000, 0xdfd5f42a },
  			//ROM_SYSTEM_BIOS( 13, "bios13", "epr-21578a (Export)" )
+diff --git a/core/hw/pvr/pvr_regs.cpp b/core/hw/pvr/pvr_regs.cpp
+index 0538b3c8a..202fd7f95 100644
+--- a/core/hw/pvr/pvr_regs.cpp
++++ b/core/hw/pvr/pvr_regs.cpp
+@@ -4,6 +4,9 @@
+ #include "ta.h"
+ #include "spg.h"
+ #include <map>
++#include "hw/sh4/sh4_if.h"
++#include <cstdio>
++#include <cstdlib>
+ 
+ bool pal_needs_update=true;
+ 
+@@ -117,6 +120,14 @@ u32 pvr_ReadReg(u32 addr)
+ void pvr_WriteReg(u32 paddr,u32 data)
+ {
+ 	u32 addr = paddr & pvr_RegMask;
++	{	// (local) FC_REGTRACE: display-related PVR register writes, only on change
++		static int on = -1; if (on < 0) on = getenv("FC_REGTRACE") != nullptr;
++		static u32 last[0x400]; static bool seen[0x400];
++		if (on && addr < 0x200 && addr != STARTRENDER_addr && addr != TA_LIST_INIT_addr && (addr < 0x124 || addr > 0x164)
++			&& (!seen[addr/4] || last[addr/4] != data))
++		{ seen[addr/4] = true; last[addr/4] = data;
++		  fprintf(stderr, "PVRW %03x=%08x pc=%08x pr=%08x\n", addr, data, Sh4cntx.pc, Sh4cntx.pr); }
++	}
+ 	DEBUG_LOG(PVR, "write %s.%c = %x", regName(paddr),
+ 			((paddr >> 26) & 7) == 2 ? 'b' : (paddr & 0x2000000) ? '1' : '0',
+ 					data);
