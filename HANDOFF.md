@@ -586,6 +586,10 @@ Conclusión: el camino de lectura de DreamShell funciona en placa; se para en al
 en `0x8c004004`, función en `0x8c004008`) y dibuja en el frame buffer todo el dbglog/printf de KallistiOS (fuente
 8x16 de `tools/dstest/font.h`). Imagen `dreamshell_con` (EMU core). En Flycast se ve el registro hasta
 "Initializing DreamShell Core...".
+**`dreamshell_con` en placa: se queda en "Initializing DreamShell Core..."** (último mensaje del core normal antes del
+menú). Después vienen, sin mensajes: SDL (vídeo + joystick: MIE/JVS), TTF, GUI, consola, módulos, apps y Lua.
+Siguiente: `dreamshell_dbg` = `DEBUG_DS_CORE.BIN` (perfil `ds_dbg`, parche `0x8c25d504`) + consola: en Flycast muestra
+"Loading module vkb", "Installing apps", "DS_OK: ..." y "Initializing time".
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 

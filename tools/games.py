@@ -387,3 +387,13 @@ GAMES["ds_emu"] = dict(GAMES["ds"], groups=[
 # dc2naomi/tools/dstest (built against the DC-SWAT KallistiOS fork, Dreamcast build): DreamShell's boot steps
 # with readable text on the screen. Same disc layout as "ds" (the DS/ folder), its own 1ST_READ.BIN.
 GAMES["dstest"] = dict(GAMES["ds"], title="DSTEST", groups=[GAMES["ds"]["groups"][0]])
+
+
+# DEBUG_DS_CORE.BIN of the release (DS_DEBUG: KallistiOS log level KDEBUG, timings; IDE/SD probes on). With
+# CONSOLE=1 the whole log is drawn on the screen.
+GAMES["ds_dbg"] = dict(GAMES["ds"], groups=[
+    GAMES["ds"]["groups"][0],
+    {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+        (0x8C25D504, 4, 0x8DC00000),           # arch_stack_32m (DEBUG core): top of RAM below the resident
+    ]},
+])
