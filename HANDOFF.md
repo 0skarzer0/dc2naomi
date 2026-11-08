@@ -522,6 +522,18 @@ que carga DreamShell desde SD (adaptador SD por SPI en el puerto serie, conector
 no hay imagen de netboot para NetDIMM. Falta confirmar en el foro (http://www.dc-swat.ru/forum/thread-4297.html) qué
 hardware hace falta exactamente y qué juegos de Dreamcast funcionan.
 
+Lo que dice el hilo "DreamShell on NAOMI" del foro de dc-swat (oct. 2025 - oct. 2026, autor SWAT):
+- Arranca DreamShell con una **BIOS propia grabada en la EPROM de la BIOS** (programador + borrador UV; las 27C160 viejas
+  "mueren como moscas", mejor comprar otras). La BIOS de serie bloquea la interfaz ATA; la HollySH la desbloquea.
+- Lee los juegos de **SD** (adaptador al conector CN1, conectores OMRON que recomienda sacar de un cartucho barato o de
+  la placa óptica) o de **IDE/CF** (CF de 128 GB con LBA48). "**For DreamShell, NETDIMM is a useless thing**": no lee de
+  la NetDIMM.
+- Juegos de Dreamcast en NAOMI: sí, salvo probablemente Windows CE. Worms World Party "funciona a la perfección".
+- Puertos maple: A y D de NAOMI se usan para otras cosas; B y C valen para periféricos de Dreamcast; el ISO Loader
+  cambia C por A. Mod del puerto A: http://www.dc-swat.ru/blog/hardware/1146.html. Desde la 4.0.4, puente JVS (MIE).
+- NAOMI 2: primero sin vídeo (nov. 2025); la 4.0.4 (jul. 2026) anuncia soporte completo de NAOMI y NAOMI 2.
+- Soporte MIE/JVS en KallistiOS: https://github.com/KallistiOS/KallistiOS/pull/1440
+
 Fuentes del isoldr para NAOMI: `firmware/isoldr/loader/{main.c,syscalls.c,utils.c,cdda.c,naomi.c}` (ramas
 `!is_dreamcast()`); MIE: `firmware/mie`; mapeo JVS: `modules/isoldr/mie_pad.c`.
 
