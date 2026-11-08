@@ -587,6 +587,15 @@ en `0x8c004004`, función en `0x8c004008`) y dibuja en el frame buffer todo el d
 8x16 de `tools/dstest/font.h`). Imagen `dreamshell_con` (EMU core). En Flycast se ve el registro hasta
 "Initializing DreamShell Core...".
 
+### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
+
+El driver G2 DMA de Linux (`arch/sh/drivers/dma/dma-g2.c`) escribe `SB_G2DSTO` (`0xa05f7890`) = 27 y `SB_G2APRO` =
+`0x4659404f`; KallistiOS escribe `0x4659007F` ("0x0C000000-0x0CFFFFFF", es decir solo 16 MB: en NAOMI, con 32 MB, una
+DMA G2 desde `0x0Dxxxxxx` daría error de overrun; a tener en cuenta para DreamShell en modo 32 MB con streaming).
+Los juegos Katana calculan y escriben su propio G2APRO con **la misma función de Shinobi en la versión Dreamcast y en
+la NAOMI** (Ikaruga, Virtua Athlete: idéntica, literales `0x07f00000`, `0x46590000`, `0xa05f78bc`), así que G2APRO
+no explica por qué la DMA G2 de Ikaruga no termina en placa con nuestro loader.
+
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
 1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
    lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.
