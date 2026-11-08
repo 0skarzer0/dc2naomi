@@ -556,7 +556,12 @@ Cambios necesarios:
 En Flycast (con dos ajustes locales en `tools/flycast/flycast-dc2naomi-debug.patch`: SCI que contesta como puerto
 síncrono sin nada conectado, porque el sondeo de SD por SCI espera RDRF sin límite; y `FC_SYSM_RAM=1`, modo de sistema
 NAOMI `0xa1` en `0xa05f74b0` para código en RAM, como la placa real): "Root directory is /cd/DS", detecta la MIE
-("JVS I/O 315-6149") y llega al menú "DreamShell 4.0.4 NAOMI". Pendiente: probar en placa.
+("JVS I/O 315-6149") y llega al menú "DreamShell 4.0.4 NAOMI".
+**En placa (2026-11-08): se cuelga tras el logo de SEGA.** Sospechoso principal: el sondeo de IDE por el bus G1
+(registros ATA `0xa05f7018`/`0xa05f7080-9c`), que en NAOMI es el bus de la NetDIMM; también el sondeo de SD por
+SCIF/SCI. Siguiente prueba: `EMU_DS_CORE.BIN` de la release (compilado con `DS_EMU`: se salta `InitIDE()` e
+`InitSDCard()`; mismo parche `0x8c25d4c4`), imágenes `dreamshell_emu` y `dreamshell_emu_diag` (`DIAG=1`). Ojo: el
+constructor reutiliza `WORK/track3.iso`; con otra carpeta fuente usar otro WORK o `REBUILD=1`.
 Siguiente: lanzar un juego de Dreamcast desde el ISO Loader leyendo de la NetDIMM (paso 2) y el puente JVS (paso 3).
 
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
