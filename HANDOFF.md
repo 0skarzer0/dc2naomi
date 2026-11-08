@@ -562,6 +562,12 @@ NAOMI `0xa1` en `0xa05f74b0` para código en RAM, como la placa real): "Root dir
 SCIF/SCI. Siguiente prueba: `EMU_DS_CORE.BIN` de la release (compilado con `DS_EMU`: se salta `InitIDE()` e
 `InitSDCard()`; mismo parche `0x8c25d4c4`), imágenes `dreamshell_emu` y `dreamshell_emu_diag` (`DIAG=1`). Ojo: el
 constructor reutiliza `WORK/track3.iso`; con otra carpeta fuente usar otro WORK o `REBUILD=1`.
+`dreamshell_emu_diag` en placa: filas vivas (las llamadas GD siguen) pero negro, sin menú; con lecturas PIO lentas en
+Flycast llega igual al menú, así que no es lentitud. Hipótesis: `cdrom_init` del KallistiOS de DreamShell repite el
+desbloqueo de la protección del bus G1 (escribe `0x1fffff` en `0xa05f74e4` y lee los 2 MB de BIOS) si `0xa05f74ec`
+no vale 3; en NAOMI esas direcciones G1 son el puerto del cartucho (la NetDIMM) y, con un multibios, la verificación
+puede fallar y bloquear el bus: el residente leería basura y DreamShell no encontraría su carpeta. Perfil `ds_emu`:
+`cmp/eq #3,r0` en `0x8c15ba1e` (EMU_DS_CORE) → `sett`, se salta el desbloqueo. Imágenes `dreamshell_emu2(_diag)`.
 Siguiente: lanzar un juego de Dreamcast desde el ISO Loader leyendo de la NetDIMM (paso 2) y el puente JVS (paso 3).
 
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:

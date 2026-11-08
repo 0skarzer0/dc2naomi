@@ -368,3 +368,17 @@ GAMES["ds"] = {
         ]},
     ],
 }
+
+
+# The same with EMU_DS_CORE.BIN of the release (built with DS_EMU: no IDE/SD probe at start, so nothing pokes the
+# G1 ATA registers, which on NAOMI are the cartridge port) and without KallistiOS's G1 bus protection unlock in
+# cdrom_init (write 0x1fffff to 0xa05f74e4 and read the whole BIOS so the bus checks it): on NAOMI that bus is the
+# NetDIMM's, and with a multibios the check may fail and lock it. First seen on the board: DreamShell alive (GD
+# calls going on) but black, as if every read came back as garbage.
+GAMES["ds_emu"] = dict(GAMES["ds"], groups=[
+    GAMES["ds"]["groups"][0],
+    {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+        (0x8C25D4C4, 4, 0x8DC00000),           # arch_stack_32m: top of RAM below the resident
+        (0x8C15BA1E, 2, 0x0018),               # cdrom_init: cmp/eq #3,r0 (protection passed?) -> sett: skip the unlock
+    ]},
+])
