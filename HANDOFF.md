@@ -270,6 +270,13 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**Power Drift en placa no responde a START (2026-11-09):** en Flycast, con `ysgw3` (mandos `menu`), START funciona en
+Power Drift (de la demo a la selección de circuito). En placa no reacciona ni a START ni a nada. `ysgw4`: el pulso de
+START tras soltar pasa de 8 a 30 sondeos. `ysgw4_autostart` (`AUTOSTART=1`, flag `0x10000`): el mando pulsa START
+solo 30 de cada 300 sondeos; si en placa Power Drift arranca carreras solo, el gancho maple de PD funciona y el fallo
+es de tiempos; si no, PD no está usando nuestro mando en la placa. (Las filas DIAG no salen en PD ni en Flycast.)
+PD guarda doble búfer de maple (`xor` en `0x10b8` del contexto) y escribe MDEN/MDST/MSYS con base `0xa05f6c00`.
+
 **VMU emulada (`DIMM_VMU` 0x8000, `"vmu": True` en el perfil; 2026-11-09):** el residente contesta como una Visual
 Memory en la ranura 1 del mando del puerto A (el mando anuncia la subunidad 0x01): DEVINFO como Flycast
 (`0x0e000000`, `0x403f7e7e`, `0x00100500`, `0x00410f00`), GETMEMINFO (la info del bloque raíz `+0x40`), BLOCKREAD

@@ -277,6 +277,8 @@ def main():
     game = dict(GAMES[name])
     if game.get("vmu"):  # emulated Visual Memory behind the port A controller
         game["flags"] = game["flags"] | 0x8000
+    if os.environ.get("AUTOSTART"):  # test: START pressed by itself for 30 polls every 300
+        game["flags"] = game["flags"] | 0x10000
     if os.environ.get("SAMPLER"):  # diagnostics: the on-screen PC sampler instead of the program hook
         game["flags"] = game["flags"] | 0x0001
     if os.environ.get("DIAG"):  # rows of bits on screen, back to VGA timings if the game leaves them

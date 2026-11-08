@@ -60,6 +60,7 @@
 #define DIMM_NOPCTRA    0x2000u       /* (test) DO write PCTRA = 0x000a03f0 as the Dreamcast BIOS: kills the NAOMI 2 TA */
 #define DIMM_NOBIOSHW   0x4000u       /* skip the "as the Dreamcast BIOS leaves it" writes (AICA SCI*, DMAOR, PCTRA) */
 #define DIMM_VMU        0x8000u       /* a Visual Memory (128 KB, in RAM at RES_VMU) in slot 1 of the port A controller */
+#define DIMM_AUTOSTART  0x10000u      /* (test) the pad presses START by itself for 30 polls every 300 polls */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
 
 /* Patch kinds. The list is read in order every time a program starts (and

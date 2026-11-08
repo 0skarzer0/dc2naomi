@@ -752,7 +752,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                 if (fwd || back) start_used = 1;
                 start_frames = 1;
             } else {
-                if (start_frames && !start_used) start_pulse = 8;   /* START for 8 polls after a clean tap */
+                if (start_frames && !start_used) start_pulse = 30;  /* START for 30 polls after a clean tap (8 was too short?) */
                 start_frames = 0;
                 start_used = 0;
                 if (fwd) b |= DC_B;
@@ -780,6 +780,10 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         if (jvs.p1 & 0x0800) b |= DC_LEFT;
         if (jvs.p1 & 0x0400) b |= DC_RIGHT;
         if (jvs.p1 & 0x0200) b |= DC_X;
+    }
+    if (H.flags & DIMM_AUTOSTART) {              /* test: does this program read our pad at all? */
+        static u32 auto_n;
+        if (++auto_n % 300 < 30) b |= DC_START;
     }
     *buttons = (u16)~b;
     *rtrig = (u8)acc;
