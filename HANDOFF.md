@@ -449,7 +449,11 @@ Cambios para el lote:
   para `layout: rebuild` (`apt-get install genisoimage`).
 - **Midway Greatest Arcade Hits Vol. 2** (perfil `mw2`, Windows CE): logo de Windows CE y Flycast cae a los ~15 s
   con "SH4 exception when blocked"; la zona de la BIOS (IP.BIN, vectores de syscall `0x8c0000b0-bc`) aparece a
-  cero en un volcado justo antes. No se entregó: Windows CE necesita un estudio aparte.
+  cero en un volcado justo antes. No se entregó: Windows CE necesita un estudio aparte. **Sega Rally 2 (USA)**
+  también es Windows CE y cae igual (~17 s).
+- **Re-Volt (USA)**, perfil `rv`: Shinobi 1.43 + Audio64 (`SFX/AUDIO64.DRV`), sin DMA G2 de sonido en Flycast, música
+  en 14 pistas CDDA (no suenan). Cable `0x8c0f2082`; la misma espera de SB_FFST bit 5 que Namco Museum en
+  `0x8c0f2fe4` (parcheada). En Flycast llega a la pantalla de la VMU.
 
 ## Cómo encontrar los parches en otro juego Katana
 

@@ -307,3 +307,28 @@ GAMES["mw2"] = {
         ]},
     ],
 }
+
+# Re-Volt (USA, 1999; Acclaim). One program: 1ST_READ.BIN 2.9 MB at 0x8c010000, Shinobi 1.43 with the
+# Audio64 sound driver (SFX/AUDIO64.DRV). Music in 14 CDDA tracks (not played by the resident).
+# Boot patches only.
+GAMES["rv"] = {
+    "title": "RE-VOLT",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "gdi",
+    "flags": 0x0004,      # no user break
+    "hook_pc": [],
+    "groups": [
+        {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+            (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+            (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+            (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+        ]},
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C0F2082, 2, mov_imm0(4)),          # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
+            # Shinobi 1.43 G2 library: the same SB_FFST bit 5 wait as Namco Museum (0x8c0a9944):
+            # tst #32,r0 -> tst #0,r0
+            (0x8C0F2FE4, 2, 0xC800),
+        ]},
+    ],
+}
