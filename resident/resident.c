@@ -76,11 +76,14 @@ static u32 dbg_val[5];
 static u32 dbg_pc[8], dbg_samples;
 u32 dbg_countdown = 1;
 
-static void dbg_row(u32 sof, u32 line, u32 r, u32 v, u32 bits) {
+static void dbg_rowx(u32 sof, u32 line, u32 r, u32 v, u32 bits, u32 x0);
+static void dbg_row(u32 sof, u32 line, u32 r, u32 v, u32 bits) { dbg_rowx(sof, line, r, v, bits, 24); }
+/* x0 = left edge in pixels (24: the left column; 340: the right one) */
+static void dbg_rowx(u32 sof, u32 line, u32 r, u32 v, u32 bits, u32 x0) {
     for (u32 b = 0; b < bits; b++) {
         u32 w = (v >> (bits - 1 - b)) & 1 ? 0xffffffffu : 0x00000000u;
         for (u32 y = 0; y < 10; y++) {
-            volatile u32 *p = (volatile u32 *)(0xa5000000u + sof + (32 + r * 14 + y) * line + (24 + b * 8 + (b >> 2) * 4) * 2);
+            volatile u32 *p = (volatile u32 *)(0xa5000000u + sof + (32 + r * 14 + y) * line + (x0 + b * 8 + (b >> 2) * 4) * 2);
             for (u32 x = 0; x < 3; x++) p[x] = (y == 0 || y == 9) ? 0x84108410u : w;
         }
     }
@@ -1032,14 +1035,15 @@ u32 g2cpu(u32 *desc, u32 flag) {
 static u32 g2cpu_ticks;
 static void g2cpu_tick(void) {
     if ((H.flags & DIMM_DIAG) && !(++g2cpu_ticks & 31)) {
-        /* rows 20-22: transfers started | finished << 16, last length, last G2 address */
+        /* right column, rows 20-22: transfers started | finished << 16, last length, last G2 address
+           (the left column is the sampler's with PCSAMPLE) */
         u32 sof = REG32(0xa05f8050) & 0x00fffffc;
         u32 size = REG32(0xa05f805c);
         u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
         if (line < 640 || line > 4096) line = 1280;
-        dbg_row(sof, line, 20, g2cpu_n | g2cpu_done << 16, 32);
-        dbg_row(sof, line, 21, g2cpu_len, 32);
-        dbg_row(sof, line, 22, g2cpu_dst, 32);
+        dbg_rowx(sof, line, 20, g2cpu_n | g2cpu_done << 16, 32, 340);
+        dbg_rowx(sof, line, 21, g2cpu_len, 32, 340);
+        dbg_rowx(sof, line, 22, g2cpu_dst, 32, 340);
     }
     if (g2cpu_qh == g2cpu_qt) return;
     u32 *desc = g2cpu_q[g2cpu_qh & 7];
