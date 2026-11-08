@@ -603,6 +603,12 @@ Parece que las interrupciones de Holly no llegan a KallistiOS (o algo externo de
 `pvrtest2`: contador de IRQ de vblank, bits de ISTNRM tras el fotograma 0, IML*, ISTEXT, SR, ICR, registros de ELAN
 (`0xa8800000`: ID `0xe1ad0000`, IFCTL `+0x10`, IRQSTAT `+0x74`, IRQMASK `+0x78`) y dos experimentos (máscara de ELAN a
 0; máscaras externas a 0).
+**`pvrtest2` en placa:** SR=`0x40000001` (IRQ activas), ICR=`0x8000`, `ISTEXT=0x8` (el bit 3 externo de siempre).
+El vblank (bit 3 de ISTNRM) aparece y se borra: **las interrupciones sí llegan** (los bits 4-5 pendientes son eventos
+que KallistiOS no usa; lectura anterior corregida). Tras el fotograma 0 nunca aparecen el bit 7 (lista opaca
+terminada) ni los 0-2 (render terminado): **el TA no recibe los polígonos**. KallistiOS los manda por store queues
+directos a `0x10000000`; Katana suele mandarlos por DMA ch2. `pvrtest3`: modo directo (SQ) 5 s con TA_OPB_POS /
+TA_VERTBUF_POS, QACR0/1, MMUCR, CCR, LMMODE0/1; si falla, `pvr_init` con `dma_enabled` (fondo verde).
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 

@@ -98,52 +98,67 @@ int main(int argc, char **argv) {
         (unsigned long)(timer_ms_gettime64() - t0), REG(0xffa00040), REG(0xffa0002c));
     regs();
 
-    say("7 3D: frames (a square on blue covers this text if rendering works)\n");
+    say("   QACR0=%08lx QACR1=%08lx MMUCR=%08lx CCR=%08lx LMMODE0=%08lx LMMODE1=%08lx\n", REG(0xff000038),
+        REG(0xff00003c), REG(0xff000010), REG(0xff00001c), REG(0xa05f6884), REG(0xa05f6888));
     pvr_set_bg_color(0.0f, 0.0f, 0.6f);
-    pvr_poly_cxt_t cxt; pvr_poly_hdr_t hdr;
-    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED, 64, 64, tex, PVR_FILTER_NONE);
-    pvr_poly_compile(&hdr, &cxt);
-    for (int f = 0;; f++) {
-        if (f < 4 || (f % 60) == 0) say("  frame %d: wait ready... ", f);
-        t0 = timer_ms_gettime64();
-        while (pvr_check_ready() != 0) {
-            if (timer_ms_gettime64() - t0 > 3000) {
-                fg = 0xf800; say("\n  frame %d: NOT READY after 3 s (vblank IRQs %lu)\n", f, (unsigned long)vbl); fg = 0xffff;
-                irqinfo("  "); elaninfo();
-                static int tries;
-                if (++tries == 2 && REG(0xa8800000) == 0xe1ad0000) {
-                    say("  experiment: ELAN IRQMASK=0, IRQSTAT cleared\n");
-                    REG(0xa8800078) = 0; REG(0xa8800074) = REG(0xa8800074);
-                }
-                if (tries == 4) {
-                    say("  experiment: all external IRQ masks 0\n");
-                    REG(0xa05f6914) = 0; REG(0xa05f6924) = 0; REG(0xa05f6934) = 0;
-                }
-                t0 = timer_ms_gettime64();
+    for (int mode = 0; mode < 2; mode++) {
+        if (mode == 1) {
+            static uint8_t vbuf[2][128 * 1024] __attribute__((aligned(32)));
+            pvr_init_params_t prm = { { PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_0 },
+                                      256 * 1024, 1, 0, 0, 3, 0 };
+            say("8 switching to DMA vertex mode (as Katana): pvr_shutdown + pvr_init(dma)... ");
+            pvr_shutdown();
+            r = pvr_init(&prm);
+            pvr_set_vertbuf(PVR_LIST_OP_POLY, vbuf[0], sizeof vbuf[0]);
+            pvr_set_vertbuf(PVR_LIST_TR_POLY, vbuf[1], sizeof vbuf[1]);
+            pvr_set_bg_color(0.0f, 0.4f, 0.0f);   /* green background in DMA mode */
+            tex = pvr_mem_malloc(64 * 64 * 2);
+            pvr_txr_load(tex_src, tex, 64 * 64 * 2);
+            say("rv=%d\n", r);
+        }
+        say("%d %s: frames (square on %s covers the text if rendering works)\n", 7 + mode, mode ? "DMA" : "direct (SQ)", mode ? "GREEN" : "BLUE");
+        pvr_poly_cxt_t cxt; pvr_poly_hdr_t hdr;
+        pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED, 64, 64, tex, PVR_FILTER_NONE);
+        pvr_poly_compile(&hdr, &cxt);
+        int done = 0;
+        uint64_t start = timer_ms_gettime64();
+        for (int f = 0; ; f++) {
+            t0 = timer_ms_gettime64();
+            while (pvr_check_ready() != 0 && timer_ms_gettime64() - t0 < 3000) {}
+            if (pvr_check_ready() != 0) {
+                fg = 0xf800; say("  frame %d: NOT READY after 3 s\n", f); fg = 0xffff;
+                say("   TA_OPB_POS=%08lx TA_VERTBUF_POS=%08lx ISTNRM=%08lx ISTERR=%08lx\n", REG(0xa05f8134),
+                    REG(0xa05f8138), REG(0xa05f6900), REG(0xa05f6908));
+                break;
+            }
+            pvr_scene_begin();
+            pvr_list_begin(PVR_LIST_OP_POLY);
+            pvr_prim(&hdr, sizeof hdr);
+            float x = 100 + (f * 2) % 400, y = 150, sz = 160;
+            pvr_vertex_t v;
+            v.flags = PVR_CMD_VERTEX; v.z = 1; v.argb = 0xffffffff; v.oargb = 0;
+            v.x = x;      v.y = y + sz; v.u = 0; v.v = 1; pvr_prim(&v, sizeof v);
+            v.x = x;      v.y = y;      v.u = 0; v.v = 0; pvr_prim(&v, sizeof v);
+            v.x = x + sz; v.y = y + sz; v.u = 1; v.v = 1; pvr_prim(&v, sizeof v);
+            v.flags = PVR_CMD_VERTEX_EOL;
+            v.x = x + sz; v.y = y;      v.u = 1; v.v = 0; pvr_prim(&v, sizeof v);
+            pvr_list_finish();
+            pvr_scene_finish();
+            if (f == 0) {
+                uint32_t seen = 0; uint64_t t = timer_ms_gettime64();
+                while (timer_ms_gettime64() - t < 300) seen |= REG(0xa05f6900);
+                say("  frame 0 sent: ISTNRM bits seen %08lx  TA_OPB_POS=%08lx TA_VERTBUF_POS=%08lx\n", seen,
+                    REG(0xa05f8134), REG(0xa05f8138));
+            }
+            done = f + 1;
+            if (mode == 0 && start && timer_ms_gettime64() - start > 5000) {
+                say("  direct: %d frames in 5 s: direct mode works (keeps drawing)\n", done);
+                start = 0;
             }
         }
-        if (f < 4 || (f % 60) == 0) say("ok ");
-        pvr_scene_begin();
-        pvr_list_begin(PVR_LIST_OP_POLY);
-        pvr_prim(&hdr, sizeof hdr);
-        float x = 100 + (f * 3) % 400, y = 150, s = 160;
-        pvr_vertex_t v;
-        v.flags = PVR_CMD_VERTEX; v.z = 1; v.argb = 0xffffffff; v.oargb = 0;
-        v.x = x;     v.y = y + s; v.u = 0; v.v = 1; pvr_prim(&v, sizeof v);
-        v.x = x;     v.y = y;     v.u = 0; v.v = 0; pvr_prim(&v, sizeof v);
-        v.x = x + s; v.y = y + s; v.u = 1; v.v = 1; pvr_prim(&v, sizeof v);
-        v.flags = PVR_CMD_VERTEX_EOL;
-        v.x = x + s; v.y = y;     v.u = 1; v.v = 0; pvr_prim(&v, sizeof v);
-        pvr_list_finish();
-        pvr_scene_finish();
-        if (f < 4 || (f % 60) == 0) say("submitted\n");
-        if (f == 0) {
-            uint32_t seen = 0; uint64_t t = timer_ms_gettime64();
-            while (timer_ms_gettime64() - t < 500) seen |= REG(0xa05f6900);
-            say("  after frame 0: ISTNRM bits seen in 0.5 s = %08lx (0-2 render done, 7 opaque list)\n", seen);
-            irqinfo("  "); elaninfo();
-            say("  vblank IRQs so far: %lu\n", (unsigned long)vbl);
-        }
+        say("  %s: %d frames\n", mode ? "DMA" : "direct", done);
+        if (mode == 0 && done > 100) { say("  direct mode works; staying here\n"); for (;;) thd_sleep(1000); }
     }
+    for (;;) thd_sleep(1000);
     return 0;
 }
