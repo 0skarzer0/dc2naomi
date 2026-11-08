@@ -49,7 +49,7 @@
 #define DIMM_CONSOLE    0x0800u       /* KallistiOS programs: play dcload (magic 0xdeadbeef at 0x8c004004, syscall at
                                          0x8c004008) so their dbglog/printf is drawn on the screen as text */
 #define DIMM_NOIPBOOT   0x1000u       /* start 1ST_READ.BIN at 0x8c010000 directly, without the IP.BIN bootstrap */
-#define DIMM_NOPCTRA    0x2000u       /* leave the SH4 port A control (PCTRA) as it is */
+#define DIMM_NOPCTRA    0x2000u       /* (test) DO write PCTRA = 0x000a03f0 as the Dreamcast BIOS: kills the NAOMI 2 TA */
 #define DIMM_NOBIOSHW   0x4000u       /* skip the "as the Dreamcast BIOS leaves it" writes (AICA SCI*, DMAOR, PCTRA) */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
 

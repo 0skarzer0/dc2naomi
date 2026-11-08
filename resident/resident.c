@@ -1528,7 +1528,10 @@ void boot(const struct dimm_header *h) {
         REG32(0xa07028ac) = 0x50;      /* SCILV1 */
         REG32(0xa07028b0) = 0x08;      /* SCILV2 */
         REG32(0xffa00040) = 0x8201;    /* DMAC DMAOR */
-        if (!(H.flags & DIMM_NOPCTRA)) REG32(0xff80002c) = 0x000a03f0; /* PCTRA */
+        /* PCTRA (SH4 port A control) is NOT written any more: the Dreamcast BIOS value 0x000a03f0 leaves the
+           NAOMI 2's TA dead (TA_LIST_INIT ignored, no polygons, no render; pvrtest_np vs _nopctra, 2026-11-08).
+           DIMM_NOPCTRA (0x2000) now means the opposite: write it, for tests. */
+        if (H.flags & DIMM_NOPCTRA) REG32(0xff80002c) = 0x000a03f0; /* PCTRA */
     }
 
     /* flush everything we wrote to the program area (enter_game then

@@ -627,6 +627,17 @@ residente: `DIMM_NOIPBOOT` 0x1000 (saltar a 1ST_READ sin el bootstrap del IP.BIN
 PCTRA `0x000a03f0`), `DIMM_NOBIOSHW` 0x4000 (no escribir AICA SCI*, DMAOR ni PCTRA). Imágenes
 `pvrtest_np_noipboot`, `pvrtest_np_nopctra`, `pvrtest_np_nobioshw`.
 
+## ⭐ CAUSA ENCONTRADA (2026-11-08): `PCTRA = 0x000a03f0` mata el TA de la NAOMI 2
+
+En placa: `pvrtest_np_nopctra` y `pvrtest_np_nobioshw` dibujan (cuadrado rojo); `pvrtest_np_noipboot` no. El residente
+escribía en `boot()` el valor que deja la BIOS de Dreamcast en el control del puerto A del SH4 (`PCTRA`,
+`0xff80002c`). En la NAOMI 2 esos pines se usan para otra cosa y con ese valor **el TA deja de responder**
+(`TA_LIST_INIT` ignorado, `TA_OPB_POS` congelado, nunca "lista terminada" ni "render terminado"): el 3D no dibuja
+nada. Era la causa de que DreamShell arrancara entero sin verse, y probablemente de la pantalla negra tras el logo de
+SEGA en casi todos los juegos de Katana (Virtua Tennis sería la excepción por cómo inicializa el TA o porque reescribe
+PCTRA). **Arreglo:** el residente ya no escribe `PCTRA` (el flag `0x2000` ahora sirve para volver a escribirlo en
+pruebas). Imágenes con el arreglo: `dreamshell2`, `ct2h2`, `daytona2`.
+
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
 El driver G2 DMA de Linux (`arch/sh/drivers/dma/dma-g2.c`) escribe `SB_G2DSTO` (`0xa05f7890`) = 27 y `SB_G2APRO` =
