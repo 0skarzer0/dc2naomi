@@ -507,6 +507,24 @@ Queda abierto: qué tiene el "Now Loading" que en la placa no se ve (paleta ARGB
 subida por DMA ch2, cambio de framebuffer en la interrupción de vblank...). Hace falta el diag del punto 1 de abajo
 para ver si en ese tramo el juego está vivo.
 
+### Alternativa encontrada: DreamShell 4.0.4 (2026-11-08)
+
+[DreamShell](https://github.com/DC-SWAT/DreamShell) 4.0.4 (julio de 2026, de SWAT) **arranca imágenes GD-ROM de Dreamcast en
+NAOMI y NAOMI 2 desde IDE o SD**, y también ROMs de cartucho NAOMI. Su ISO Loader (isoldr) hace lo mismo que nuestro
+residente, pero es un proyecto maduro: emula todas las syscalls de la BIOS, lee de forma asíncrona con interrupciones,
+emula CDDA en NAOMI, parchea el cable de vídeo, carga un volcado de la flash de Dreamcast y gestiona la EEPROM.
+Para los mandos trae un **firmware propio de la MIE con puente JVS → mando de Dreamcast**: volante, pedales, hasta
+10 botones, zona muerta, calibración de volante/acelerador/freno (aplicación "MIE JVS"). Es justo lo que buscaba
+este proyecto para el mueble de Crazy Taxi.
+
+Cómo arranca en NAOMI: con la BIOS **HollySH** (`firmware/hollysh`, imagen `.bios` que sustituye a la BIOS de la placa),
+que carga DreamShell desde SD (adaptador SD por SPI en el puerto serie, conector CN1, CS por RTS) o IDE. En el código
+no hay imagen de netboot para NetDIMM. Falta confirmar en el foro (http://www.dc-swat.ru/forum/thread-4297.html) qué
+hardware hace falta exactamente y qué juegos de Dreamcast funcionan.
+
+Fuentes del isoldr para NAOMI: `firmware/isoldr/loader/{main.c,syscalls.c,utils.c,cdda.c,naomi.c}` (ramas
+`!is_dreamcast()`); MIE: `firmware/mie`; mapeo JVS: `modules/isoldr/mie_pad.c`.
+
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
 1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
    lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.
