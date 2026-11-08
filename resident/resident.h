@@ -29,7 +29,7 @@
 #define DIMM_MAGIC1     0x32474d49u   /* "IMG2" */
 #define DIMM_VERSION    2
 #define DIMM_RANGES     4
-#define DIMM_TRACKS     8
+#define DIMM_TRACKS     32            /* Windows CE discs (Midway Vol. 2) have 28 */
 #define DIMM_PATCHES    64
 
 /* flags */

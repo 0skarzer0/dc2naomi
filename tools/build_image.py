@@ -29,7 +29,7 @@ ALIGN = 0x10000
 BASE_LBA = 45000
 FLASH_OFFSET = 0x1000
 DATA_OFFSET = 0x40000
-DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 4, 8, 64
+DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 4, 32, 64
 PATCH_CHECK, PATCH_W16, PATCH_W32, PATCH_TRAMP, PATCH_R4FIX = 1, 2, 4, 8, 16
 
 
@@ -54,8 +54,9 @@ def nonzero_runs(gdi, gap=256):
 
 
 class GdiDisc:
-    def __init__(self, path):
+    def __init__(self, path, boot_name="1ST_READ.BIN"):
         self.gdi = Gdi(path)
+        self.boot_name = boot_name          # the boot file IP.BIN names (Windows CE discs: 0WINCEOS.BIN)
         self.runs = nonzero_runs(self.gdi)
         if len(self.runs) > DIMM_RANGES:
             # merge the closest runs until they fit
@@ -71,7 +72,7 @@ class GdiDisc:
         return self.gdi.read_file(name)
 
     def boot(self):
-        lba, size = self.gdi.find("1ST_READ.BIN")
+        lba, size = self.gdi.find(self.boot_name)
         return lba + 150, size
 
     def toc(self):
@@ -291,7 +292,7 @@ def main():
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)
-    disc = GdiDisc(source) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
+    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN")) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
 
     boot_fad, boot_size = disc.boot()
     first_track, tracks, leadout = disc.toc()

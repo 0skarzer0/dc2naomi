@@ -422,6 +422,35 @@ Ver qué hace la BIOS de NAOMI / Kunoichi con el AICA y el bus G2 antes del jueg
 2. `strings 1ST_READ.BIN`: "NAOMI LIBRARY" o una librería de sonido propia (Virtua Tennis: `libsnd0.95`) son buena
    señal; `sd for DC` / `MANATEE.DRV` / audio64 suelen ir con DMA G2.
 
+### Los juegos de coches (2026-11-08): criba y lote de 5
+
+Dos familias de sonido, que coinciden con lo visto en placa:
+- **SEGA AM**: `NAOMI LIBRARY … AM R&D` dentro del programa, driver `AICADRV.BIN` + `libsnd`, sonido subido
+  **por CPU** (la traza `FC_G2TRACE` solo muestra la DMA de prueba con `EN=0`). Virtua Tennis ✅ (0.9),
+  Crazy Taxi 2, Daytona USA 2001 y Yu Suzuki Game Works (0.8).
+- **Kit estándar**: `MANATEE.DRV` + `sd for DC` / `.MLT`, sonido **por DMA G2**. Ikaruga ❌, Virtua Athlete ❌.
+  (Crazy Taxi 2 y Daytona también llevan `MANATEE.DRV`, pero solo para el navegador Dream Passport `2_DP.BIN`.)
+- Namco Museum (Shinobi 1.43): sin DMA G2 de sonido en 60 s de Flycast.
+
+Lote para placa (normal + diag; diag = `DIAG=1 PCSAMPLE=1`, salvo YSGW = `DIAG=1 MASKERR=1` porque el muestreador
+cuelga YSGW en Flycast: su monitor tiene otro despachador de interrupciones):
+
+| Imagen | Flycast |
+|---|---|
+| `ct2` | pantalla de tarjetas de memoria |
+| `daytona` (`layout: rebuild`, 65 músicas recodificadas a 32 kHz: 477 MB; `flags 0x0004` y tiempos G1 del IP.BIN) | logo ADX → tarjetas de memoria |
+| `ysgw` | título |
+| `nmus` | menú ("No Memory Card found") |
+
+Cambios para el lote:
+- **El residente pone a 0 (VGA) los bits 9:8 de `0xa0702c00`** al arrancar: la BIOS de Dreamcast deja ahí el tipo de
+  cable; en NAOMI vale 3 (compuesto). Lo leen Ikaruga y Windows CE.
+- `DIMM_TRACKS` 8 → 32 (Windows CE: 28 pistas) y `boot` en el perfil (`0WINCEOS.BIN`). `genisoimage` hace falta
+  para `layout: rebuild` (`apt-get install genisoimage`).
+- **Midway Greatest Arcade Hits Vol. 2** (perfil `mw2`, Windows CE): logo de Windows CE y Flycast cae a los ~15 s
+  con "SH4 exception when blocked"; la zona de la BIOS (IP.BIN, vectores de syscall `0x8c0000b0-bc`) aparece a
+  cero en un volcado justo antes. No se entregó: Windows CE necesita un estudio aparte.
+
 ## Cómo encontrar los parches en otro juego Katana
 
 Herramientas en `tools/` (necesitan `sh-elf-objdump`):

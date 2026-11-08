@@ -47,11 +47,14 @@ GAMES = {
         "layout": "rebuild",  # needs re-encoded music to fit 512 MB
         "volume": "DAYTONAUSA",
         "music_rate": 32000,
-        "flags": 0x0001,      # the PC sampler (diagnostics), as before
+        "flags": 0x0004,      # no user break (the UBC hangs the real board: the old 0x0001 sampler
+                              # used it, which is probably why Daytona was black on the board)
         "hook_pc": [],
         "groups": [
             {"file": "IP.BIN", "base": 0x8C008000, "patches": [
                 (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type: VGA
+                (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+                (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
             ]},
             {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
                 (0x8C1D21EE, 2, 0x000B),               # syCblCheck (copy 1): rts
@@ -282,3 +285,25 @@ GAMES["va_tsel0"]["groups"][1]["patches"] += [
     (0x8C1943FA, 2, 0xE100),   # mov.l @(20,r14),r1 (desc TSEL) -> mov #0,r1
     (0x8C1943FC, 2, 0xE300),   # or r1,r3 -> mov #0,r3
 ]
+
+# Midway's Greatest Arcade Hits Vol. 2 (USA, 2001; Digital Eclipse). A Windows CE disc: IP.BIN boots
+# 0WINCEOS.BIN (the CE kernel, at 0x8c010000), which loads its DLLs and the emulators (Spy Hunter,
+# 720°, Gauntlet, Paperboy, Rampage...). 28 high-density tracks (data 3 and 30, 26 CDDA music tracks
+# the resident does not play). CE reads the cable type from the AICA register 0x2c00, which the
+# resident now sets to VGA at boot. Boot patches only (no maple hook: Windows CE has MAPLE.DLL).
+GAMES["mw2"] = {
+    "title": "MIDWAY ARCADE HITS 2",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "gdi",
+    "boot": "0WINCEOS.BIN",
+    "flags": 0x0004,      # no user break
+    "hook_pc": [],
+    "groups": [
+        {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+            (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+            (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+            (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+        ]},
+    ],
+}

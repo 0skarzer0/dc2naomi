@@ -1442,6 +1442,15 @@ void boot(const struct dimm_header *h) {
     /* An endless loop for the sound CPU until the game loads its driver */
     REG32(0xa0800000) = 0xeafffffe;
 
+    /* The video cable type the Dreamcast BIOS leaves in the AICA register 0x2c00 (bits 9:8; bit 0
+       is the ARM reset). Ikaruga, and Windows CE (IP.BIN, DDHAL.DLL, 0WINCEOS.BIN) read it there.
+       On the NAOMI it reads 3 (composite, 15 kHz); 0 = VGA. */
+    {
+        u32 t = 0;
+        while ((REG32(0xa05f688c) & 0x11) && ++t < 100000u) {}
+        REG32(0xa0702c00) = REG32(0xa0702c00) & ~0x300u;
+    }
+
     /* IP.BIN and 1ST_READ.BIN */
     read_sectors(0x8c008000, H.ip_fad, 16, 0);
     boot_sectors = (H.boot_size + 2047) >> 11;
