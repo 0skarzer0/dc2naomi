@@ -332,3 +332,12 @@ GAMES["rv"] = {
         ]},
     ],
 }
+
+# Crazy Taxi 2 with the maple hook: the DMA start (0x8c166e40..5e: r8 = SB_MDSTAR, jsr to the
+# address-to-physical function 0x8c16852e through the literal 0x8c166ee0) -> resident hook, so the
+# game talks to the resident (JVS inputs) instead of the MIE. On the board the plain ct2 got past the
+# logo to the memory card screen about 1 time in 6: the maple scan of the MIE is a suspect.
+GAMES["ct2h"] = _copy.deepcopy(GAMES["ct2"])
+GAMES["ct2h"]["groups"][1]["patches"] += [
+    (0x8C166EE0, 4, HOOK),
+]
