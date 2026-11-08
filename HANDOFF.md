@@ -609,6 +609,11 @@ que KallistiOS no usa; lectura anterior corregida). Tras el fotograma 0 nunca ap
 terminada) ni los 0-2 (render terminado): **el TA no recibe los polígonos**. KallistiOS los manda por store queues
 directos a `0x10000000`; Katana suele mandarlos por DMA ch2. `pvrtest3`: modo directo (SQ) 5 s con TA_OPB_POS /
 TA_VERTBUF_POS, QACR0/1, MMUCR, CCR, LMMODE0/1; si falla, `pvr_init` con `dma_enabled` (fondo verde).
+**`pvrtest3` en placa: fallan los dos modos** (directo y DMA de vértices). QACR0/1=`0x10`, MMUCR=0, CCR=`0x105`,
+LMMODE0/1=0/1: iguales que en Flycast. Pero el TA escribe cerca de 0: directo `TA_OPB_POS=0x00022580` (Flycast
+`0x00489600`); DMA `TA_OPB_POS=0x00012580`, `TA_VERTBUF_POS=0x00000084` (Flycast `0x00400000`). Como si los registros
+de base del TA no tuvieran lo que KallistiOS escribe. `pvrtest4`: volcado de registros PVR/TA tras `pvr_init_defaults`
+y tras la lista opaca, y escritura/relectura de los registros del TA.
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
