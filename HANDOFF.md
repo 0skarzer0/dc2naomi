@@ -479,6 +479,10 @@ maple del MIE (CT2 no tenía hook) y las interrupciones de error. Perfil `ct2h` 
 `0x8c166ee0` de la llamada a "a física" `0x8c16852e` antes de `SB_MDSTAR`); imágenes `ct2h`, `ct2h_maskerr` y
 `ct2h_maskerr_diag` (en Flycast se ve el mando del residente en el puerto A).
 
+`ct2h_maskerr_diag` en placa (2026-11-08, último vídeo de la sesión): logo de SEGA con filas → negro al menos 25 s,
+sin filas del muestreador. Ni el hook de maple ni `MASKERR` lo arreglan en ese intento (falta saber la proporción en
+varios arranques). **Proyecto en pausa en este punto.**
+
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
 1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
    lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.
