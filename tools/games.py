@@ -221,6 +221,16 @@ GAMES["ikaruga_g2cpu"]["groups"][1]["patches"] += [
     (0x8C045234, 4, G2CPU),
 ]
 
+# Ikaruga with the AICA G2 DMA started by the CPU alone: ADTSEL = 0 (the library writes 5 = hardware
+# trigger | suspend enable). On the board ADSUSP bit 4 (DMA request input from the AICA) read 0, while
+# in Flycast it is 1 from the second transfer on: with suspend enabled the DMA may wait for a request
+# that never comes. The earlier CPU-trigger test wrote 4 and kept suspend enable.
+GAMES["ikaruga_tsel0"] = _copy.deepcopy(GAMES["ikaruga"])
+GAMES["ikaruga_tsel0"]["groups"][1]["patches"] += [
+    (0x8C0452A6, 2, 0xE100),   # mov.l @(20,r14),r1 (desc TSEL) -> mov #0,r1
+    (0x8C0452A8, 2, 0xE300),   # or r1,r3 -> mov #0,r3
+]
+
 # Virtua Tennis (USA; Hitmaker). One program: 1ST_READ.BIN 2 MB at 0x8c010000. Its sound goes to the
 # AICA by CPU, not by G2 DMA (Flycast trace: only the G2 DMA library's setup transfer), so it tells
 # whether the G2 DMA stall Ikaruga hits is what stops every game on the board. Boot patches only.
@@ -242,3 +252,33 @@ GAMES["vt"] = {
         ]},
     ],
 }
+
+# Virtua Athlete 2000 (USA; Hitmaker, 2000). Made for Dreamcast first, ported to NAOMI in 2002 (Virtua
+# Athletics, GDS-0019). One program: 1ST_READ.BIN 1.7 MB at 0x8c010000, Shinobi 1.69, sd for DC 2.02.07,
+# CRI ADX. The NAOMI version runs the same code on "Kunoichi for NAOMI 0.96" (syG2 1.02.01, sd 2.02.11);
+# its G2 DMA start function is the same as the Dreamcast one. Boot patches only.
+GAMES["va"] = {
+    "title": "VIRTUA ATHLETE 2000",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "gdi",
+    "flags": 0x0004,      # no user break
+    "hook_pc": [],
+    "groups": [
+        {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+            (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+            (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+            (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+        ]},
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C19325A, 2, mov_imm0(4)),          # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
+        ]},
+    ],
+}
+
+# Virtua Athlete with the AICA G2 DMA started by the CPU alone (ADTSEL 0), as ikaruga_tsel0.
+GAMES["va_tsel0"] = _copy.deepcopy(GAMES["va"])
+GAMES["va_tsel0"]["groups"][1]["patches"] += [
+    (0x8C1943FA, 2, 0xE100),   # mov.l @(20,r14),r1 (desc TSEL) -> mov #0,r1
+    (0x8C1943FC, 2, 0xE300),   # or r1,r3 -> mov #0,r3
+]
