@@ -568,6 +568,11 @@ desbloqueo de la protección del bus G1 (escribe `0x1fffff` en `0xa05f74e4` y le
 no vale 3; en NAOMI esas direcciones G1 son el puerto del cartucho (la NetDIMM) y, con un multibios, la verificación
 puede fallar y bloquear el bus: el residente leería basura y DreamShell no encontraría su carpeta. Perfil `ds_emu`:
 `cmp/eq #3,r0` en `0x8c15ba1e` (EMU_DS_CORE) → `sett`, se salta el desbloqueo. Imágenes `dreamshell_emu2(_diag)`.
+**`dreamshell_emu2_diag` en placa (2026-11-08): igual**, filas vivas durante minutos y negro. La protección del bus G1
+no era (o no era lo único). Sin forma de ver en placa qué devuelve cada lectura, el camino por netboot queda
+**aparcado**. Para seguirlo haría falta un diag legible (por ejemplo dígitos hexadecimales en vez de bits: contador de
+llamadas GD, último comando, último FAD y los primeros bytes del último sector leído) o preguntar a SWAT. La ruta
+probada por SWAT sigue siendo BIOS HollySH + SD en CN1 (MISO B45, MOSI A46, CLK A47, CS B50, 3,3 V) o CF/IDE.
 Siguiente: lanzar un juego de Dreamcast desde el ISO Loader leyendo de la NetDIMM (paso 2) y el puente JVS (paso 3).
 
 Virtua Tennis sigue siendo la única excepción fija y no sabemos por qué. Ideas sin probar, en orden:
