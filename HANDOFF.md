@@ -646,6 +646,12 @@ bien con el hook de mandos. Daytona USA 2001 sigue en negro tras el logo de SEGA
 KallistiOS devuelven `~n & 0xffff`), así que el bloque de configuración (bloque lógico 5, partición 2) era inválido y
 los juegos de Katana usaban japonés. Corregido; `ct2h3` sale en inglés.
 
+**Mapeo del mueble para CT2 (`ct2h4`, en `pad_state` del residente):** volante → stick X; acelerador → R; freno → L;
+START → Y al instante (Crazy Hop), mantenido 1 s (60 sondeos) → START (título, pausa); palanca adelante → B (marcha D /
+volver), atrás → A (marcha R / aceptar); volante en el último ~6 % del recorrido → cruceta izquierda+arriba /
+derecha+abajo (cursor de menús); botón JVS 0x0200 → X. (Es global en el residente: si otro juego necesita otro reparto,
+hacer el mapeo por perfil.)
+
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
 El driver G2 DMA de Linux (`arch/sh/drivers/dma/dma-g2.c`) escribe `SB_G2DSTO` (`0xa05f7890`) = 27 y `SB_G2APRO` =

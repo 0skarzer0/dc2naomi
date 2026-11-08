@@ -725,23 +725,23 @@ static void pad_state(u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
         /* small dead zones on the pedals */
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
-        /* START: a short press is A (the menus confirm with A, and START
-           there goes back); held for over half a second it becomes START
-           (the title screen, pause) */
+        /* Crazy Taxi cabinet mapping (tuned on Crazy Taxi 2, 2026-11-08):
+           START          -> Y at once (Crazy Hop); held for a second it becomes START (title, pause)
+           lever forward  -> B (drive gear; "back" in menus), lever back -> A (reverse gear; "accept")
+           wheel at the end of its travel -> d-pad left+up / right+down (menu cursor) */
         if (jvs.p1 & 0x8000) {
             if (start_frames < 1000) start_frames++;
-            b |= start_frames < 20 ? DC_A : DC_START;
+            b |= start_frames < 60 ? DC_Y : DC_START;
         } else {
             start_frames = 0;
         }
-        if (jvs.p1 & 0x2000) b |= DC_UP;   /* shifter forward: menus, view */
-        if (jvs.p1 & 0x1000) b |= DC_DOWN; /* shifter back */
+        if (jvs.p1 & 0x2000) b |= DC_B;    /* lever forward */
+        if (jvs.p1 & 0x1000) b |= DC_A;    /* lever back */
         if (jvs.p1 & 0x0800) b |= DC_LEFT;
         if (jvs.p1 & 0x0400) b |= DC_RIGHT;
-        if (jvs.p1 & 0x0200) b |= DC_B;
-        if (x < 16) b |= DC_LEFT;    /* the wheel at full lock: menus */
-        if (x > 239) b |= DC_RIGHT;
-        if (brk > 200 && (jvs.p1 & 0x8000)) b = (b & ~DC_A) | DC_B; /* brake + START: B (back) */
+        if (jvs.p1 & 0x0200) b |= DC_X;
+        if (x < 16) b |= DC_LEFT | DC_UP;
+        if (x > 239) b |= DC_RIGHT | DC_DOWN;
     }
     *buttons = (u16)~b;
     *rtrig = (u8)acc;
