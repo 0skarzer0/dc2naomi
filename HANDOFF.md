@@ -638,6 +638,14 @@ SEGA en casi todos los juegos de Katana (Virtua Tennis sería la excepción por 
 PCTRA). **Arreglo:** el residente ya no escribe `PCTRA` (el flag `0x2000` ahora sirve para volver a escribirlo en
 pruebas). Imágenes con el arreglo: `dreamshell2`, `ct2h2`, `daytona2`.
 
+**Resultados en placa con el arreglo (2026-11-08):** DreamShell muestra su menú y se maneja con los mandos del mueble.
+**Crazy Taxi 2 funciona**: "Now Loading", pantalla de VMU y, en el mueble de Crazy Taxi, volante y pedales responden
+bien con el hook de mandos. Daytona USA 2001 sigue en negro tras el logo de SEGA.
+
+**Idioma japonés: CRC de la flash mal.** `crc_block` de `build_image.py` no invertía el resultado (la BIOS y
+KallistiOS devuelven `~n & 0xffff`), así que el bloque de configuración (bloque lógico 5, partición 2) era inválido y
+los juegos de Katana usaban japonés. Corregido; `ct2h3` sale en inglés.
+
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
 El driver G2 DMA de Linux (`arch/sh/drivers/dma/dma-g2.c`) escribe `SB_G2DSTO` (`0xa05f7890`) = 27 y `SB_G2APRO` =

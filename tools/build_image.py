@@ -186,7 +186,8 @@ def crc_block(b):
         for _ in range(8):
             n = ((n << 1) ^ 4129) if n & 0x8000 else (n << 1)
             n &= 0xffff
-    return n
+    return (~n) & 0xffff   # (inverted, as the BIOS/KallistiOS flashrom code: without it the settings block is
+                           #  invalid and Katana games fall back to Japanese)
 
 
 def make_flash(region, language):
