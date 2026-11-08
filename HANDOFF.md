@@ -590,6 +590,12 @@ en `0x8c004004`, función en `0x8c004008`) y dibuja en el frame buffer todo el d
 menú). Después vienen, sin mensajes: SDL (vídeo + joystick: MIE/JVS), TTF, GUI, consola, módulos, apps y Lua.
 Siguiente: `dreamshell_dbg` = `DEBUG_DS_CORE.BIN` (perfil `ds_dbg`, parche `0x8c25d504`) + consola: en Flycast muestra
 "Loading module vkb", "Installing apps", "DS_OK: ..." y "Initializing time".
+**`dreamshell_dbg` en placa (foto): DreamShell arranca entero.** "DreamShell 4.0.4 NAOMI 2", "Base path: /cd/DS",
+módulo vkb, todas las apps `DS_OK`, "App Launch App opened", "Startup time: 6833 ms". Pero la pantalla sigue mostrando
+el texto de la consola: lo que DreamShell dibuja con el PVR (3D) no llega a la pantalla. La placa es una **NAOMI 2**
+(SWAT: "en NAOMI 2 aún no hay vídeo, la salida hay que configurarla aparte"; su BIOS HollySH inicializa ELAN). Flycast
+no puede emular NAOMI 2 sin su BIOS. Siguiente: `tools/pvrtest` (imagen `pvrtest`): los pasos de vídeo de DreamShell
+(`pvr_init_defaults`, `pvr_dma_init`, textura por SQ y por DMA ch2, fotogramas con límite de tiempo) con texto.
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
