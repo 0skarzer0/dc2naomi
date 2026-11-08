@@ -270,6 +270,14 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**VMU emulada (`DIMM_VMU` 0x8000, `"vmu": True` en el perfil; 2026-11-09):** el residente contesta como una Visual
+Memory en la ranura 1 del mando del puerto A (el mando anuncia la subunidad 0x01): DEVINFO como Flycast
+(`0x0e000000`, `0x403f7e7e`, `0x00100500`, `0x00410f00`), GETMEMINFO (la info del bloque raíz `+0x40`), BLOCKREAD
+(130 palabras), BLOCKWRITE (fase = cuarto de 128 bytes), GETLASTERROR/SETCOND/LCD/reloj aceptados. 128 KB en RAM en
+`RES_VMU` = `0x8de00000`, formateada al arrancar si no lo está (raíz 255, FAT 254, directorio 253-241, 200 bloques).
+Se pierde al recargar la imagen o apagar. En Flycast, Namco Museum (`nmus4`) ya no muestra "No Memory Card found" y
+va directo al menú (opciones con "Save Mini-Game to VMU"). Ikaruga en placa: **funciona, terminado**.
+
 ## Ikaruga y Virtua Tennis: la DMA G2 del AICA (2026-11-07 / 08)
 
 ### Ikaruga (Japón) — perfil `ikaruga`

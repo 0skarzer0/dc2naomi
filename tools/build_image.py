@@ -275,6 +275,8 @@ def main():
         sys.exit(__doc__)
     name, source, work, prog, out = sys.argv[1:]
     game = dict(GAMES[name])
+    if game.get("vmu"):  # emulated Visual Memory behind the port A controller
+        game["flags"] = game["flags"] | 0x8000
     if os.environ.get("SAMPLER"):  # diagnostics: the on-screen PC sampler instead of the program hook
         game["flags"] = game["flags"] | 0x0001
     if os.environ.get("DIAG"):  # rows of bits on screen, back to VGA timings if the game leaves them

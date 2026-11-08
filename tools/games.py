@@ -119,7 +119,8 @@ GAMES = {
     # Shinobi 1.43 + KAMUI2 (1999), no G1 timing writes of its own. Has Pole Position.
     "nmus": {
         "title": "NAMCO MUSEUM",
-        "pads": "menu",       # plain START (on release), START + lever = up/down, wheel lock = left/right
+        "pads": "menu",
+        "vmu": True,          # emulated Visual Memory in slot 1 (RAM: kept until the board is reset)       # plain START (on release), START + lever = up/down, wheel lock = left/right
         "region": 1,          # USA
         "language": 1,        # English
         "layout": "gdi",

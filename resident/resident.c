@@ -875,6 +875,107 @@ static u32 mie_build(void) {
     return PHYS(my_list);
 }
 
+/* ------------------------------------------------------------------ */
+/* Emulated Visual Memory (DIMM_VMU): 256 blocks of 512 bytes in RAM at RES_VMU, behind the port A controller.
+   Answers as Flycast's VMU does (DEVINFO, GETMEMINFO, BLOCKREAD/WRITE, GETLASTERROR; LCD and clock accepted). */
+
+#define VMU ((u8 *)RES_VMU)
+
+static void vmu_format(void) {
+    u8 *v = VMU;
+    if (v[255 * 512] == 0x55 && v[255 * 512 + 15] == 0x55 && v[255 * 512 + 0x46] == 0xfe) return; /* already formatted */
+    mset(v, 0, 128 * 1024);
+    u8 *root = v + 255 * 512;
+    for (int i = 0; i < 16; i++) root[i] = 0x55;
+    static const u8 tstamp[8] = {0x20, 0x26, 0x11, 0x09, 0x00, 0x00, 0x00, 0x00};   /* BCD 2026-11-09 */
+    mcpy(root + 0x30, tstamp, 8);
+    /* media info (also the GETMEMINFO answer): max block, min block, info, FAT at 254 (1 block),
+       directory at 253 (13 blocks), icon 0, 200 user blocks, 0x1f */
+    static const u16 info[12] = {0xff, 0, 0xff, 0xfe, 1, 0xfd, 13, 0, 200, 0x1f, 0, 0};
+    for (int i = 0; i < 12; i++) { root[0x40 + i * 2] = (u8)info[i]; root[0x41 + i * 2] = (u8)(info[i] >> 8); }
+    u8 *fat = v + 254 * 512;
+    for (int b = 0; b < 256; b++) {
+        u32 e = 0xfffc;                                   /* free */
+        if (b >= 242 && b <= 253) e = b - 1;              /* directory chain 253 -> 241 */
+        if (b == 241 || b == 254 || b == 255) e = 0xfffa; /* end of chain */
+        fat[b * 2] = (u8)e;
+        fat[b * 2 + 1] = (u8)(e >> 8);
+    }
+}
+
+static void vmu_devinfo(u32 *w) {
+    static const char name[30] = "Visual Memory                 ";
+    static const char lic[60] = "Produced By or Under License From SEGA ENTERPRISES,LTD.     ";
+    u8 *b = (u8 *)w;
+    w[0] = 0x0e000000u;   /* storage | LCD | clock */
+    w[1] = 0x403f7e7eu;   /* clock */
+    w[2] = 0x00100500u;   /* LCD */
+    w[3] = 0x00410f00u;   /* storage */
+    b[16] = 0xff;
+    b[17] = 0;
+    mcpy(b + 18, name, 30);
+    mcpy(b + 48, lic, 60);
+    b[108] = 0x7c;
+    b[109] = 0x00;
+    b[110] = 0x82;
+    b[111] = 0x00;
+}
+
+static u32 vmu_block(u32 loc) {          /* location word: partition, phase, block (big-endian 16 bits) */
+    return ((loc >> 16) & 0xff) << 8 | loc >> 24;
+}
+
+/* One frame for the VMU: data = the frame's words after the header, n of them. Returns the reply length in
+   words (header included) written to out. */
+static u32 vmu_frame(u32 cmd, u32 dst, const u32 *data, u32 n, u32 *out) {
+    u32 rcmd = 7, olen = 0;
+    u32 func = n ? data[0] : 0;
+    if (cmd == 1 || cmd == 2) {                                   /* DEVINFO / ALLINFO */
+        rcmd = 5;
+        olen = 28;
+        vmu_devinfo(&out[1]);
+    } else if (cmd == 10 && func == 0x02000000u) {                /* GETMEMINFO, storage */
+        rcmd = 8;
+        olen = 7;
+        out[1] = 0x02000000u;
+        mcpy(&out[2], VMU + 255 * 512 + 0x40, 24);
+    } else if (cmd == 10 && func == 0x04000000u) {                /* GETMEMINFO, LCD */
+        rcmd = 8;
+        olen = 2;
+        out[1] = 0x04000000u;
+        out[2] = 47 | 31 << 8 | 0x10 << 16 | 2 << 24;
+    } else if (cmd == 11 && func == 0x02000000u && n >= 2) {      /* BLOCKREAD */
+        u32 blk = vmu_block(data[1]) & 0xff;
+        rcmd = 8;
+        olen = 2 + 128;
+        out[1] = 0x02000000u;
+        out[2] = data[1];
+        mcpy(&out[3], VMU + blk * 512, 512);
+    } else if (cmd == 11 && func == 0x08000000u) {                /* BLOCKREAD, clock: 2026-11-09 00:00 */
+        rcmd = 8;
+        olen = 3;
+        out[1] = 0x08000000u;
+        out[2] = (2026 & 0xff) | (2026 >> 8) << 8 | 11 << 16 | 9u << 24;
+        out[3] = 0;
+    } else if (cmd == 12 && func == 0x02000000u && n >= 2) {      /* BLOCKWRITE: phase = 128-byte quarter */
+        u32 blk = vmu_block(data[1]), phase = (data[1] >> 8) & 0xff;
+        u32 adr = blk * 512 + phase * 128, bytes = (n - 2) * 4;
+        if (adr + bytes <= 128 * 1024) mcpy(VMU + adr, &data[2], bytes);
+        else rcmd = 0xfb;                                         /* file error */
+    } else if (cmd == 12 || cmd == 13 || cmd == 14) {             /* LCD / clock writes, GETLASTERROR, SETCOND */
+        rcmd = 7;
+    } else if (cmd == 9) {                                        /* GETCOND: nothing to report */
+        rcmd = 8;
+        olen = 2;
+        out[1] = func;
+        out[2] = 0;
+    } else {
+        rcmd = 0xfe;                                              /* unknown function */
+    }
+    out[0] = rcmd | (dst & 0xc0) << 8 | dst << 16 | olen << 24;
+    return olen + 1;
+}
+
 /* Called by the game's maple driver with its frame list, just before it
    starts the DMA: answer every frame into its receive buffer, and hand the
    hardware our MIE poll instead (its end interrupt is the game's). */
@@ -893,10 +994,13 @@ u32 maple_hook(u32 list) {
         u32 hdr = in[2];
         u32 cmd = hdr & 0xff, dst = (hdr >> 8) & 0xff;
         u32 port = (dst >> 6) & 3;
-        u32 out[32];
+        static u32 out[2 + 2 + 128];
         u32 olen = 0;
         int answer = (port == 0 || (port == 1 && H.pad_map == DIMM_PAD_JOY)) && (dst & 0x20) && (w0 >> 8 & 7) == 0;
-        if (answer) {
+        int vmu = (H.flags & DIMM_VMU) && port == 0 && (dst & 0x3f) == 0x01 && (w0 >> 8 & 7) == 0;
+        if (vmu) {
+            olen = vmu_frame(cmd, dst, in + 3, len, out);
+        } else if (answer) {
             u32 rcmd = 7; /* ACK */
             if (cmd == 1 || cmd == 2) { /* DEVINFO / ALLINFO */
                 rcmd = 5;
@@ -911,7 +1015,8 @@ u32 maple_hook(u32 list) {
                 pad_state(port, (u16 *)b, b + 2, b + 3, b + 4, b + 5);
                 b[6] = b[7] = 128;
             }
-            out[0] = rcmd | (port << 6) << 8 | (0x20u | (port << 6)) << 16 | olen << 24;
+            u32 subs = (H.flags & DIMM_VMU) && port == 0 ? 0x01 : 0;    /* sub-unit present: the VMU in slot 1 */
+            out[0] = rcmd | (port << 6) << 8 | (0x20u | (port << 6) | subs) << 16 | olen << 24;
             olen++;
         } else {
             out[0] = 0xffffffffu; /* nothing connected */
@@ -1529,6 +1634,7 @@ void boot(const struct dimm_header *h) {
     REG32(0x8c0000b8) = (u32)flash_syscall;
     REG32(0x8c0000bc) = (u32)gd_syscall;
     REG32(0x8c0000e0) = (u32)misc_syscall;
+    if (H.flags & DIMM_VMU) vmu_format();
     if (H.flags & DIMM_CONSOLE) {
         REG32(0x8c004004) = 0xdeadbeefu;
         REG32(0x8c004008) = (u32)dcl_syscall;

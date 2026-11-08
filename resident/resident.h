@@ -14,6 +14,7 @@
 #define RES_MAPLE       0xadd40000u   /* maple DMA buffers (uncached) */
 #define RES_SCRATCH     0xadd7f000u   /* where neutralised register writes land */
 #define RES_LOG         0x8dd80000u   /* debug log ring */
+#define RES_VMU         0x8de00000u   /* emulated Visual Memory, 128 KB (lost when the board is reset or reloaded) */
 
 #define RES_MAGIC       0x524c4344u   /* "DCLR" */
 
@@ -58,6 +59,7 @@
 #define DIMM_NOIPBOOT   0x1000u       /* start 1ST_READ.BIN at 0x8c010000 directly, without the IP.BIN bootstrap */
 #define DIMM_NOPCTRA    0x2000u       /* (test) DO write PCTRA = 0x000a03f0 as the Dreamcast BIOS: kills the NAOMI 2 TA */
 #define DIMM_NOBIOSHW   0x4000u       /* skip the "as the Dreamcast BIOS leaves it" writes (AICA SCI*, DMAOR, PCTRA) */
+#define DIMM_VMU        0x8000u       /* a Visual Memory (128 KB, in RAM at RES_VMU) in slot 1 of the port A controller */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
 
 /* Patch kinds. The list is read in order every time a program starts (and
