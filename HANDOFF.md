@@ -614,6 +614,13 @@ LMMODE0/1=0/1: iguales que en Flycast. Pero el TA escribe cerca de 0: directo `T
 `0x00489600`); DMA `TA_OPB_POS=0x00012580`, `TA_VERTBUF_POS=0x00000084` (Flycast `0x00400000`). Como si los registros
 de base del TA no tuvieran lo que KallistiOS escribe. `pvrtest4`: volcado de registros PVR/TA tras `pvr_init_defaults`
 y tras la lista opaca, y escritura/relectura de los registros del TA.
+**`pvrtest4` en placa:** ELAN presente (`0xa8800000` = `0xe1ad0000`). Todos los registros PVR/TA iguales que en
+Flycast y todos se pueden escribir y releer, **salvo que `TA_OPB_POS` sigue en `0x00022580`** (debería volver a
+`TA_OPBINIT` = `0x00089600` en cada `TA_LIST_INIT`): el TA no responde a la orden de iniciar lista ni procesa datos.
+La tabla de inicialización del IP.BIN no toca el PVR/TA. KallistiOS normal (Cannonball, NAOMI) hace el mismo
+`PVR_RESET_ALL` y funciona arrancando desde la BIOS. Experimento: la misma prueba con KallistiOS de NAOMI
+(`tools/pvrnaomi`): `pvrtest_nb` (imagen NAOMI directa, como Cannonball) y `pvrtest_np` (por loader + residente +
+IP.BIN, con un salto de 64 KB delante porque KallistiOS NAOMI enlaza en `0x8c020000`).
 
 ### SB_G2APRO (protección de direcciones de la DMA G2, `0xa05f78bc`) — revisado 2026-11-08
 
