@@ -1002,11 +1002,14 @@ static u32 g2cpu_n, g2cpu_len, g2cpu_dst, g2cpu_done;
 static u32 *g2cpu_q[8];
 static u32 g2cpu_qh, g2cpu_qt;
 static void tmr_arm(void);
+static u32 g2cpu_ticks, g2cpu_stage;
+static void g2cpu_draw(void);
 u32 g2cpu(u32 *desc, u32 flag) {
     (void)flag;
     u32 sr;
     __asm__ volatile("stc sr,%0" : "=r"(sr));
     __asm__ volatile("ldc %0,sr" : : "r"(sr | 0xf0));
+    g2cpu_stage = 3;
     u32 ctx = REG32(0x8c0cf2f0);
     u32 chan = desc[0] & 3;
     u32 len = desc[3] & 0x7fffffe0u;
@@ -1028,28 +1031,37 @@ u32 g2cpu(u32 *desc, u32 flag) {
     g2cpu_len = desc[3];
     g2cpu_dst = desc[1];
     tmr_arm();
+    g2cpu_stage = 4;
+    g2cpu_draw();
     __asm__ volatile("ldc %0,sr" : : "r"(sr));
     return 0;
 }
 /* from tmu2_isr: finish one queued transfer per tick */
-static u32 g2cpu_ticks;
+/* right column: 20 = started | finished << 16, 21 = last length, 22 = last G2 address,
+   23 = stage (1 in the game's end handler, 2 back from it, 3 in g2cpu, 4 back to the game)
+   | queued << 8 | TMU2 ticks << 16. Drawn at every step, so a frozen screen shows the last one. */
+static void g2cpu_draw(void) {
+    if (!(H.flags & DIMM_DIAG)) return;
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc;
+    u32 size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    dbg_rowx(sof, line, 20, g2cpu_n | g2cpu_done << 16, 32, 340);
+    dbg_rowx(sof, line, 21, g2cpu_len, 32, 340);
+    dbg_rowx(sof, line, 22, g2cpu_dst, 32, 340);
+    dbg_rowx(sof, line, 23, g2cpu_stage | ((g2cpu_qt - g2cpu_qh) & 0xff) << 8 | g2cpu_ticks << 16, 32, 340);
+}
 static void g2cpu_tick(void) {
-    if ((H.flags & DIMM_DIAG) && !(++g2cpu_ticks & 31)) {
-        /* right column, rows 20-22: transfers started | finished << 16, last length, last G2 address
-           (the left column is the sampler's with PCSAMPLE) */
-        u32 sof = REG32(0xa05f8050) & 0x00fffffc;
-        u32 size = REG32(0xa05f805c);
-        u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
-        if (line < 640 || line > 4096) line = 1280;
-        dbg_rowx(sof, line, 20, g2cpu_n | g2cpu_done << 16, 32, 340);
-        dbg_rowx(sof, line, 21, g2cpu_len, 32, 340);
-        dbg_rowx(sof, line, 22, g2cpu_dst, 32, 340);
-    }
+    if (!(++g2cpu_ticks & 31)) g2cpu_draw();
     if (g2cpu_qh == g2cpu_qt) return;
     u32 *desc = g2cpu_q[g2cpu_qh & 7];
     g2cpu_qh++;
     g2cpu_done++;
+    g2cpu_stage = 1;
+    g2cpu_draw();
     ((void (*)(u32 *))0x8c044cbcu)(desc);          /* the game's end-of-DMA handler */
+    g2cpu_stage = 2;
+    g2cpu_draw();
 }
 
 static void apply_patches(void) {
