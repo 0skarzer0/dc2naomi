@@ -17,7 +17,8 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Namco Museum (US) | ✅ Menú y Pac-Man | ❌ Congelado tras STREAM.MLT (sonido) |
 | Crazy Taxi 2 (US) | ✅ Hasta tarjetas de memoria | sin probar |
 | **Virtua Tennis (US)** | ✅ | ✅ **Primer juego de Dreamcast que arranca en la placa real** (2026-11-08): llega a "No VMU found in slot 1, port A" |
-| Ikaruga (JP) | ✅ Título | ❌ Logo de SEGA → negro: atascado en la DMA G2 del AICA. Imagen `ikaruga_g2cpu` (sin DMA G2) pendiente de placa |
+| Ikaruga (JP) | ✅ Título | ❌ Logo de SEGA → negro: atascado en la DMA G2 del AICA. Con `g2cpu` avanza 5 subidas más y se para en la 6.ª |
+| Virtua Athlete 2000 (US) | ✅ Título y demo | ❌ Logo de SEGA → negro (monitor trifrecuencia: no pierde señal). **Mismo código de DMA G2 que su versión NAOMI, que sí funciona** |
 
 Resumen de lo aprendido en placa (detalles en "Ikaruga y Virtua Tennis", abajo):
 - **Loader + residente + NetDIMM funcionan en placa** (lo demuestra Virtua Tennis). Las lecturas PIO de la NetDIMM
@@ -26,6 +27,11 @@ Resumen de lo aprendido en placa (detalles en "Ikaruga y Virtua Tennis", abajo):
 - **La DMA G2 del canal AICA (canal 0) no termina nunca en la NAOMI** cuando la lanza un juego de Dreamcast
   (`ADST` se queda a 1). Es lo que para Ikaruga y muy probablemente Namco Museum (los dos cuelgan cargando sonido).
   Virtua Tennis sube su sonido por CPU y por eso arranca. Solución en curso: `g2cpu` (copia por CPU).
+- **Virtua Athlete 2000** (hecho primero para Dreamcast y portado por SEGA a NAOMI) usa la misma función de DMA G2,
+  instrucción a instrucción, que su versión NAOMI, y aun así se cuelga en placa: **el bloqueo está en el entorno que
+  deja el cargador (o en algo que hace la BIOS/librería NAOMI antes del juego), no en el juego**.
+- Balance: 1 juego con el sonido por CPU (arranca) frente a 4 con DMA G2 (Ikaruga, Virtua Athlete, y casi seguro
+  Namco Museum y YSGW: ninguno arranca).
 
 Sesión 2026-11-04:
 - Analizado YSGW entero (abajo). Es el nuevo banco de pruebas.
@@ -376,6 +382,45 @@ DIAG=1 python3 tools/build_image.py ikaruga_g2cpu ika/disc.gdi build/ikaruga_g2c
 python3 tools/drvpatch.py build/ikaruga_g2cpu.bin && python3 tools/drvpatch.py build/ikaruga_g2cpu_diag.bin
 gzip -k build/ikaruga_g2cpu.bin   # el nombre del .gz es el de romsinfo.csv (romname y audit_name)
 ```
+
+### Resultados de placa del 2026-11-08 (tarde)
+
+- **`ikaruga_g2cpu_diag`**: filas 21-22 leídas en el vídeo = `0x8001ef20` / `0x008f2e00`, la **6.ª** subida de la
+  lista de Flycast. La copia por CPU funciona en placa (antes se paraba en la 1.ª), pero la fila 20 parece decir
+  6 empezadas / 5 terminadas: el fin de la 6.ª no llega. La imagen `ikaruga_g2cpu_pc_diag` (muestreador + columna
+  derecha con la fila 23 = etapa | en cola<<8 | ticks de TMU2<<16) está hecha pero sin probar.
+- **`va_dc2naomi`**: negro tras el logo de SEGA. **`va_pc_diag`**: las filas del residente salen menos de un segundo
+  sobre el logo y luego todo negro; las del muestreador no llegan a salir. El monitor (trifrecuencia) no pierde la
+  señal: la imagen es negra, no un modo de vídeo distinto. O el juego apaga la salida de vídeo antes de cargar y se
+  cuelga, o se cuelga antes de montar sus interrupciones. Siguiente diag útil: forzar la imagen encendida y pintar
+  desde TMU2.
+- Sin probar aún: `ikaruga_tsel0`, `va_tsel0` (ADTSEL = 0: arranque por CPU **sin** "suspend enable"; en placa
+  ADSUSP bit 4, la petición de DMA del AICA, se leía 0, y en Flycast 1).
+
+### Virtua Athlete 2000 (USA) — perfil `va`
+
+Disco de 101 MB de ficheros (incluye Dream Passport). Un programa: `1ST_READ.BIN` 1,7 MB en `0x8c010000`.
+Parches: IP.BIN como siempre y cable `0x8c19325a` (`mov.w @r3,r4` → `mov #0,r4`). La versión NAOMI (GDS-0019,
+imagen de 112 MB; programa rom `0x0-0x1d0000` → `0x8c020000`, ISO en `0x800000`, base LBA 45000) lleva:
+
+| | Dreamcast | NAOMI |
+|---|---|---|
+| Base | Shinobi 1.69 | Kunoichi Library for NAOMI 0.96 |
+| syG2 | 1.02.00 | 1.02.01 |
+| sd (sonido) | 2.02.07 | 2.02.11 |
+| Otras | syBt, syHw, syCbl | syBtKn, syHwKn, syCblkn, syExtChkKn, "NAOMI LIBRARY FOR AM" 2.22 |
+
+La función de arranque de DMA G2 (VA DC `0x8c1943xx`, NAOMI `0x8c1362xx`; Ikaruga DC `0x8c04522c`, NAOMI
+`0x8c02af..`) es idéntica salvo literales. Literales de registros Holly que solo usa NAOMI: los del cartucho/NetDIMM
+(`0x5f7000-14`, `0x5f703c`, `0x5f7068`) y tiempos G1 (`0x5f7480-b8`); los de G2 (`0x5f78xx`) son los mismos.
+Ver qué hace la BIOS de NAOMI / Kunoichi con el AICA y el bus G2 antes del juego es el siguiente paso de fondo.
+
+### Cómo predecir si un juego de Dreamcast cargará (hipótesis, 2026-11-08)
+
+1. `FC_G2TRACE=1` en Flycast: si el juego sube su sonido por DMA G2 (líneas `G2DMA start` con `EN=1` tras la de
+   prueba), hoy se cuelga en placa. Si no hay (Virtua Tennis), probablemente carga.
+2. `strings 1ST_READ.BIN`: "NAOMI LIBRARY" o una librería de sonido propia (Virtua Tennis: `libsnd0.95`) son buena
+   señal; `sd for DC` / `MANATEE.DRV` / audio64 suelen ir con DMA G2.
 
 ## Cómo encontrar los parches en otro juego Katana
 
