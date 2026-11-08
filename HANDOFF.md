@@ -16,6 +16,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Menú y Power Drift jugable | ❌ Negro tras la licencia de SEGA |
 | Namco Museum (US) | ✅ Menú y Pac-Man | ❌ Congelado tras STREAM.MLT (sonido) |
 | Crazy Taxi 2 (US) | ✅ Hasta tarjetas de memoria | sin probar |
+| Crazy Taxi 2 (US), Daytona 2001, Re-Volt | ✅ hasta tarjetas de memoria / VMU | ❌ logo de SEGA → negro (lote del 2026-11-08) |
 | **Virtua Tennis (US)** | ✅ | ✅ **Primer juego de Dreamcast que arranca en la placa real** (2026-11-08): llega a "No VMU found in slot 1, port A" |
 | Ikaruga (JP) | ✅ Título | ❌ Logo de SEGA → negro: atascado en la DMA G2 del AICA. Con `g2cpu` avanza 5 subidas más y se para en la 6.ª |
 | Virtua Athlete 2000 (US) | ✅ Título y demo | ❌ Logo de SEGA → negro (monitor trifrecuencia: no pierde señal). **Mismo código de DMA G2 que su versión NAOMI, que sí funciona** |
@@ -454,6 +455,30 @@ Cambios para el lote:
 - **Re-Volt (USA)**, perfil `rv`: Shinobi 1.43 + Audio64 (`SFX/AUDIO64.DRV`), sin DMA G2 de sonido en Flycast, música
   en 14 pistas CDDA (no suenan). Cable `0x8c0f2082`; la misma espera de SB_FFST bit 5 que Namco Museum en
   `0x8c0f2fe4` (parcheada). En Flycast llega a la pantalla de la VMU.
+
+### Resultado del lote en placa (2026-11-08, tarde) y dónde estamos
+
+**No carga ninguno**: Crazy Taxi 2, Daytona 2001, YSGW, Namco Museum, Re-Volt (Midway y Sega Rally 2 ni se
+enviaron). **La hipótesis del sonido no basta**: Crazy Taxi 2 es de la misma familia que Virtua Tennis (librería AM,
+sonido por CPU, sin DMA G2) y se para igual.
+
+`ct2_diag` en placa (vídeo): texto del loader → logo de SEGA con las filas del residente (llamadas GD) durante
+menos de un segundo → **todo negro** (el monitor no pierde la señal) y las filas del muestreador TMU2 nunca salen.
+**Igual que `va_pc_diag`.** En Flycast, tras el logo, los dos pasan a su siguiente pantalla. Ikaruga, en cambio,
+se queda con el logo congelado y las filas vivas (atascado en la DMA G2).
+
+Lo que eso dice: el juego llega a cargar datos del disco con el residente y apaga/borra la imagen para la siguiente
+pantalla; después, o se para sin volver a llamar al GD-ROM, o la salida de vídeo queda desactivada y no se ve nada.
+El muestreador debería armarse en la siguiente lectura (VBR `0x8c00f400` en CT2 y VA, comprobado en Flycast), así que
+probablemente se para **antes** de la siguiente lectura o con las interrupciones enmascaradas.
+
+Virtua Tennis sigue siendo la única excepción y no sabemos por qué. Ideas sin probar, en orden:
+1. Diag que **fuerce la imagen** (FB_R_CTRL/VO_CONTROL) y pinte desde TMU2 armado ya en `boot()` (no esperar a una
+   lectura GD), con el VBR que haya: saber si el juego sigue vivo y dónde.
+2. Comparar el estado de Holly/AICA/SH4 que deja la BIOS de NAOMI al lanzar un juego NAOMI con el que deja nuestro
+   loader KOS (registros G1/G2, `SB_*`, IML*, DMAC, CCR/MMU, AICA 0x2800/0x2c00, RTC). La versión NAOMI de Virtua
+   Athlete corre el mismo código que la de Dreamcast y en la placa sí funciona.
+3. Mirar qué hace Virtua Tennis distinto justo tras el logo (en Flycast, trazando accesos a registros de CT2 y VT).
 
 ## Cómo encontrar los parches en otro juego Katana
 
