@@ -270,6 +270,17 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**F355 Challenge y 18 Wheeler (USA), perfiles `f355` y `w18` (2026-11-09):** un programa cada uno (1ST_READ.BIN en
+`0x8c010000`), driver maple de Shinobi con contexto en `+0x10bc`/`+0x10f4` (como Power Drift). Parches (función
+`_katana_drive` en `games.py`): IP.BIN como siempre; cable `mov.w @r1,r2` de PDTRA (`0xff800030`) → `mov #0,r2`
+(F355 `0x8c0de946`, 18W `0x8c15b2a6`); literal de la función "a física" antes de SB_MDSTAR → HOOK (F355
+`0x8c0ec81c` → `0x8c0eeb20`, 18W `0x8c16a580` → `0x8c16c9c0`); el arranque de 1ST_READ escribe tiempos G1 en un
+modo de configuración (`0x8c011046`): literales `0x8c011128/2c/30` → SCRATCH. Mandos `menu` y VMU. F355 pone
+SB_MDAPRO = `0x6155404f`. En Flycast: F355 crea su fichero en la VMU y llega a PRESS START; 18 Wheeler llega al menú
+de modos. **Ojo:** Flycast toma cualquier imagen llamada `f355*` o con título `F355...` por la recreativa F355 (pide
+su BIOS): título `FERRARI 355 DC`, y para probar en Flycast renombrar el .bin.
+`nmus_novmu` = Namco sin VMU (en placa `nmus5` con VMU queda en negro tras el logo de SEGA).
+
 **⭐ SB_MDAPRO (2026-11-09): por qué Power Drift y Namco Museum no veían los mandos en placa.** `ysgw4_autostart`
 en placa: Power Drift arranca y pausa solo (el gancho maple funciona y el juego lee nuestras respuestas), pero
 volante/pedales/START reales no llegan: `jvs` no se actualiza. Power Drift, Namco Museum y F355 escriben SB_MDAPRO

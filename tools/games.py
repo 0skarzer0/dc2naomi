@@ -406,3 +406,41 @@ GAMES["nmus_ffst"] = dict(GAMES["nmus"], groups=[
     GAMES["nmus"]["groups"][0],
     dict(GAMES["nmus"]["groups"][1], patches=GAMES["nmus"]["groups"][1]["patches"] + [(0x8C0A9944, 2, 0xC800)]),
 ])
+
+# F355 Challenge: Passione Rossa (USA, 2000; AM2). One program: 1ST_READ.BIN 1.6 MB at 0x8c010000 (KAMUI 1.11,
+# Shinobi maple driver with the context at +0x10bc/+0x10f4 as Power Drift). Its startup also writes the G1 GD
+# timings (0x8c011046, only in one config mode) and sets SB_MDAPRO = 0x6155404f (the resident reopens it).
+def _katana_drive(title, cable, hook):
+    return {
+        "title": title,
+        "pads": "menu",       # START (on release), START + lever = up/down, lever = B/A, wheel lock = left/right
+        "vmu": True,          # emulated Visual Memory in slot 1
+        "region": 1,          # USA
+        "language": 1,        # English
+        "layout": "gdi",
+        "flags": 0x0004,      # no user break
+        "hook_pc": [],
+        "groups": [
+            {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+                (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+                (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+                (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+            ]},
+            {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+                (cable, 2, mov_imm0(2)),               # cable: mov.w @r1,r2 (PDTRA 0xff800030) -> mov #0,r2
+                (hook, 4, HOOK),                       # maple: literal of the "to physical" call before SB_MDSTAR
+                (0x8C011128, 4, SCRATCH + 0x20),       # startup G1 timings: 0xa05f7490/94
+                (0x8C01112C, 4, SCRATCH + 0x30),       #   0xa05f74a0
+                (0x8C011130, 4, SCRATCH + 0x40),       #   0xa05f707c
+            ]},
+        ],
+    }
+
+
+GAMES["f355"] = _katana_drive("FERRARI 355 DC",  # no title starting "F355": Flycast takes it for the arcade F355 (own BIOS)
+                                  0x8C0DE946, 0x8C0EC81C)
+# 18 Wheeler: American Pro Trucker (USA, 2001; AM2). Same startup and maple driver (KAMUI2, Shinobi).
+GAMES["w18"] = _katana_drive("18 WHEELER DC", 0x8C15B2A6, 0x8C16A580)
+
+# Namco Museum without the emulated VMU (to tell a VMU problem from a maple one on the board).
+GAMES["nmus_novmu"] = dict(GAMES["nmus"], vmu=False)
