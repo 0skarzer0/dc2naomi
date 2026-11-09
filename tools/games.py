@@ -42,6 +42,7 @@ GAMES = {
     # Daytona USA 2001 (US). First attempt: black screen on the real board.
     "daytona": {
         "title": "DAYTONA USA DC",
+        "pads": "menu",       # START (on release), START + lever = up/down, lever = B/A, wheel lock = left/right
         "region": 1,          # USA
         "language": 1,        # English
         "layout": "rebuild",  # needs re-encoded music to fit 512 MB
@@ -62,9 +63,10 @@ GAMES = {
                 (0x8C1F6866, 2, 0x000B),               # syCblCheck (copy 2)
                 (0x8C1F6868, 2, mov_imm0(0)),
                 (0x8C1E966C, 4, HOOK),                 # maple: address-to-physical call
-                (0x8C1F3764, 4, 0xAC00FE00),           # G1RWC.. (0xa05f7484) -> RAM
-                (0x8C1F3778, 4, 0xAC00FE40),           # G1GDRC, G1GDWC (0xa05f74a0)
-                (0x8C1F3784, 4, 0xAC00FE80),           # G1CRDYC.. (0xa05f74b4)
+                # (2026-11-09: aimed at SCRATCH, not at 0xac00fe00.. in the Katana system area as before)
+                (0x8C1F3764, 4, SCRATCH + 0x20),       # G1RWC.. (0xa05f7484) -> RAM
+                (0x8C1F3778, 4, SCRATCH + 0x30),       # G1GDRC, G1GDWC (0xa05f74a0)
+                (0x8C1F3784, 4, SCRATCH + 0x40),       # G1CRDYC.. (0xa05f74b4)
             ]},
         ],
     },

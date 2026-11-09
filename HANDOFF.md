@@ -270,6 +270,11 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**Daytona USA 2001, `daytona3` (2026-11-09):** reconstruida con el residente actual (sin PCTRA, SB_MDAPRO abierto),
+mandos `menu` y los tiempos G1 de su 1ST_READ (`0x8c1f3764/78/84`) a SCRATCH (antes iban a `0xac00fe00..`, dentro del
+área de sistema de Katana). En Flycast llega a la pantalla de memory card. Pendiente de placa (antes: negro tras SEGA).
+Su 1ST_READ lleva "NAOMI LIBRARY Ver 0.8 AM R&D" (NLOBJPUT/NLSPRITE) y no la librería de módem.
+
 **Aparcados (2026-11-09, placa):** `18wheeler_novmu` (negro tras SEGA) y `f355_novmu` ("Now Loading" fijo): sin la
 VMU fallan igual, así que la VMU no era la causa en estos dos (en Flycast los dos arrancan). También aparcados `kof99`
 y `lb2`. Aparcado el pack ADC 1.7 (disco 1): menú + ~100 programas KallistiOS (MAME4ALL, emuladores de consolas),
