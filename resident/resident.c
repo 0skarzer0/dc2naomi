@@ -438,6 +438,7 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7);
 #define DIMM_PARAMH  0xa05f7048u
 #define DIMM_STATUS  0xa05f704cu
 #define ISTEXT       0xa05f6904u
+#define DIMM_WINDOW  0x01fffffcu           /* offset: the last word of RAM (inside the resident's own area) */
 static u32 dimm_base, dimm_cmds, dimm_last, dimm_raw, dimm_bases;
 static volatile int dimm_busy;
 
@@ -462,9 +463,16 @@ static void dimm_service(void) {
     if (cmd == 0xffff || !(cmd & 0x8000)) return;
     dimm_busy = 1;
     u32 id = (cmd >> 9) & 0x3f, ret = 1, pl = 0, ph = 0;
-    u32 a = (((cmd & 0x1ff) << 16) | REG16(DIMM_OFFSETL)) + dimm_base;
+    /* Seen on the board (firmware 3.17, DragonMinded's netdimm.py): only the low 25 bits of the address arrive
+       (peek 0x8dc00000 -> command 0x8dc0, OFFSETL 0) and command 3 is never sent. So an address is an offset
+       into the 32 MB of RAM, unless a window was set: a 32-bit poke at offset DIMM_WINDOW sets the base for
+       what follows (0xa0000000 for Holly/AICA/VRAM, 0xff000000 for SH4 registers; 0 = RAM again). */
+    u32 off = ((cmd & 0x1ff) << 16) | REG16(DIMM_OFFSETL);
+    u32 a = off + (dimm_base ? dimm_base : 0x0c000000u);
     u32 val = (u32)REG16(DIMM_PARAMH) << 16 | REG16(DIMM_PARAML);
     u32 t = dimm_addr(a);
+    if (off == DIMM_WINDOW && id == 10) { dimm_base = val; dimm_bases++; id = 0; }
+    if (off == DIMM_WINDOW && id == 6) { pl = dimm_base & 0xffff; ph = dimm_base >> 16; id = 0; }
     switch (id) {
     case 0: case 1: break;
     case 3: dimm_base = val; dimm_bases++; break;
@@ -472,12 +480,7 @@ static void dimm_service(void) {
     case 5: if (a & 1) ret = 0; else pl = t ? REG16(t) : 0xbadd; break;
     case 6:
         if (a & 3) { ret = 0; break; }
-        {   /* (diagnostics: 0x005f7ff0.. = our own counters; an address we refuse reads as itself) */
-            u32 ph_ = a & 0x1fffffffu;
-            u32 v = ph_ == 0x005f7ff0u ? dimm_base : ph_ == 0x005f7ff4u ? dimm_raw : ph_ == 0x005f7ff8u ? dimm_cmds
-                  : ph_ == 0x005f7ffcu ? dimm_bases : t ? REG32(t) : a;
-            pl = v & 0xffff; ph = v >> 16;
-        }
+        { u32 v = t ? REG32(t) : 0xbadadd00u; pl = v & 0xffff; ph = v >> 16; }
         break;
     case 8: if (t) REG8(t) = (u8)val; break;
     case 9: if (a & 1) ret = 0; else if (t) REG16(t) = (u16)val; break;
@@ -486,7 +489,7 @@ static void dimm_service(void) {
     }
     dimm_cmds++;
     dimm_last = a;
-    if (id != 6 || (a & 0x1ffffff0u) != 0x005f7ff0u) dimm_raw = cmd << 16 | REG16(DIMM_OFFSETL);
+    dimm_raw = cmd << 16 | (off & 0xffff);
     REG16(DIMM_COMMAND) = (u16)((cmd & 0x7e00) | ret);
     REG16(DIMM_OFFSETL) = 0;
     REG16(DIMM_PARAML) = (u16)pl;
