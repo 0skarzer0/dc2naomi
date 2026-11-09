@@ -14,7 +14,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 |---|---|---|
 | Daytona USA 2001 (US) | — | ❌ Negro (probablemente el UBC, ver abajo). Parado |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Menú y Power Drift jugable | ✅ Funciona (residente sin PCTRA); ajustando mandos |
-| Namco Museum (US) | ✅ Menú y Pac-Man | ❌ Congelado tras STREAM.MLT (sonido) |
+| Namco Museum (US) | ✅ Menú y Pac-Man | ✅ **Terminado** (`nmus6`: sin VMU, mandos `pole`) |
 | Crazy Taxi 2 (US) | ✅ Hasta tarjetas de memoria | sin probar |
 | Crazy Taxi 2 (US), Daytona 2001, Re-Volt | ✅ hasta tarjetas de memoria / VMU | ❌ logo de SEGA → negro (lote del 2026-11-08) |
 | **Virtua Tennis (US)** | ✅ | ✅ **Primer juego de Dreamcast que arranca en la placa real** (2026-11-08): llega a "No VMU found in slot 1, port A" |
@@ -269,6 +269,8 @@ botones 1-6 = A B X Y L R (L/R a fondo); el jugador 2 (JVS P2, `jvs.p2` = bytes 
 el puerto maple B, que ahora también contesta (sólo con este reparto). Imágenes `ikaruga_joy` (perfil `ikaruga`,
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
+
+**Namco Museum: terminado** (2026-11-09, `nmus6` probado en el mueble: todo bien).
 
 **Placa, 2026-11-09 (noche):** YSGW (`ysgw5`) funciona, Power Drift incluido. Pendiente para otro día: el sonido de
 Power Drift petardea y al salir con B se queda en negro (no vuelve al menú). F355 con VMU se queda en "Now Loading" y
