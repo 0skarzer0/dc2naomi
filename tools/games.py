@@ -119,8 +119,8 @@ GAMES = {
     # Shinobi 1.43 + KAMUI2 (1999), no G1 timing writes of its own. Has Pole Position.
     "nmus": {
         "title": "NAMCO MUSEUM",
-        "pads": "menu",
-        "vmu": True,          # emulated Visual Memory in slot 1 (RAM: kept until the board is reset)       # plain START (on release), START + lever = up/down, wheel lock = left/right
+        "pads": "pole",       # menu controls + Pole Position: gas = A, brake = B, lever = R (Low/High)
+        # no VMU: with the emulated VMU the board stays black after the SEGA logo (nmus5); without, it plays (2026-11-09)       # plain START (on release), START + lever = up/down, wheel lock = left/right
         "region": 1,          # USA
         "language": 1,        # English
         "layout": "gdi",
@@ -444,3 +444,47 @@ GAMES["w18"] = _katana_drive("18 WHEELER DC", 0x8C15B2A6, 0x8C16A580)
 
 # Namco Museum without the emulated VMU (to tell a VMU problem from a maple one on the board).
 GAMES["nmus_novmu"] = dict(GAMES["nmus"], vmu=False)
+
+
+# Fighting games for the standard NAOMI cabinet (2 sticks, 6 buttons per player, 2 STARTs): mandos `joy`.
+# Patch points found with tools/findpatch.py (cable read of PDTRA, maple "to physical" literal), checked by hand.
+def _katana_joy(title, region, language, patches):
+    return {
+        "title": title,
+        "pads": "joy",
+        "region": region,
+        "language": language,
+        "layout": "gdi",
+        "flags": 0x0004,      # no user break
+        "hook_pc": [],
+        "groups": [
+            {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+                (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+                (0x8C00DAB4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+                (0x8C00DAC0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+            ]},
+            {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": patches},
+        ],
+    }
+
+
+# The King of Fighters: Dream Match 1999 (USA). 42 CDDA tracks (music): the resident plays no CDDA.
+GAMES["kof99"] = _katana_joy("KOF DREAM MATCH 1999", 1, 1, [
+    (0x8C1109F2, 2, mov_imm0(4)),   # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
+    (0x8C1D28B0, 4, HOOK),          # maple: to-physical 0x8c1d3f06, result to @r8 = SB_MDSTAR
+])
+# The Last Blade 2 (USA). To-physical 0x8c033230 (`mov.l @r15,r0; and r3,r0`, not found by findpatch).
+GAMES["lb2"] = _katana_joy("LAST BLADE 2 DC", 1, 1, [
+    (0x8C014EB0, 2, mov_imm0(0)),   # cable: mov.w @r3,r0 (PDTRA) -> mov #0,r0
+    (0x8C030DE4, 4, HOOK),          # maple: literal loaded at 0x8c030d4a, then SB_MDST = 1
+])
+# Street Fighter III: 3rd Strike (USA). 1ST_READ.BIN is 14 MB (up to 0x8cdeaa00).
+GAMES["sf3ts"] = _katana_joy("SF3 THIRD STRIKE DC", 1, 1, [
+    (0x8CD6A7A6, 2, mov_imm0(4)),   # cable
+    (0x8CD89DE8, 4, HOOK),          # maple: to-physical 0x8cd8b436
+])
+# Street Fighter III: Double Impact (USA).
+GAMES["sf3di"] = _katana_joy("SF3 DOUBLE IMPACT DC", 1, 1, [
+    (0x8C08210A, 2, mov_imm0(4)),   # cable
+    (0x8C091A10, 4, HOOK),          # maple: to-physical 0x8c09305e
+])

@@ -742,7 +742,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
         u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
-        if (H.pad_map == DIMM_PAD_MENU) {
+        if (H.pad_map == DIMM_PAD_MENU || H.pad_map == DIMM_PAD_POLE) {
             /* Yu Suzuki Game Works (2026-11-08): START is a plain START, but it is sent when released, and only if
                the lever was not used while it was held: START + lever forward = up, START + lever back = down
                (the menu needs clean up/down). Lever alone = B/A; wheel at the end of its travel = left/right. */
@@ -761,6 +761,14 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             if (start_pulse) { start_pulse--; b |= DC_START; }
             if (x < 16) b |= DC_LEFT;
             if (x > 239) b |= DC_RIGHT;
+            if (H.pad_map == DIMM_PAD_POLE) {
+                /* Pole Position (Namco Museum, 2026-11-09): A accelerates, B brakes, R toggles Low/High */
+                b &= ~(u32)(DC_A | DC_B);
+                if (acc > 64) b |= DC_A;
+                if (brk > 64) b |= DC_B;
+                acc = (!start && (fwd || back)) ? 255 : 0;
+                brk = 0;
+            }
         } else {
             /* Crazy Taxi cabinet mapping (tuned on Crazy Taxi 2, 2026-11-08):
                START          -> Y at once (Crazy Hop); held for a second it becomes START (title, pause)

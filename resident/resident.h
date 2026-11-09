@@ -37,6 +37,8 @@
 #define DIMM_PAD_CT     0             /* Crazy Taxi 2: START = Y (hop), held 1 s = START; lever = B/A; wheel lock = d-pad */
 #define DIMM_PAD_MENU   1             /* Yu Suzuki GW: START plain (sent on release); START + lever = up/down; lever = B/A;
                                          wheel lock = left/right */
+#define DIMM_PAD_POLE   3             /* Namco Museum (Pole Position): as MENU, but gas = A, brake = B (digital) and the
+                                         lever (either way) = R trigger (Low/High gear toggle) */
 #define DIMM_PAD_JOY    2             /* standard NAOMI cabinet, 2 players (Ikaruga): stick = d-pad, START = START,
                                          buttons 1-6 = A B X Y L R; player 2 on maple port B */
 

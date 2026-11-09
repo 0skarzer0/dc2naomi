@@ -270,6 +270,11 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**Namco Museum en placa (2026-11-09):** `nmus5_novmu` funciona bien (con el arreglo de SB_MDAPRO); con la VMU emulada
+(`nmus5`) se queda en negro tras el logo de SEGA: **la VMU emulada falla en placa** (en Flycast va), sin investigar.
+`nmus` queda sin VMU y con mandos `pole` (`pad_map` 3): como `menu`, pero acelerador = A, freno = B (digitales) y
+palanca (cualquier sentido, sin START) = gatillo R, que en Pole Position cambia Low/High. Imagen `nmus6`.
+
 **F355 Challenge y 18 Wheeler (USA), perfiles `f355` y `w18` (2026-11-09):** un programa cada uno (1ST_READ.BIN en
 `0x8c010000`), driver maple de Shinobi con contexto en `+0x10bc`/`+0x10f4` (como Power Drift). Parches (función
 `_katana_drive` en `games.py`): IP.BIN como siempre; cable `mov.w @r1,r2` de PDTRA (`0xff800030`) → `mov #0,r2`
