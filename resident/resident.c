@@ -438,7 +438,7 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7);
 #define DIMM_PARAMH  0xa05f7048u
 #define DIMM_STATUS  0xa05f704cu
 #define ISTEXT       0xa05f6904u
-static u32 dimm_base, dimm_cmds, dimm_last;
+static u32 dimm_base, dimm_cmds, dimm_last, dimm_raw, dimm_bases;
 static volatile int dimm_busy;
 
 /* The address to use for a peek/poke, or 0: only memory that cannot raise an exception. */
@@ -467,12 +467,17 @@ static void dimm_service(void) {
     u32 t = dimm_addr(a);
     switch (id) {
     case 0: case 1: break;
-    case 3: dimm_base = val; break;
+    case 3: dimm_base = val; dimm_bases++; break;
     case 4: pl = t ? REG8(t) : 0xad; break;
     case 5: if (a & 1) ret = 0; else pl = t ? REG16(t) : 0xbadd; break;
     case 6:
         if (a & 3) { ret = 0; break; }
-        { u32 v = t ? REG32(t) : 0xbadadd00u; pl = v & 0xffff; ph = v >> 16; }
+        {   /* (diagnostics: 0x005f7ff0.. = our own counters; an address we refuse reads as itself) */
+            u32 ph_ = a & 0x1fffffffu;
+            u32 v = ph_ == 0x005f7ff0u ? dimm_base : ph_ == 0x005f7ff4u ? dimm_raw : ph_ == 0x005f7ff8u ? dimm_cmds
+                  : ph_ == 0x005f7ffcu ? dimm_bases : t ? REG32(t) : a;
+            pl = v & 0xffff; ph = v >> 16;
+        }
         break;
     case 8: if (t) REG8(t) = (u8)val; break;
     case 9: if (a & 1) ret = 0; else if (t) REG16(t) = (u16)val; break;
@@ -481,6 +486,7 @@ static void dimm_service(void) {
     }
     dimm_cmds++;
     dimm_last = a;
+    if (id != 6 || (a & 0x1ffffff0u) != 0x005f7ff0u) dimm_raw = cmd << 16 | REG16(DIMM_OFFSETL);
     REG16(DIMM_COMMAND) = (u16)((cmd & 0x7e00) | ret);
     REG16(DIMM_OFFSETL) = 0;
     REG16(DIMM_PARAML) = (u16)pl;
