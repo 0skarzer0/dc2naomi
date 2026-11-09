@@ -270,6 +270,11 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**Aparcados (2026-11-09, placa):** `18wheeler_novmu` (negro tras SEGA) y `f355_novmu` ("Now Loading" fijo): sin la
+VMU fallan igual, así que la VMU no era la causa en estos dos (en Flycast los dos arrancan). También aparcados `kof99`
+y `lb2`. Aparcado el pack ADC 1.7 (disco 1): menú + ~100 programas KallistiOS (MAME4ALL, emuladores de consolas),
+cada uno con su driver maple y su detección de 32 MB: habría que parchearlos uno a uno; no lleva OpenBOR.
+
 **Namco Museum: terminado** (2026-11-09, `nmus6` probado en el mueble: todo bien).
 
 **Placa, 2026-11-09 (noche):** YSGW (`ysgw5`) funciona, Power Drift incluido. Pendiente para otro día: el sonido de
