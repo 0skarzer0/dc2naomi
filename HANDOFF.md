@@ -848,3 +848,11 @@ Para WiPi Netbooter: `gzip build/ysgw.bin` y una línea en `romsinfo.csv`.
 ## Agradecimientos (regla)
 
 Citar en el README (sección "Agradecimientos") todo lo que se use de otros, y también lo que haya servido de inspiración o ayuda directa o indirecta. Añadirlo en el mismo commit en que se empiece a usar.
+
+**Crazy Taxi 2, `ct2h5` (2026-11-09):** a petición del usuario (el salto en START no le gustaba), `DIMM_PAD_CT` pasa a ser
+el mapa por defecto del mueble (`DIMM_PAD_WHEEL`: START al soltar, con START apretado palanca = arriba/abajo, freno = X,
+acelerador = Y) más la marcha: la palanca del mueble vuelve al centro, así que el residente recuerda la marcha
+(empieza en D). Palanca adelante en R = D (B); adelante ya en D = salto (Y, Crazy Hop); atrás = R (A). Si la marcha
+del juego y la del residente se desincronizan, basta un toque atrás y otro adelante. Imagen hecha cambiando solo el
+loader de `ct2h4` (el disco de CT2 ya no está aquí; la cabecera conserva `pad_map` 0). En Flycast llega a la pantalla
+de memory card. `app/loader.bin` regenerado.

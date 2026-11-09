@@ -43,8 +43,10 @@ PADS_TEXT = {
              "START = START al soltarlo; START + palanca = arriba/abajo"],
     "pole": ["Menús: como Yu Suzuki (START al soltar, START + palanca = arriba/abajo)",
              "Pole Position: acelerador = A, freno = B, palanca = cambio Low/High"],
-    "ct": ["START = salto (Crazy Hop); mantenido 1 s = START", "Palanca adelante = marcha D (B), atrás = R (A)",
-           "Volante a tope = cruceta (menús)", "Acelerador y freno = gatillos"],
+    "ct": ["Como el mueble por defecto, y además:",
+           "Palanca adelante en R = marcha D (B); adelante estando ya en D = salto (Crazy Hop)",
+           "Palanca atrás = marcha R (A)",
+           "START = START al soltarlo; con START apretado: palanca = arriba/abajo, freno = X, acelerador = Y"],
 }
 
 GAMES = {

@@ -715,6 +715,7 @@ static u32 wheel(u32 v) {
 #define DC_X 0x0400
 
 static u32 start_frames, start_used, start_pulse;
+static u32 gear_drive = 1, lever_prev_fwd, lever_hop;   /* DIMM_PAD_CT: the gear the game is in (starts in drive) */
 
 static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
     u32 b = 0;
@@ -737,7 +738,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         /* the digital stick on the analog stick too (3D games read only that one) */
         x = (p & 0x0800) ? 0 : (p & 0x0400) ? 255 : 128;
         y = (p & 0x2000) ? 0 : (p & 0x1000) ? 255 : 128;
-    } else if (jvs.valid && H.pad_map == DIMM_PAD_WHEEL) {
+    } else if (jvs.valid && (H.pad_map == DIMM_PAD_WHEEL || H.pad_map == DIMM_PAD_CT)) {
         /* Crazy Taxi cabinet default for games not tuned yet (2026-11-09). START is sent on release, and only if
            nothing else was used while it was held; while held it shifts the controls: lever = up/down, brake = X,
            gas = Y. Otherwise lever forward = B, back = A, gas = R trigger, brake = L trigger. The wheel is the
@@ -760,9 +761,19 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             if (start_frames && !start_used) start_pulse = 30;
             start_frames = 0;
             start_used = 0;
-            if (fwd) b |= DC_B;
-            if (back) b |= DC_A;
+            if (H.pad_map == DIMM_PAD_CT) {
+                /* Crazy Taxi 2 (2026-11-09): the cabinet lever springs back to the centre, so we keep the gear.
+                   Lever forward in reverse (R) = drive (B); lever forward already in drive (D) = Crazy Hop (Y);
+                   lever back = reverse (A). */
+                if (fwd && !lever_prev_fwd) lever_hop = (gear_drive != 0);
+                if (fwd) { b |= lever_hop ? DC_Y : DC_B; gear_drive = 1; }
+                if (back) { b |= DC_A; gear_drive = 0; }
+            } else {
+                if (fwd) b |= DC_B;
+                if (back) b |= DC_A;
+            }
         }
+        lever_prev_fwd = fwd;
         if (start_pulse) { start_pulse--; b |= DC_START; }
         if (x < 16) b |= DC_LEFT;
         if (x > 239) b |= DC_RIGHT;
