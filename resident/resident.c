@@ -718,7 +718,7 @@ static u32 start_frames, start_used, start_pulse;
 
 static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
     u32 b = 0;
-    u32 x = 128, acc = 0, brk = 0;
+    u32 x = 128, y = 128, acc = 0, brk = 0;
     if (jvs.valid && H.pad_map == DIMM_PAD_JOY) {
         /* Standard NAOMI cabinet (Ikaruga, 2026-11-09): JVS stick and START as they are, buttons 1-6 = A B X Y L R
            (L/R fully pressed), player 1 on port A and player 2 on port B. */
@@ -734,6 +734,38 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         if (p & 0x0040) b |= DC_Y;
         if (p & 0x0020) brk = 255;
         if (p & 0x0010) acc = 255;
+        /* the digital stick on the analog stick too (3D games read only that one) */
+        x = (p & 0x0800) ? 0 : (p & 0x0400) ? 255 : 128;
+        y = (p & 0x2000) ? 0 : (p & 0x1000) ? 255 : 128;
+    } else if (jvs.valid && H.pad_map == DIMM_PAD_WHEEL) {
+        /* Crazy Taxi cabinet default for games not tuned yet (2026-11-09). START is sent on release, and only if
+           nothing else was used while it was held; while held it shifts the controls: lever = up/down, brake = X,
+           gas = Y. Otherwise lever forward = B, back = A, gas = R trigger, brake = L trigger. The wheel is the
+           analog stick X always, and the d-pad left/right at the ends of its travel (menus). */
+        x = wheel(jvs.analog[0]);
+        acc = scale(1, jvs.analog[1], 255);
+        brk = scale(2, jvs.analog[2], 255);
+        acc = acc < 15 ? 0 : acc;
+        brk = brk < 15 ? 0 : brk;
+        u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
+        if (start) {
+            if (fwd) b |= DC_UP;
+            if (back) b |= DC_DOWN;
+            if (brk > 64) b |= DC_X;
+            if (acc > 64) b |= DC_Y;
+            if (fwd || back || brk > 64 || acc > 64) start_used = 1;
+            start_frames = 1;
+            acc = brk = 0;
+        } else {
+            if (start_frames && !start_used) start_pulse = 30;
+            start_frames = 0;
+            start_used = 0;
+            if (fwd) b |= DC_B;
+            if (back) b |= DC_A;
+        }
+        if (start_pulse) { start_pulse--; b |= DC_START; }
+        if (x < 16) b |= DC_LEFT;
+        if (x > 239) b |= DC_RIGHT;
     } else if (jvs.valid) {
         x = wheel(jvs.analog[0]);
         acc = scale(1, jvs.analog[1], 255);
@@ -797,7 +829,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
     *rtrig = (u8)acc;
     *ltrig = (u8)brk;
     *joyx = (u8)x;
-    *joyy = 128;
+    *joyy = (u8)y;
 }
 
 /* Standard controller DEVINFO (functions, function data, area, direction,

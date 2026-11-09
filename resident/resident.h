@@ -40,7 +40,12 @@
 #define DIMM_PAD_POLE   3             /* Namco Museum (Pole Position): as MENU, but gas = A, brake = B (digital) and the
                                          lever (either way) = R trigger (Low/High gear toggle) */
 #define DIMM_PAD_JOY    2             /* standard NAOMI cabinet, 2 players (Ikaruga): stick = d-pad, START = START,
-                                         buttons 1-6 = A B X Y L R; player 2 on maple port B */
+                                         buttons 1-6 = A B X Y L R; player 2 on maple port B; the stick also
+                                         drives the analog stick to its ends (games that only read it) */
+#define DIMM_PAD_WHEEL  4             /* Crazy Taxi cabinet default (games not tuned yet): START sent on release, only
+                                         if nothing else was used while held; held START: lever = up/down, brake = X,
+                                         gas = Y; otherwise lever = B/A, gas/brake = R/L triggers; wheel = analog
+                                         stick X, plus d-pad left/right at the ends of its travel */
 
 /* flags */
 #define DIMM_SAMPLER    0x0001u       /* diagnostics: sample the PC every 2^20 instructions */

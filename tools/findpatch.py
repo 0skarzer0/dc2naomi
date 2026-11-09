@@ -6,6 +6,8 @@ Prints, for tools/games.py:
 - cable: every read of PDTRA (literal 0xff800030 loaded, then mov.w @Rm,Rn) -> (addr, 2, mov #0,Rn);
 - maple: literals of an "address to physical" function (and 0x0fffffff on r4) that are loaded right before a jsr
   whose result goes to @(4,Rn) (SB_MDSTAR) -> (literal, 4, HOOK);
+- texture DMA: literals 0x11000000 loaded by a mov.l -> candidates for TEXPATH (0x13000000), to check by hand
+  (not every such literal is the texture DMA: Virtua Tennis lost its textures with it);
 - G1 timings: aligned literals 0xa05f7484/90/94/a0/b4 and 0xa05f707c in 1ST_READ.BIN -> SCRATCH.
 Only addresses and instruction words are printed (nothing from the disc goes into the repository).
 """
@@ -31,11 +33,13 @@ def movl_target(op, pc):
     return None
 
 
-def main(d):
-    ip = open(os.path.join(d, "IP.BIN"), "rb").read()
+def analyze(ip, b, print=lambda *a, **k: None):
+    """Patch points of a Katana game: {"ip_std": bool, "cable": [(addr, reg)], "aica": [addr],
+    "hook": [addr] (best candidates first), "g1": [addr]}."""
+    res = {"ip_std": u16(ip, 0x382) == 0x8532 and u32(ip, 0x5AB4) == 0xA05F7490 and u32(ip, 0x5AC0) == 0xA05F74A0,
+           "cable": [], "aica": [], "hook": [], "hook_strict": False, "g1": [], "texdma": []}
     print("IP.BIN 0x382 = %#06x (0x8532 = mov.w @(4,r3),r0 expected), 0x5ab4 = %#010x, 0x5ac0 = %#010x"
           % (u16(ip, 0x382), u32(ip, 0x5AB4), u32(ip, 0x5AC0)))
-    b = open(os.path.join(d, "1ST_READ.BIN"), "rb").read()
     n = len(b)
     end = BASE + n
 
@@ -55,6 +59,7 @@ def main(d):
                 op = u16(b, i + 2 * k)
                 if op & 0xF00F == 0x6001 and (op >> 4) & 15 == m:      # mov.w @Rm,Rn
                     rn = (op >> 8) & 15
+                    res["cable"].append((BASE + i + 2 * k, rn))
                     print("    (0x%08X, 2, mov_imm0(%d)),   # cable: mov.w @r%d,r%d (PDTRA) -> mov #0,r%d"
                           % (BASE + i + 2 * k, rn, m, rn, rn))
                     break
@@ -70,6 +75,7 @@ def main(d):
                 if i + 2 * k + 3 >= n:
                     break
                 if u16(b, i + 2 * k) == 0x4019 and u16(b, i + 2 * k + 2) == 0xC903:   # shlr8 r0 ; and #3,r0
+                    res["aica"].append(BASE + i + 2 * k + 2)
                     print("    (0x%08X, 2, mov_imm0(0)),   # AICA cable bits: and #3,r0 -> mov #0,r0"
                           % (BASE + i + 2 * k + 2))
                     break
@@ -85,7 +91,7 @@ def main(d):
                 for s in range(i - 8, i + 2, 2):                       # function start: a few candidates
                     phys.add(BASE + s)
     print("# maple (literal of the to-physical call before SB_MDSTAR)")
-    strict, loose = [], []
+    strict, loose, strict_txt, loose_txt = [], [], [], []
     for i in range(0, n - 3, 4):
         v = u32(b, i)
         if (v & 0x1FFFFFFF) | 0x80000000 in phys and (v >> 29) in (0, 4, 5):
@@ -102,18 +108,23 @@ def main(d):
                         if op == (0x400B | rr << 8):                    # jsr @rr
                             after = [u16(b, j + 2 * k + 2 * q) for q in range(1, 24) if j + 2 * k + 2 * q < n - 1]
                             if any(x & 0xF0FF == 0x1001 for x in after[:12]):     # mov.l r0,@(4,Rn)
-                                strict.append("    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X"
+                                strict.append(la)
+                                strict_txt.append("    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X"
                                               % (la, v, BASE + j, BASE + j + 2 * k))
                             elif any(x & 0xF0FF == 0x2002 for x in after[:3]) and any(x & 0xF00F == 0x1006 for x in after[:10]):
                                 # mov.l r0,@Rn (Rn = base+4), then mov.l Rm,@(24,Rn) (SB_MDST = 1)
-                                loose.insert(0, "    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X (r0,@Rn; MDST)"
+                                loose.insert(0, la)
+                                loose_txt.insert(0, "    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X (r0,@Rn; MDST)"
                                              % (la, v, BASE + j, BASE + j + 2 * k))
                             elif any(x & 0xF0FF == 0x2002 for x in after[:3]):    # mov.l r0,@Rn (Rn = base+4)
-                                loose.append("    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X (r0,@Rn)"
+                                loose.append(la)
+                                loose_txt.append("    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X (r0,@Rn)"
                                              % (la, v, BASE + j, BASE + j + 2 * k))
                             break
-    for line in strict or loose:
+    for line in strict_txt or loose_txt:
         print(line)
+    res["hook"] = list(dict.fromkeys(strict or loose))
+    res["hook_strict"] = bool(strict)
     if not (strict or loose):
         print("    ? none found (bsr call or another driver): look by hand")
 
@@ -123,7 +134,28 @@ def main(d):
         v = u32(b, i)
         if v in (0xA05F7484, 0xA05F7488, 0xA05F748C, 0xA05F7490, 0xA05F7494, 0xA05F74A0, 0xA05F74B4, 0xA05F707C):
             print("    (0x%08X, 4, SCRATCH + 0x%02x),   # %#010x" % (BASE + i, slot, v))
+            res["g1"].append(BASE + i)
             slot += 0x10
+
+    # direct texture path 0x11000000 (LMMODE0 = 0) loaded by a mov.l: the channel 2 DMA to it writes nothing to
+    # VRAM on a NAOMI 2; its mirror 0x13000000 works and is the same path on a Dreamcast (games.py TEXPATH)
+    print("# texture DMA base 0x11000000 (-> TEXPATH 0x13000000)")
+    for i in range(0, n - 3, 4):
+        if u32(b, i) == 0x11000000:
+            la = BASE + i
+            for j in range(max(0, i - 1024), i, 2):
+                t = movl_target(u16(b, j), BASE + j)
+                if t and t[0] == la:
+                    res["texdma"].append(la)
+                    print("    (0x%08X, 4, TEXPATH),   # loaded at 0x%08X" % (la, BASE + j))
+                    break
+    return res
+
+
+def main(d):
+    ip = open(os.path.join(d, "IP.BIN"), "rb").read()
+    b = open(os.path.join(d, "1ST_READ.BIN"), "rb").read()
+    analyze(ip, b, print=print)
 
 
 if __name__ == "__main__":

@@ -8,18 +8,52 @@ Arrancar juegos de **Dreamcast** en una **NAOMI / NAOMI 2** por netboot (NetDIMM
 Dreamcast por un programa residente. Si funciona, sirve para recopilatorios (Yu Suzuki Game Works, Namco
 Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 
-## Estado (2026-11-08)
+## Estado (2026-11-09)
 
-| Juego | Flycast | Placa real |
+| Juego | Placa real | Mueble |
 |---|---|---|
-| Daytona USA 2001 (US) | — | ❌ Negro (probablemente el UBC, ver abajo). Parado |
-| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Menú y Power Drift jugable | ✅ Funciona (residente sin PCTRA); ajustando mandos |
-| Namco Museum (US) | ✅ Menú y Pac-Man | ✅ **Terminado** (`nmus6`: sin VMU, mandos `pole`) |
-| Crazy Taxi 2 (US) | ✅ Hasta tarjetas de memoria | sin probar |
-| Crazy Taxi 2 (US), Daytona 2001, Re-Volt | ✅ hasta tarjetas de memoria / VMU | ❌ logo de SEGA → negro (lote del 2026-11-08) |
-| **Virtua Tennis (US)** | ✅ | ✅ **Primer juego de Dreamcast que arranca en la placa real** (2026-11-08): llega a "No VMU found in slot 1, port A" |
-| Ikaruga (JP) | ✅ Título | ❌ Logo de SEGA → negro: atascado en la DMA G2 del AICA. Con `g2cpu` avanza 5 subidas más y se para en la 6.ª |
-| Virtua Athlete 2000 (US) | ✅ Título y demo | ❌ Logo de SEGA → negro (monitor trifrecuencia: no pierde señal). **Mismo código de DMA G2 que su versión NAOMI, que sí funciona** |
+| Crazy Taxi 2 (US) | ✅ **Terminado** (`ct2h4`, mandos `ct`) | Crazy Taxi |
+| Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
+| Namco Museum (US) | ✅ **Terminado** (`nmus6`: sin VMU, mandos `pole`) | Crazy Taxi |
+| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
+| Daytona USA 2001 (US) | `daytona3` pendiente de probar (antes: negro tras SEGA) | Crazy Taxi |
+| F355, 18 Wheeler | ❌ aparcados (Now Loading / negro tras SEGA) | Crazy Taxi |
+| KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
+| SF3 Double Impact | ❌ el hook no llega (menú que carga dos programas) | estándar |
+| Virtua Tennis (US) | llegó a "No VMU found" (2026-11-08, perfil antiguo) | — |
+
+## El programa `dc2naomi` (2026-11-09)
+
+`app/dc2naomi.py` convierte un `.chd`/`.gdi` en `JUEGO_dc2naomi.bin.gz` sin herramientas externas. En Windows son
+dos ejecutables del mismo código (PyInstaller, `.github/workflows/windows.yml`): **`dc2naomi.exe`** (mueble
+estándar, `cab=joy`) y **`dc2naomict.exe`** (Crazy Taxi, `cab=ct`); el mueble sale del nombre del ejecutable
+(o `--cab`). `--batch` = sin preguntas ni pausa. **No se ha publicado ninguna release** (la crea un tag `v*`).
+
+- **`tools/chd.py`**: lector de CHD v5 propio (mapa con Huffman, códecs `cdlz`/`cdzl`; `cdfl` = audio, se lee como
+  silencio). `gdi.ChdGdi` da la misma interfaz que `Gdi`; `gdi.open_disc()` elige. Verificado: 504.150 sectores de
+  SF3 Double Impact idénticos a los de `chdman extractcd`, y `1ST_READ.BIN`/`IP.BIN`/pistas iguales en 7 CHD.
+- **`tools/catalog.py`**: juego conocido = SHA-1 de los programas que parchea su perfil (`SIGNATURES`, hechas con
+  `tools/gensig.py`, que también lee de las imágenes ya construidas). Estado por mueble: `ok` / `experimental` /
+  `broken`, mandos y nota. Daytona (`MK-51037`) está en `UNSUPPORTED`: el perfil es `rebuild` (ffmpeg + genisoimage).
+- **Juego desconocido** (o versión distinta): `findpatch.analyze()` → parches de IP.BIN estándar, cable (PDTRA y
+  AICA), hook de maple (primer candidato) y tiempos G1 → SCRATCH. Comprobado: da **exactamente** los parches
+  hechos a mano de kof02, motw, sf3ts, spf2x, ssf2x, kof99, lb2, f355, w18, sf3di e ikaruga (Namco: falta su
+  TEXPATH; Daytona: parchea el cable de otra forma equivalente). Virtua Tennis así llega a "No VMU found" en Flycast.
+- **TEXPATH no se aplica automáticamente:** findpatch lista los literales `0x11000000` cargados por `mov.l`, pero en
+  Virtua Tennis cambiarlo dejó la pantalla sin texturas en Flycast. Ojo: **F355 y 18 Wheeler tienen ese literal**
+  (`0x8c0ffa6c`, `0x8c17bf4c`) y nunca se les puso TEXPATH: pista para cuando se retomen.
+- **Imagen idéntica:** SPF2X convertido con el programa = imagen hecha a mano (archivo y disco byte a byte).
+- Juegos con Windows CE (`0WINCEOS.BIN`): rechazados con mensaje. Imagen > 512 MB: se genera con aviso.
+- **`app/loader.bin`**: el loader + residente compilados (título `DC2NAOMI`; el programa escribe el del juego en
+  las 8 copias de la cabecera NAOMI, `0x30 + 0x20*i`, únicos bytes que cambian con `-t`). **Regenerarlo con
+  `app/make_loader.sh` cada vez que se toque `resident/` o `loader/`**, o el programa llevará el residente viejo.
+
+**Mandos nuevos (residente, 2026-11-09):**
+- `DIMM_PAD_WHEEL` (4, `"wheel"`), por defecto del mueble Crazy Taxi para juegos sin ajustar: START al soltar solo
+  si no se tocó nada; con START apretado palanca = arriba/abajo, freno = X, acelerador = Y (los gatillos a 0);
+  sin START palanca = B/A, pedales = gatillos R/L; volante = stick X y cruceta a tope.
+- `joy`: además de la cruceta, el stick analógico va al extremo (juegos 3D que solo leen el stick). Ikaruga sigue
+  arrancando en Flycast; no reprobado en placa.
 
 Resumen de lo aprendido en placa (detalles en "Ikaruga y Virtua Tennis", abajo):
 - **Loader + residente + NetDIMM funcionan en placa** (lo demuestra Virtua Tennis). Las lecturas PIO de la NetDIMM

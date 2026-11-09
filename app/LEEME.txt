@@ -1,0 +1,23 @@
+dc2naomi - juegos de Dreamcast en Sega NAOMI / NAOMI 2 por netboot (NetDIMM)
+https://github.com/0skarzer0/dc2naomi
+
+  dc2naomi.exe     mueble NAOMI estandar (2 palancas, 6 botones por jugador, 2 START)
+  dc2naomict.exe   mueble NAOMI Crazy Taxi (volante, pedales, palanca, START)
+
+USO: arrastra el .chd (o .gdi) de tu juego encima del icono del programa que
+corresponda a tu mueble. Al terminar tendras JUEGO_dc2naomi.bin.gz (o
+JUEGO_dc2naomict.bin.gz) junto al .chd, listo para tu netbooter.
+
+El programa indica si el juego esta PROBADO en placa real con ese mueble,
+si es EXPERIMENTAL o si sabemos que NO FUNCIONA todavia, como quedan los
+mandos y si la imagen no cabe en la NetDIMM de 512 MB.
+
+LIMITACIONES
+- Sin audio de CD (CDDA): los juegos que ponen asi su musica quedan sin ella.
+- Sin memorias (VMU): no se guardan partidas.
+- No soporta juegos con Windows CE (Sega Rally 2, Midway's Greatest Arcade
+  Hits...) ni los que son un menu que carga varios programas.
+- Probado con NAOMI 2 y NetDIMM de 512 MB; no probado con NAOMI 1, aunque
+  deberia funcionar.
+
+Necesitas tu propio volcado del juego. Este programa no contiene juegos ni BIOS.

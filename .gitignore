@@ -13,3 +13,6 @@ build/
 *.raw
 # Flycast home with the NAOMI BIOS (never upload BIOS files)
 tools/flycast/home/
+
+# prebuilt loader for the dc2naomi program (own code + KallistiOS, BSD)
+!app/loader.bin

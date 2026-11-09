@@ -1,0 +1,44 @@
+# Builds dc2naomi.exe and dc2naomict.exe (one program, the cabinet comes from the name).
+# Run by hand (Actions > windows > Run workflow): the zip is left as an artifact.
+# A tag v* also publishes it as a GitHub release.
+name: windows
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyinstaller==6.11.1
+      - name: build
+        run: |
+          pyinstaller --onefile --console --name dc2naomi --paths tools --add-data "app/loader.bin;." app/dc2naomi.py
+          pyinstaller --onefile --console --name dc2naomict --paths tools --add-data "app/loader.bin;." app/dc2naomi.py
+      - name: smoke test
+        shell: bash
+        run: |
+          ./dist/dc2naomi.exe --batch nada.chd | tee out1.txt || true
+          grep -q "No encuentro el archivo" out1.txt
+          grep -q "NAOMI est" out1.txt
+          ./dist/dc2naomict.exe --batch nada.chd | tee out2.txt || true
+          grep -q "Crazy Taxi" out2.txt
+      - name: zip
+        run: |
+          Copy-Item app/LEEME.txt dist/
+          Compress-Archive -Path dist/dc2naomi.exe, dist/dc2naomict.exe, dist/LEEME.txt -DestinationPath dc2naomi-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dc2naomi-windows
+          path: dc2naomi-windows.zip
+      - name: release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dc2naomi-windows.zip

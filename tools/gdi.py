@@ -107,3 +107,53 @@ class Gdi:
             else:
                 out.append([a, b])
         return [(a, b - a) for a, b in out]
+
+    def track_sectors(self, track):
+        """(lba, 2048 bytes) for every sector of a data track."""
+        num, start, ctrl, ss, fn, n = track
+        with open(fn, "rb") as f:
+            for i in range(n):
+                f.seek(i * ss + (16 if ss == 2352 else 0))
+                yield start + i, f.read(2048)
+
+
+class ChdGdi(Gdi):
+    """The same interface over a GD-ROM CHD (tools/chd.py), with no extraction."""
+
+    def __init__(self, path):
+        from chd import Chd
+        self.chd = Chd(path)
+        self.dir = None
+        self.tracks = []
+        self._start = {}   # track number -> first CHD frame
+        self._raw = {}
+        lba = 0
+        for num, typ, frames, first in self.chd.gd_tracks():
+            if num == 3:
+                lba = 45000          # the high-density area
+            ctrl = 0 if typ == "AUDIO" else 4
+            self.tracks.append((num, lba, ctrl, 2352, None, frames))
+            self._start[num] = first
+            self._raw[num] = typ.endswith("_RAW") or typ == "AUDIO"
+            lba += frames
+        self.files = {}
+
+    def sector(self, lba):
+        for t in reversed(self.tracks):
+            num, start, ctrl, ss, fn, n = t
+            if start <= lba < start + n:
+                if ctrl != 4:
+                    return bytes(2048)
+                fr = self.chd.frame(self._start[num] + lba - start)
+                return fr[16:2064] if self._raw[num] else fr[:2048]
+        return bytes(2048)
+
+    def track_sectors(self, track):
+        num, start, ctrl, ss, fn, n = track
+        for i in range(n):
+            yield start + i, self.sector(start + i)
+
+
+def open_disc(path):
+    """A .gdi or a .chd."""
+    return ChdGdi(path) if path.lower().endswith(".chd") else Gdi(path)

@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from games import GAMES, HOOK, TRAMP, R4FIX, TEXPATH  # noqa: E402
-from gdi import Gdi  # noqa: E402
+from gdi import Gdi, open_disc  # noqa: E402
 
 ALIGN = 0x10000
 BASE_LBA = 45000
@@ -42,24 +42,20 @@ def nonzero_runs(gdi, gap=256, skip=()):
     skipset = set()
     for a, n in skip:
         skipset.update(range(a, a + n))
-    for num, start, ctrl, ss, fn, n in gdi.data_tracks():
-        with open(fn, "rb") as f:
-            for i in range(n):
-                f.seek(i * ss + (16 if ss == 2352 else 0))
-                s = f.read(2048)
-                lba = start + i
-                if lba in skipset or s.count(0) == 2048:
-                    continue
-                if runs and lba <= runs[-1][1] + gap:
-                    runs[-1][1] = lba + 1
-                else:
-                    runs.append([lba, lba + 1])
+    for track in gdi.data_tracks():
+        for lba, s in gdi.track_sectors(track):
+            if lba in skipset or s.count(0) == 2048:
+                continue
+            if runs and lba <= runs[-1][1] + gap:
+                runs[-1][1] = lba + 1
+            else:
+                runs.append([lba, lba + 1])
     return [(a, b - a) for a, b in runs]
 
 
 class GdiDisc:
     def __init__(self, path, boot_name="1ST_READ.BIN", blank=(), alias=None):
-        self.gdi = Gdi(path)
+        self.gdi = open_disc(path)
         self.boot_name = boot_name          # the boot file IP.BIN names (Windows CE discs: 0WINCEOS.BIN)
         self.override = {}                  # lba -> sector data (patched directory sectors)
         # files left out of the image (to fit 512 MB): they read as zeros
@@ -358,7 +354,14 @@ def main():
         game["flags"] = game["flags"] | 0x4000
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
-    os.makedirs(work, exist_ok=True)
+    build(name, game, source, work, open(prog, "rb").read(), out)
+
+
+def build(name, game, source, work, image, out, log=print):
+    """Write the NetDIMM image (loader image bytes + archive + disc sectors) to the open file or path out."""
+    print = log  # noqa: A001
+    if work:
+        os.makedirs(work, exist_ok=True)
     disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN"), game.get("blank", ()), game.get("alias")) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
 
     boot_fad, boot_size = disc.boot()
@@ -376,7 +379,7 @@ def main():
     assert len(rtab) <= DIMM_RANGES and len(tracks) <= DIMM_TRACKS
     patches = build_patches(disc, game["groups"])
 
-    image = bytearray(open(prog, "rb").read())
+    image = bytearray(image)
     assert image[:5] == b"NAOMI"
     seg_offset, _addr, seg_length = struct.unpack_from("<III", image, 0x360)
     base = (seg_offset + seg_length + ALIGN - 1) & ~(ALIGN - 1)
@@ -390,7 +393,7 @@ def main():
     hdr += struct.pack("<3I", first_track, len(tracks), leadout)
     hdr += struct.pack(f"<{DIMM_TRACKS}I", *(tracks + [0] * (DIMM_TRACKS - len(tracks))))
     hook = list(game.get("hook_pc", [])) + [0, 0]
-    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3}[game.get("pads", "ct")]) + b"\0" * 28
+    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4}[game.get("pads", "ct")]) + b"\0" * 28
     for p in patches:
         hdr += struct.pack("<4I", *p)
     hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))
@@ -400,14 +403,23 @@ def main():
     archive += make_flash(game["region"], game["language"])
     archive += b"\0" * (DATA_OFFSET - len(archive))
 
-    with open(out, "wb") as o:
-        o.write(image)
-        o.write(archive)
-        disc.write_sectors(o)
-    total = os.path.getsize(out)
-    print(f"{out}: archive at 0x{base:08x}, {total} bytes ({total / 1048576:.1f} MB)")
-    if total > 512 * 1048576:
-        print("warning: larger than the 512 MB NetDIMM")
+    total = len(image) + len(archive) + sum(n for _f, n in ranges) * 2048
+    if hasattr(out, "set_total"):
+        out.set_total(total)
+    if isinstance(out, str):
+        with open(out, "wb") as o:
+            o.write(image)
+            o.write(archive)
+            disc.write_sectors(o)
+        total = os.path.getsize(out)
+        print(f"{out}: archive at 0x{base:08x}, {total} bytes ({total / 1048576:.1f} MB)")
+        if total > 512 * 1048576:
+            print("warning: larger than the 512 MB NetDIMM")
+    else:
+        out.write(image)
+        out.write(archive)
+        disc.write_sectors(out)
+    return total
 
 
 if __name__ == "__main__":
