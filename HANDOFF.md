@@ -905,3 +905,17 @@ comprueba. Imagen buena: **`ct2h7`** (= la v6 bien hecha). Comprobado en Flycast
 `0x8c166ee0` = `0x8dc01884`, cable parcheado, mando en el puerto A, START pasa de la pantalla de VMU.
 **Ojo al probar mandos en Flycast:** sin `FC_PEDALS=1` el acelerador y el freno están a media carrera (`0x8000`), así
 que con los mapas `wheel`/`ct` START cuenta como "usado" (pedal > 64) y no se envía. Usar `FC_PEDALS=1`.
+
+## Depuración en la placa real por la red (2026-11-09 noche)
+
+El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenciales solo en el chat, no aquí):
+`192.168.68.59` ("virtua") → NetDIMM `10.0.0.3` (NAOMI 2, mueble estándar) y `192.168.68.60` ("Netbooter") → NetDIMM
+`10.0.0.4` (NAOMI 2, mueble Crazy Taxi). Firmware 3.17, 512 MB. El WiPi lleva las herramientas de DragonMinded en
+`/sbin/piforce/dm_netboot` (`netdimm.NetDimm(ip).info()/peek()/poke()`), que se usan desde la Raspberry.
+- `peek` con un juego de NAOMI normal: contesta al momento. **Con nuestro residente: 17-30 s y basura** (nadie
+  atendía la petición; era la "interrupción externa bit 3 siempre pendiente" de las pruebas de DreamShell).
+- **`dimm_service()` en el residente** (protocolo de `dimmcomms.c` de libnaomi): contesta peek/poke 8/16/32 y la
+  dirección base, solo sobre memoria segura (RAM, Holly, AICA, VRAM, registros del SH4). Se sondea desde el gancho
+  maple, cada syscall GD y el tick de TMU2 (con `DIMM_PCSAMPLE` 0x0200, que además deja los últimos PC en `pcs_ring`).
+  Primera imagen con ello: `ysgw7` (sin probar en placa). Guardar el `nm` del residente de cada imagen de prueba
+  para saber las direcciones (`_hook_calls`, `_jvs`, `_dbg_val`, `_pcs_ring`...).

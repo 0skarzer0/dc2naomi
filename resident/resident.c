@@ -423,12 +423,81 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7);
 /* The game calls in from its main loop and from interrupts: a call that
    comes in while another is copying sectors gets "busy" (as the BIOS's
    semaphore does) instead of running into it. */
+/* ------------------------------------------------------------------ */
+/* NetDIMM host commands (peek/poke over the network, 2026-11-09)      */
+/* The NetDIMM asks the NAOMI to read or write its memory (netboot tools: peek/poke on TCP 10703) through
+   the DIMM communication registers and the external interrupt bit 3 (ISTEXT 0x8, "always pending" in our
+   board tests: nobody answered). The NAOMI BIOS answers them; with a Dreamcast game running nobody did, and
+   every peek timed out with garbage. Protocol as libnaomi's dimmcomms.c (DragonMinded): command word
+   0x8000 = pending, bits 14-9 = id (3 base address, 4/5/6 peek 8/16/32, 8/9/10 poke 8/16/32), bits 8-0 +
+   OFFSETL = address - base; answer in PARAMETERL/H, id | 1 = done. Polled (no interrupt of our own) from
+   the maple hook, every GD-ROM syscall and the TMU2 tick when it runs. */
+#define DIMM_COMMAND 0xa05f703cu
+#define DIMM_OFFSETL 0xa05f7040u
+#define DIMM_PARAML  0xa05f7044u
+#define DIMM_PARAMH  0xa05f7048u
+#define DIMM_STATUS  0xa05f704cu
+#define ISTEXT       0xa05f6904u
+static u32 dimm_base, dimm_cmds, dimm_last;
+static volatile int dimm_busy;
+
+/* The address to use for a peek/poke, or 0: only memory that cannot raise an exception. */
+static u32 dimm_addr(u32 a) {
+    u32 phys = a & 0x1fffffffu;
+    if (a >= 0xff000000u) return a;                                      /* SH4 registers */
+    if (phys >= 0x0c000000u && phys < 0x0e000000u)                       /* RAM: as the program sees it */
+        return ((a >> 29) == 5 ? 0xa0000000u : 0x80000000u) | phys;
+    if ((phys >= 0x005f6800u && phys < 0x005fa000u) ||                   /* Holly */
+        (phys >= 0x00700000u && phys < 0x00711000u) ||                   /* AICA registers, RTC */
+        (phys >= 0x00800000u && phys < 0x00a00000u) ||                   /* AICA RAM */
+        (phys >= 0x04000000u && phys < 0x05800000u))                     /* VRAM */
+        return 0xa0000000u | phys;
+    return 0;
+}
+
+static void dimm_service(void) {
+    if (dimm_busy) return;
+    if (!(REG32(ISTEXT) & 8)) return;
+    u32 cmd = REG16(DIMM_COMMAND);
+    if (cmd == 0xffff || !(cmd & 0x8000)) return;
+    dimm_busy = 1;
+    u32 id = (cmd >> 9) & 0x3f, ret = 1, pl = 0, ph = 0;
+    u32 a = (((cmd & 0x1ff) << 16) | REG16(DIMM_OFFSETL)) + dimm_base;
+    u32 val = (u32)REG16(DIMM_PARAMH) << 16 | REG16(DIMM_PARAML);
+    u32 t = dimm_addr(a);
+    switch (id) {
+    case 0: case 1: break;
+    case 3: dimm_base = val; break;
+    case 4: pl = t ? REG8(t) : 0xad; break;
+    case 5: if (a & 1) ret = 0; else pl = t ? REG16(t) : 0xbadd; break;
+    case 6:
+        if (a & 3) { ret = 0; break; }
+        { u32 v = t ? REG32(t) : 0xbadadd00u; pl = v & 0xffff; ph = v >> 16; }
+        break;
+    case 8: if (t) REG8(t) = (u8)val; break;
+    case 9: if (a & 1) ret = 0; else if (t) REG16(t) = (u16)val; break;
+    case 10: if (a & 3) ret = 0; else if (t) REG32(t) = val; break;
+    default: ret = 0xff; break;
+    }
+    dimm_cmds++;
+    dimm_last = a;
+    REG16(DIMM_COMMAND) = (u16)((cmd & 0x7e00) | ret);
+    REG16(DIMM_OFFSETL) = 0;
+    REG16(DIMM_PARAML) = (u16)pl;
+    REG16(DIMM_PARAMH) = (u16)ph;
+    REG16(DIMM_STATUS) = (u16)(REG16(DIMM_STATUS) | 0x100);              /* acknowledge its interrupt */
+    for (u32 i = 0; i < 200000 && (REG32(ISTEXT) & 8); i++) {}
+    REG16(DIMM_STATUS) = (u16)(REG16(DIMM_STATUS) & 0xfffe);             /* interrupt to the DIMM: answer ready */
+    dimm_busy = 0;
+}
+
 static volatile int gd_inside;
 
 static void patch_poll(void);
 
 static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     s32 r0;
+    dimm_service();
     dbg_val[0]++;
     dbg_val[1] = r7 << 8 | (r4 & 0xff);
     dbg_draw();
@@ -1070,6 +1139,7 @@ u32 maple_hook(u32 list) {
        0x0c000000-0x0cffffff only, which blocks the hardware DMA of our MIE poll in RES_MAPLE (0x0dd40000): no JVS
        inputs at all on the board (Flycast does not check it). 0x6155407f = 0x0c000000-0x0fffffff, as Ikaruga. */
     REG32(0xa05f6c8c) = 0x6155407fu;
+    dimm_service();
     hook_calls++;
     dbg_val[2]++;
     dbg_draw();
@@ -1379,6 +1449,7 @@ static void apply_patches(void) {
 static u32 pcs_ring[8], pcs_n, pcs_ssr, dmac_fix, br_wait, br_calls, br_last;
 void tmu2_isr(void) {
     REG16(0xffd80028) &= (u16)~0x0100u;           /* TCR2.UNF */
+    dimm_service();
     g2cpu_tick();
     if (!(H.flags & DIMM_PCSAMPLE)) return;
     u32 spc, ssr;
