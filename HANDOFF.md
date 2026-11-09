@@ -876,3 +876,22 @@ abajo, en cruceta y stick; acelerador = A disparo, freno = B misil; volante = st
 **START + volante a tope a la izquierda** = coche. Con START apretado el volante no manda cruceta. Pendiente de
 confirmar en placa qué botón es disparo y cuál misil en After Burner II, y el sentido de la palanca. Hecha con el
 programa desde el CHD (disco idéntico a `ysgw5`). En Flycast llega a PRESS START.
+
+## OutRun 2006 Coast 2 Coast, demo para Dreamcast v24 (homebrew KallistiOS, 2026-11-09) — perfil `or2006`
+
+Demo hecha por fans (textos en español, "OUTRUN DC DEMO", IP.BIN casero con fecha 2026-11-09), GDI con `track03.iso`
+de 2048 bytes/sector. **No es Katana sino KallistiOS 2.x**, así que se trata como DreamShell:
+- flags `0x1404`: `DIMM_SYNCREAD` (KOS espera la IRQ de fin de DMA G1 si la lectura sigue "procesando"),
+  `DIMM_NOIPBOOT` (su IP.BIN no es el de SEGA: la tabla G1 no está en `0x5ab4`) y sin user break.
+- `arch_stack_32m` (`0x8c0862f4`, `0x8e000000`) → `0x8dc00000`: es `_arch_mem_top`, techo de pila y montículo.
+- `cdrom_init`: `cmp/eq #3,r0` (`0x8c04b6ba`) → `sett`, sin desbloqueo del bus G1 (en placa ya vale 3).
+- `vid_check_cable` y sus dos copias en línea: `tst r0,r0` → `clrt` (`0x8c0581f4`, `0x8c058512`, `0x8c0588d2`):
+  siempre VGA y nunca la escritura de PCTRA que mata el TA de la NAOMI 2 (en placa ya lo evitaría SYSMODE `0xa0`).
+- **Mandos, nuevo:** `maple_dma_addr()` de KOS (`0x8c04fbc0`: `and 0x1fffffff,r4; mov.l r4,@SB_MDSTAR; rts`) pasa a
+  saltar a `maple_hook_mdstar` del residente (valor de parche `HOOKST` = `0xfffffffb`, `PATCH_HOOKST`): llama al gancho
+  maple y escribe en SB_MDSTAR lo que devuelve. Sirve para cualquier programa KOS con ese driver.
+- Tamaño: 598 MB de datos (el archivo `0.0` de 405 MB es relleno a cero y no cuenta). `alias` acepta ahora una lista:
+  `MVATTR.VQV` → `MVTS.VQV` y `MUS4/5/16/17/18.ADP` → `MUS3.ADP` (las canciones más largas). Queda en 493,6 MB.
+- En Flycast (`FC_SYSM_RAM=1`): vídeo de intro, título "INICIO", START entra en "Elegir carnet", A (palanca atrás)
+  crea licencia y escribe el nombre. Con `AUTOSTART=1` también pasa del título. Carrera sin comprobar.
+  Mandos `wheel` (los del mueble por defecto). Sin probar en placa.

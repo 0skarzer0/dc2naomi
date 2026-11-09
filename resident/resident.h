@@ -91,6 +91,8 @@
 #define PATCH_G2CHK0    0xfffffffeu   /* value for W32: g2chk0, a G2 FIFO check (SB_FFST bit 0) with a timeout */
 #define PATCH_G2CHK4    0xfffffffdu   /* value for W32: g2chk4, the same for bit 4 */
 #define PATCH_G2CPU     0xfffffffcu   /* value for W32: g2cpu, a G2 DMA start done by the CPU (Ikaruga) */
+#define PATCH_HOOKST    0xfffffffbu   /* value for W32: maple_hook_mdstar = maple_hook, and the result written to SB_MDSTAR
+                                         (KallistiOS's maple_dma_addr(), which writes SB_MDSTAR itself) */
 #define TRAMPS          4
 
 struct dimm_patch {

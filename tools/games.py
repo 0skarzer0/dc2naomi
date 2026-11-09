@@ -22,6 +22,7 @@ HOOK = 0xFFFFFFFF
 G2CHK0 = 0xFFFFFFFE  # resident G2 FIFO check with a timeout (SB_FFST bit 0)
 G2CPU = 0xFFFFFFFC   # resident g2cpu: G2 DMA start done by the CPU
 G2CHK4 = 0xFFFFFFFD  # the same for bit 4
+HOOKST = 0xFFFFFFFB  # KallistiOS maple_dma_addr(): the maple hook, and its result written to SB_MDSTAR
 TRAMP = "tramp"  # value for a jump literal: through the resident (patches the next program first)
 # The channel 2 DMA to the direct texture path at 0x11000000 (LMMODE0 = 0) writes nothing to VRAM on a
 # NAOMI 2 (measured on the board, CH2TEST); its mirror at 0x13000000 (LMMODE1 = 0) works, and is the
@@ -516,3 +517,32 @@ GAMES["motw"] = _katana_joy("MARK OF THE WOLVES DC", 1, 1, [
     (0x8C0157B0, 2, mov_imm0(0)),   # AICA cable bits
     (0x8C032B2C, 4, HOOK),          # maple: to-physical 0x8c034f78
 ])
+
+
+# OutRun 2006 Coast 2 Coast, fan demo for Dreamcast (homebrew, KallistiOS 2.x; "OUTRUN DC DEMO", v24, 2026-11-09).
+# Not a Katana game: KOS does its own hardware set-up. Same treatment as DreamShell (SYNCREAD, top of RAM below the
+# resident), plus our maple hook in KOS's own maple driver. 598 MB of data: the attract movie and five songs are
+# aliased to fit 512 MB.
+GAMES["or2006"] = {
+    "title": "OUTRUN 2006 C2C",
+    "region": 2,          # Europe (the disc says JUE)
+    "language": 1,        # English
+    "layout": "gdi",
+    "pads": "wheel",
+    "flags": 0x1404,      # no user break, GD DMA reads in one call, 1ST_READ.BIN started directly (homebrew IP.BIN)
+    "hook_pc": [],
+    "alias": [(["MVATTR.VQV"], "MVTS.VQV"),
+              (["MUS18.ADP", "MUS16.ADP", "MUS17.ADP", "MUS5.ADP", "MUS4.ADP"], "MUS3.ADP")],
+    "groups": [
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C0862F4, 4, 0x8DC00000),   # arch_stack_32m 0x8e000000 -> top of RAM below the resident
+            (0x8C04FBCC, 4, HOOKST),       # maple_dma_addr(): literal 0x1fffffff -> maple_hook_mdstar
+            (0x8C04FBC2, 2, 0x412B),       #   and r1,r4 -> jmp @r1
+            (0x8C04FBC4, 2, 0x0009),       #   mov.l (SB_MDSTAR),r1 -> nop (delay slot)
+            (0x8C04B6BA, 2, 0x0018),       # cdrom_init: cmp/eq #3,r0 -> sett (skip the G1 bus unlock)
+            (0x8C0581F4, 2, 0x0008),       # vid_check_cable(): tst r0,r0 -> clrt: VGA, no PCTRA write
+            (0x8C058512, 2, 0x0008),       # vid_set_mode(): the same inlined check
+            (0x8C0588D2, 2, 0x0008),       # vid_init(): the same
+        ]},
+    ],
+}

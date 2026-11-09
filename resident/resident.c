@@ -1122,6 +1122,13 @@ u32 maple_hook(u32 list) {
     return mie_build();
 }
 
+/* KallistiOS: maple_dma_addr(list) writes SB_MDSTAR itself; its body becomes a jump here (PATCH_HOOKST). */
+u32 maple_hook_mdstar(u32 list) {
+    u32 phys = maple_hook(list);
+    REG32(0xa05f6c04) = phys;
+    return phys;
+}
+
 /* ------------------------------------------------------------------ */
 /* Boot                                                                */
 
@@ -1317,7 +1324,8 @@ static void apply_patches(void) {
         u32 v = p->value == PATCH_HOOK ? (u32)maple_hook
               : p->value == PATCH_G2CHK0 ? (u32)g2chk0
               : p->value == PATCH_G2CHK4 ? (u32)g2chk4
-              : p->value == PATCH_G2CPU ? (u32)g2cpu : p->value;
+              : p->value == PATCH_G2CPU ? (u32)g2cpu
+              : p->value == PATCH_HOOKST ? (u32)maple_hook_mdstar : p->value;
         if (kind == PATCH_R4FIX) {
             if (fx >= nfix) continue;
             volatile u32 *a = (volatile u32 *)p->addr;

@@ -60,11 +60,11 @@ class GdiDisc:
         self.override = {}                  # lba -> sector data (patched directory sectors)
         # files left out of the image (to fit 512 MB): they read as zeros
         skip = []
-        if alias:
-            # alias = (patterns, target): the matching files' directory records point at the target file instead
-            # (e.g. every movie plays the shortest one), and their own data is left out
+        # alias = (patterns, target), or a list of them: the matching files' directory records point at the
+        # target file instead (e.g. every movie plays the shortest one), and their own data is left out
+        aliases = [alias] if alias and isinstance(alias[1], str) else list(alias or [])
+        for pats, target in aliases:
             import fnmatch
-            pats, target = alias
             tlba, tsize = self.gdi.find(target)
             pvd = self.gdi.sector(45016)
             root = pvd[156:190]
