@@ -1,0 +1,24 @@
+00:00:000 sdl/sdl.cpp:939 N[RENDERER]: Monitor refresh rate: 0 Hz (800 x 600)
+00:00:354 ui/gui.cpp:245 N[RENDERER]: Screen DPI is 96, size 640 x 480. Scaling by 1.00
+00:00:359 rend/gles/gles.cpp:606 N[RENDERER]: OpenGL version 4.5
+00:00:359 rend/gles/gles.cpp:607 N[RENDERER]: Vendor 'Mesa' Renderer 'llvmpipe (LLVM 20.1.2, 256 bits)' Version '4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.4'
+00:00:458 rend/gles/gles.cpp:618 N[RENDERER]: glBlitFramebuffer test successful
+00:00:476 hw/mem/addrspace.cpp:440 N[VMEM]: Info: nvmem is enabled
+00:00:502 hw/mem/addrspace.cpp:472 N[VMEM]: BASE 0x7fe5420e0000 RAM(16 MB) 0x7fe54e0e0000 VRAM64(8 MB) 0x7fe5460e0000 ARAM(2 MB) 0x7fe5620e0000
+00:00:533 hw/mem/addrspace.cpp:440 N[VMEM]: Info: nvmem is enabled
+00:00:583 hw/mem/addrspace.cpp:472 N[VMEM]: BASE 0x7fe5420e0000 RAM(32 MB) 0x7fe54e0e0000 VRAM64(16 MB) 0x7fe5460e0000 ARAM(8 MB) 0x7fe5620e0000
+00:00:597 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577h.ic27
+00:00:597 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577g.ic27
+00:00:597 hw/naomi/naomi_cart.cpp:464 W[NAOMI]: Warning: Region 1 bios not found in naomi.zip
+00:00:597 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21576h.ic27
+00:00:597 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21576g.ic27
+00:00:597 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21578h.ic27
+00:00:597 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21578g.ic27
+00:00:602 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577h.ic27
+00:00:602 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577g.ic27
+00:00:602 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21579d.ic27
+00:00:602 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21576h_multi.ic27
+00:00:931 hw/naomi/naomi_cart.cpp:668 N[NAOMI]: NAOMI GAME ID [YU SUZUKI GAME WORKS] region ff players 0 vertical 0
+00:00:934 emulator.cpp:60 N[BOOT]: Game ID is [YU SUZUKI GAME WORKS]
+00:00:940 hw/naomi/naomi_flashrom.cpp:148 N[NAOMI]: Initializing Naomi EEPROM for game YU SUZUKI GAME WORKS            
+00:00:940 emulator.cpp:60 N[BOOT]: Game ID is [YU SUZUKI GAME WORKS]

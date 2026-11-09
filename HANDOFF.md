@@ -270,6 +270,15 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**⭐ SB_MDAPRO (2026-11-09): por qué Power Drift y Namco Museum no veían los mandos en placa.** `ysgw4_autostart`
+en placa: Power Drift arranca y pausa solo (el gancho maple funciona y el juego lee nuestras respuestas), pero
+volante/pedales/START reales no llegan: `jvs` no se actualiza. Power Drift, Namco Museum y F355 escriben SB_MDAPRO
+(`0xa05f6c8c`) = `0x6155404f`: la DMA maple sólo puede tocar `0x0c000000-0x0cffffff`, y nuestra lista del MIE y su
+búfer de respuesta están en RES_MAPLE (`0x0dd40000`): el hardware bloquea la DMA y el MIE nunca se sondea. Flycast no
+comprueba MDAPRO (por eso allí funcionaba). Arreglo: `maple_hook` escribe `0x6155407f` (`0x0c000000-0x0fffffff`, el
+valor de Ikaruga) en cada llamada. Imágenes `ysgw5`, `nmus5` (con VMU). Explica también que Namco se colgara en el
+logo con la VMU (sus DMA maple nunca terminaban).
+
 **Power Drift en placa no responde a START (2026-11-09):** en Flycast, con `ysgw3` (mandos `menu`), START funciona en
 Power Drift (de la demo a la selección de circuito). En placa no reacciona ni a START ni a nada. `ysgw4`: el pulso de
 START tras soltar pasa de 8 a 30 sondeos. `ysgw4_autostart` (`AUTOSTART=1`, flag `0x10000`): el mando pulsa START

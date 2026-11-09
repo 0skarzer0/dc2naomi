@@ -987,6 +987,10 @@ static u32 hook_calls, cond_calls;
 
 u32 maple_hook(u32 list) {
     const u32 *in = (const u32 *)list;
+    /* SB_MDAPRO: maple DMA allowed range. Some Katana games (Namco Museum, Power Drift, F355) set 0x6155404f =
+       0x0c000000-0x0cffffff only, which blocks the hardware DMA of our MIE poll in RES_MAPLE (0x0dd40000): no JVS
+       inputs at all on the board (Flycast does not check it). 0x6155407f = 0x0c000000-0x0fffffff, as Ikaruga. */
+    REG32(0xa05f6c8c) = 0x6155407fu;
     hook_calls++;
     dbg_val[2]++;
     dbg_draw();
