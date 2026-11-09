@@ -121,6 +121,11 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
   proyecto (`tools/chd.py`) está escrito siguiendo su código (`chd.cpp`, `chdcodec.cpp`, `cdrom.cpp`, BSD-3-Clause).
 - **[DreamShell](https://github.com/DC-SWAT/DreamShell)** y **SWAT** ([DC-SWAT](http://www.dc-swat.ru)): DreamShell
   se estudió y probó por netboot, y sus notas sobre NAOMI y JVS fueron de mucha ayuda.
+- **[DragonMinded](https://github.com/DragonMinded)**: su [libnaomi](https://github.com/DragonMinded/libnaomi)
+  documenta el protocolo de peticiones de la NetDIMM (`dimmcomms.c`), que el residente sigue para contestar las
+  lecturas de memoria por red, y sus [herramientas de netboot](https://github.com/DragonMinded/netboot) son las que
+  usamos para depurar en la placa real.
+- **WiPi Netbooter** y sus autores: el netbooter con el que se carga y prueba todo en las placas.
 - La comunidad de **Dreamcast y NAOMI** que ha documentado durante años el hardware (Katana, Holly, AICA, maple, JVS,
   NetDIMM) y los desarrolladores de los **netbooters** para NAOMI.
 - **[DejaVu Fonts](https://dejavu-fonts.github.io)**: la letra de los mensajes en pantalla sale de DejaVu Sans Mono.
