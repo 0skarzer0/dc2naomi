@@ -270,6 +270,24 @@ el puerto maple B, que ahora también contesta (sólo con este reparto). Imágen
 sin más parches que antes) e `ikaruga_joy_g2cpu` (+ `drvpatch.py`): el cuelgue de la DMA G2 se diagnosticó con la
 escritura de PCTRA aún puesta, así que probar primero la normal.
 
+**Placa, 2026-11-09 (noche):** YSGW (`ysgw5`) funciona, Power Drift incluido. Pendiente para otro día: el sonido de
+Power Drift petardea y al salir con B se queda en negro (no vuelve al menú). F355 con VMU se queda en "Now Loading" y
+18 Wheeler con VMU en negro tras SEGA: la VMU emulada falla en placa en todos los juegos probados → `_katana_drive` ya
+no la pone (imágenes `f355_novmu`, `18wheeler_novmu`). Ikaruga (`ikaruga_joy`): terminado.
+
+**Juegos de lucha para mueble NAOMI estándar (mandos `joy`, sin VMU), 2026-11-09:** `tools/findpatch.py DIR` encuentra
+los puntos (lectura de PDTRA, bits de cable que la BIOS de DC deja en el AICA `0xa0702c00` como Ikaruga, literal de
+la función "a física" seguido de SB_MDST = 1, tiempos G1). Perfiles con `_katana_joy` en `games.py`. En Flycast
+llegan al título / menú: `kof99` (42 pistas CDDA: sin música; DIMM_TRACKS sube a 64), `lb2` (911 MB: las 21 películas
+de personaje `ZSFD/NN_*.SFD` apuntan a la más corta con la opción `alias` del builder, 418 MB; sin el parche del
+cable AICA se quedaba en negro), `sf3ts` (1ST_READ de 14 MB), `spf2x`, `ssf2x`, `kof02` y `motw` (motor SNK de
+LB2: mismas direcciones de cable). DIMM_RANGES sube a 32 (los ficheros omitidos parten los tramos) y el builder
+tiene `blank` (ficheros fuera, leen ceros) y `alias` (registros de directorio reescritos).
+**`sf3di` (SF III Double Impact) no funciona:** 1ST_READ es un cargador; el menú es `GAMESEL/GAMESEL.BIN` y los juegos
+`SFNG/SF3_1ST.BIN` y `SFNG2/SF3_2ND.BIN` (programas aparte, como Power Drift): el gancho de 1ST_READ nunca se llama
+(se queda en el aviso de VMU sin responder). Hace falta encontrar dónde se carga cada uno y parchearlos con
+trampolines como YSGW.
+
 **Namco Museum en placa (2026-11-09):** `nmus5_novmu` funciona bien (con el arreglo de SB_MDAPRO); con la VMU emulada
 (`nmus5`) se queda en negro tras el logo de SEGA: **la VMU emulada falla en placa** (en Flycast va), sin investigar.
 `nmus` queda sin VMU y con mandos `pole` (`pad_map` 3): como `menu`, pero acelerador = A, freno = B (digitales) y

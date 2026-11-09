@@ -29,8 +29,8 @@
 #define DIMM_MAGIC0     0x47434459u   /* "YDCG" */
 #define DIMM_MAGIC1     0x32474d49u   /* "IMG2" */
 #define DIMM_VERSION    2
-#define DIMM_RANGES     4
-#define DIMM_TRACKS     32            /* Windows CE discs (Midway Vol. 2) have 28 */
+#define DIMM_RANGES     32            /* data runs (files left out of the image split them) */
+#define DIMM_TRACKS     64            /* Windows CE discs (Midway Vol. 2) have 28, KOF Dream Match 1999 41 */
 #define DIMM_PATCHES    64
 
 /* pad_map: how the cabinet (wheel, pedals, lever, START) becomes a Dreamcast pad, per game */

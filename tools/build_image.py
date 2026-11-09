@@ -29,23 +29,27 @@ ALIGN = 0x10000
 BASE_LBA = 45000
 FLASH_OFFSET = 0x1000
 DATA_OFFSET = 0x40000
-DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 4, 32, 64
+DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 32, 64, 64
 PATCH_CHECK, PATCH_W16, PATCH_W32, PATCH_TRAMP, PATCH_R4FIX = 1, 2, 4, 8, 16
 
 
 # ---------------------------------------------------------------- disc: gdi
 
-def nonzero_runs(gdi, gap=256):
-    """(lba, count) runs of non-zero sectors in the high-density data tracks."""
+def nonzero_runs(gdi, gap=256, skip=()):
+    """(lba, count) runs of non-zero sectors in the high-density data tracks (sectors in skip left out: they
+    read as zeros)."""
     runs = []
+    skipset = set()
+    for a, n in skip:
+        skipset.update(range(a, a + n))
     for num, start, ctrl, ss, fn, n in gdi.data_tracks():
         with open(fn, "rb") as f:
             for i in range(n):
                 f.seek(i * ss + (16 if ss == 2352 else 0))
                 s = f.read(2048)
-                if s.count(0) == 2048:
-                    continue
                 lba = start + i
+                if lba in skipset or s.count(0) == 2048:
+                    continue
                 if runs and lba <= runs[-1][1] + gap:
                     runs[-1][1] = lba + 1
                 else:
@@ -54,10 +58,53 @@ def nonzero_runs(gdi, gap=256):
 
 
 class GdiDisc:
-    def __init__(self, path, boot_name="1ST_READ.BIN"):
+    def __init__(self, path, boot_name="1ST_READ.BIN", blank=(), alias=None):
         self.gdi = Gdi(path)
         self.boot_name = boot_name          # the boot file IP.BIN names (Windows CE discs: 0WINCEOS.BIN)
-        self.runs = nonzero_runs(self.gdi)
+        self.override = {}                  # lba -> sector data (patched directory sectors)
+        # files left out of the image (to fit 512 MB): they read as zeros
+        skip = []
+        if alias:
+            # alias = (patterns, target): the matching files' directory records point at the target file instead
+            # (e.g. every movie plays the shortest one), and their own data is left out
+            import fnmatch
+            pats, target = alias
+            tlba, tsize = self.gdi.find(target)
+            pvd = self.gdi.sector(45016)
+            root = pvd[156:190]
+            todo = [("", struct.unpack_from("<I", root, 2)[0], struct.unpack_from("<I", root, 10)[0])]
+            moved = 0
+            while todo:
+                path_, dlba, dsize = todo.pop()
+                for k in range((dsize + 2047) // 2048):
+                    sl = dlba + k
+                    sec = bytearray(self.override.get(sl, self.gdi.sector(sl)))
+                    i = 0
+                    while i < 2048 and sec[i]:
+                        n = sec[i]
+                        name = bytes(sec[i + 33:i + 33 + sec[i + 32]])
+                        if name not in (b"\0", b"\1"):
+                            nm = path_ + name.decode(errors="replace").split(";")[0]
+                            flba, fsize = struct.unpack_from("<I", sec, i + 2)[0], struct.unpack_from("<I", sec, i + 10)[0]
+                            if sec[i + 25] & 2:
+                                todo.append((nm + "/", flba, fsize))
+                            elif nm.upper() != target.upper() and any(fnmatch.fnmatch(nm.upper(), q.upper()) for q in pats):
+                                skip.append((flba, (fsize + 2047) // 2048))
+                                struct.pack_into("<I", sec, i + 2, tlba)
+                                struct.pack_into(">I", sec, i + 6, tlba)
+                                struct.pack_into("<I", sec, i + 10, tsize)
+                                struct.pack_into(">I", sec, i + 14, tsize)
+                                self.override[sl] = bytes(sec)
+                                moved += 1
+                        i += n
+            print(f"  aliased to {target}: {moved} files")
+        if blank:
+            import fnmatch
+            for p, lba, size in self.gdi.walk():
+                if any(fnmatch.fnmatch(p.upper(), b.upper()) for b in blank):
+                    skip.append((lba, (size + 2047) // 2048))
+            print(f"  left out: {len(skip)} files, {sum(n for _, n in skip) * 2048 / 1048576:.1f} MB")
+        self.runs = nonzero_runs(self.gdi, skip=skip)
         if len(self.runs) > DIMM_RANGES:
             # merge the closest runs until they fit
             while len(self.runs) > DIMM_RANGES:
@@ -86,7 +133,11 @@ class GdiDisc:
     def write_sectors(self, out):
         for lba, n in self.runs:
             for i in range(0, n, 512):
-                out.write(self.gdi.sectors(lba + i, min(512, n - i)))
+                m = min(512, n - i)
+                if any(lba + i <= x < lba + i + m for x in self.override):
+                    out.write(b"".join(self.override.get(lba + i + j) or self.gdi.sector(lba + i + j) for j in range(m)))
+                else:
+                    out.write(self.gdi.sectors(lba + i, m))
 
 
 # ------------------------------------------------------ disc: rebuilt ISO
@@ -308,7 +359,7 @@ def main():
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
     os.makedirs(work, exist_ok=True)
-    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN")) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
+    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN"), game.get("blank", ()), game.get("alias")) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
 
     boot_fad, boot_size = disc.boot()
     first_track, tracks, leadout = disc.toc()

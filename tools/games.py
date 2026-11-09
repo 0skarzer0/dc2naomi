@@ -414,7 +414,7 @@ def _katana_drive(title, cable, hook):
     return {
         "title": title,
         "pads": "menu",       # START (on release), START + lever = up/down, lever = B/A, wheel lock = left/right
-        "vmu": True,          # emulated Visual Memory in slot 1
+        # no VMU: the emulated VMU fails on the board (Namco Museum black, F355 stuck at Now Loading, 2026-11-09)
         "region": 1,          # USA
         "language": 1,        # English
         "layout": "gdi",
@@ -476,8 +476,12 @@ GAMES["kof99"] = _katana_joy("KOF DREAM MATCH 1999", 1, 1, [
 # The Last Blade 2 (USA). To-physical 0x8c033230 (`mov.l @r15,r0; and r3,r0`, not found by findpatch).
 GAMES["lb2"] = _katana_joy("LAST BLADE 2 DC", 1, 1, [
     (0x8C014EB0, 2, mov_imm0(0)),   # cable: mov.w @r3,r0 (PDTRA) -> mov #0,r0
+    (0x8C014E28, 2, mov_imm0(0)),   # cable bits the DC BIOS leaves in AICA 0xa0702c00: and #3,r0 -> mov #0,r0
     (0x8C030DE4, 4, HOOK),          # maple: literal loaded at 0x8c030d4a, then SB_MDST = 1
 ])
+# 911 MB of data. To fit the 512 MB NetDIMM the 29 character story movies (ZSFD/NN_*.SFD) all point at the shortest
+# one (25_SHIGEN2.SFD, 6 MB) and their data is left out. Left out as zeros instead, the opening hangs (Flycast).
+GAMES["lb2"]["alias"] = (["ZSFD/[0-2][0-9]_*.SFD"], "ZSFD/25_SHIGEN2.SFD")
 # Street Fighter III: 3rd Strike (USA). 1ST_READ.BIN is 14 MB (up to 0x8cdeaa00).
 GAMES["sf3ts"] = _katana_joy("SF3 THIRD STRIKE DC", 1, 1, [
     (0x8CD6A7A6, 2, mov_imm0(4)),   # cable
@@ -487,4 +491,26 @@ GAMES["sf3ts"] = _katana_joy("SF3 THIRD STRIKE DC", 1, 1, [
 GAMES["sf3di"] = _katana_joy("SF3 DOUBLE IMPACT DC", 1, 1, [
     (0x8C08210A, 2, mov_imm0(4)),   # cable
     (0x8C091A10, 4, HOOK),          # maple: to-physical 0x8c09305e
+])
+# Super Puzzle Fighter II X for Matching Service (Japan).
+GAMES["spf2x"] = _katana_joy("SUPER PUZZLE FIGHTER IIX", 0, 0, [
+    (0x8C1AB24E, 2, mov_imm0(4)),   # cable
+    (0x8C1D0BE4, 4, HOOK),          # maple: to-physical 0x8c1d2232
+])
+# Super Street Fighter II X for Matching Service (Japan).
+GAMES["ssf2x"] = _katana_joy("SUPER STREET FIGHTER IIX", 0, 0, [
+    (0x8C2310CA, 2, mov_imm0(4)),   # cable
+    (0x8C26C150, 4, HOOK),          # maple: to-physical 0x8c26d79e
+])
+# The King of Fighters 2002 (Japan, En/Ja) and Garou: Mark of the Wolves (USA): the SNK engine of Last Blade 2
+# (same cable code at the same addresses, AICA cable read too).
+GAMES["kof02"] = _katana_joy("KOF 2002 DC", 0, 1, [
+    (0x8C015838, 2, mov_imm0(0)),   # cable: mov.w @r3,r0 (PDTRA) -> mov #0,r0
+    (0x8C0157B0, 2, mov_imm0(0)),   # AICA cable bits: and #3,r0 -> mov #0,r0
+    (0x8C032B54, 4, HOOK),          # maple: to-physical 0x8c034fa0, then SB_MDST = 1
+])
+GAMES["motw"] = _katana_joy("MARK OF THE WOLVES DC", 1, 1, [
+    (0x8C015838, 2, mov_imm0(0)),   # cable
+    (0x8C0157B0, 2, mov_imm0(0)),   # AICA cable bits
+    (0x8C032B2C, 4, HOOK),          # maple: to-physical 0x8c034f78
 ])

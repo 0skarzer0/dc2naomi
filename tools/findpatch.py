@@ -61,6 +61,19 @@ def main(d):
             else:
                 print("    ? PDTRA loaded at 0x%08X, no mov.w @r%d,Rn right after" % (BASE + i, m))
 
+    # cable type the Dreamcast BIOS leaves in the AICA (0xa0702c00 bits 9:8: shlr8; and #3,r0), as Ikaruga
+    print("# cable (AICA 0xa0702c00 bits 9:8)")
+    for i in range(0, n - 3, 2):
+        t = movl_target(u16(b, i), BASE + i)
+        if t and lit(t[0]) == 0xA0702C00:
+            for k in range(1, 16):
+                if i + 2 * k + 3 >= n:
+                    break
+                if u16(b, i + 2 * k) == 0x4019 and u16(b, i + 2 * k + 2) == 0xC903:   # shlr8 r0 ; and #3,r0
+                    print("    (0x%08X, 2, mov_imm0(0)),   # AICA cable bits: and #3,r0 -> mov #0,r0"
+                          % (BASE + i + 2 * k + 2))
+                    break
+
     # "to physical" functions
     phys = set()
     for i in range(0, n - 1, 2):
@@ -68,7 +81,7 @@ def main(d):
         if t and lit(t[0]) == 0x0FFFFFFF:
             rx = t[1]
             win = [u16(b, i + 2 * k) for k in range(-3, 4) if 0 <= i + 2 * k < n - 1]
-            if ((0x2009 | rx << 4) in win and 0x6043 in win) or (rx == 0 and 0x2049 in win):  # and Rx,r0 + mov r4,r0 / and r4,r0
+            if ((0x2009 | rx << 4) in win and (0x6043 in win or 0x60F2 in win)) or (rx == 0 and 0x2049 in win):  # and Rx,r0 + mov r4,r0 / and r4,r0
                 for s in range(i - 8, i + 2, 2):                       # function start: a few candidates
                     phys.add(BASE + s)
     print("# maple (literal of the to-physical call before SB_MDSTAR)")
@@ -91,6 +104,10 @@ def main(d):
                             if any(x & 0xF0FF == 0x1001 for x in after[:12]):     # mov.l r0,@(4,Rn)
                                 strict.append("    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X"
                                               % (la, v, BASE + j, BASE + j + 2 * k))
+                            elif any(x & 0xF0FF == 0x2002 for x in after[:3]) and any(x & 0xF00F == 0x1006 for x in after[:10]):
+                                # mov.l r0,@Rn (Rn = base+4), then mov.l Rm,@(24,Rn) (SB_MDST = 1)
+                                loose.insert(0, "    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X (r0,@Rn; MDST)"
+                                             % (la, v, BASE + j, BASE + j + 2 * k))
                             elif any(x & 0xF0FF == 0x2002 for x in after[:3]):    # mov.l r0,@Rn (Rn = base+4)
                                 loose.append("    (0x%08X, 4, HOOK),   # -> %#010x, loaded at 0x%08X, jsr at 0x%08X (r0,@Rn)"
                                              % (la, v, BASE + j, BASE + j + 2 * k))
