@@ -716,7 +716,8 @@ static u32 wheel(u32 v) {
 
 static u32 start_frames, start_used, start_pulse;
 #define HOP_WINDOW 60                                    /* polls (one per frame: ~1 s) */
-static u32 lever_prev_fwd, lever_hop, hop_window;       /* DIMM_PAD_CT: double tap forward = Crazy Hop */
+static u32 lever_prev_fwd, lever_hop, hop_window;
+static u32 plane_mode;                                  /* DIMM_PAD_YSGW: 0 driving, 1 plane */       /* DIMM_PAD_CT: double tap forward = Crazy Hop */
 
 static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
     u32 b = 0;
@@ -739,7 +740,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         /* the digital stick on the analog stick too (3D games read only that one) */
         x = (p & 0x0800) ? 0 : (p & 0x0400) ? 255 : 128;
         y = (p & 0x2000) ? 0 : (p & 0x1000) ? 255 : 128;
-    } else if (jvs.valid && (H.pad_map == DIMM_PAD_WHEEL || H.pad_map == DIMM_PAD_CT)) {
+    } else if (jvs.valid && (H.pad_map == DIMM_PAD_WHEEL || H.pad_map == DIMM_PAD_CT || H.pad_map == DIMM_PAD_YSGW)) {
         /* Crazy Taxi cabinet default for games not tuned yet (2026-11-09). START is sent on release, and only if
            nothing else was used while it was held; while held it shifts the controls: lever = up/down, brake = X,
            gas = Y. Otherwise lever forward = B, back = A, gas = R trigger, brake = L trigger. The wheel is the
@@ -759,6 +760,12 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             start_frames = 1;
             hop_window = 0;
             acc = brk = 0;
+            if (H.pad_map == DIMM_PAD_YSGW) {
+                /* Yu Suzuki Game Works (2026-11-09): START + wheel full left = driving controls,
+                   START + wheel full right = plane controls (After Burner II, Space Harrier) */
+                if (x < 16) { plane_mode = 0; start_used = 1; }
+                if (x > 239) { plane_mode = 1; start_used = 1; }
+            }
         } else {
             if (start_frames && !start_used) start_pulse = 30;
             start_frames = 0;
@@ -774,6 +781,14 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                 if (fwd) b |= lever_hop ? DC_Y : DC_B;
                 if (back) { b |= DC_A; hop_window = 0; }
                 if (hop_window) hop_window--;
+            } else if (H.pad_map == DIMM_PAD_YSGW && plane_mode) {
+                /* plane: lever forward = up (as the arcade stick pushed forward), back = down, on the d-pad and
+                   the analog stick; gas = A (fire), brake = B (missile); no triggers */
+                if (fwd) { b |= DC_UP; y = 0; }
+                if (back) { b |= DC_DOWN; y = 255; }
+                if (acc > 64) b |= DC_A;
+                if (brk > 64) b |= DC_B;
+                acc = brk = 0;
             } else {
                 if (fwd) b |= DC_B;
                 if (back) b |= DC_A;
@@ -781,8 +796,15 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         }
         lever_prev_fwd = fwd;
         if (start_pulse) { start_pulse--; b |= DC_START; }
-        if (x < 16) b |= DC_LEFT;
-        if (x > 239) b |= DC_RIGHT;
+        if (H.pad_map == DIMM_PAD_YSGW && start) {
+            /* (START + wheel at the end = change of controls: no d-pad) */
+        } else if (H.pad_map == DIMM_PAD_YSGW && plane_mode) {
+            if (x < 64) b |= DC_LEFT;                /* plane: the d-pad from half the wheel's travel */
+            if (x > 191) b |= DC_RIGHT;
+        } else {
+            if (x < 16) b |= DC_LEFT;
+            if (x > 239) b |= DC_RIGHT;
+        }
     } else if (jvs.valid) {
         x = wheel(jvs.analog[0]);
         acc = scale(1, jvs.analog[1], 255);

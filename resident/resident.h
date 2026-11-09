@@ -43,6 +43,8 @@
 #define DIMM_PAD_JOY    2             /* standard NAOMI cabinet, 2 players (Ikaruga): stick = d-pad, START = START,
                                          buttons 1-6 = A B X Y L R; player 2 on maple port B; the stick also
                                          drives the analog stick to its ends (games that only read it) */
+#define DIMM_PAD_YSGW   5             /* Yu Suzuki GW: DIMM_PAD_WHEEL, and START + wheel full right = plane controls (lever =
+                                         up/down, gas = A fire, brake = B missile), START + wheel full left = back */
 #define DIMM_PAD_WHEEL  4             /* Crazy Taxi cabinet default (games not tuned yet): START sent on release, only
                                          if nothing else was used while held; held START: lever = up/down, brake = X,
                                          gas = Y; otherwise lever = B/A, gas/brake = R/L triggers; wheel = analog

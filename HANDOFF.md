@@ -862,3 +862,17 @@ adelante**: el primer toque = D (B) y "carga" el salto durante `HOP_WINDOW` = 60
 un segundo toque adelante dentro de esa ventana = Crazy Hop (Y). Palanca atrás (R, A) o START apretado descargan.
 Las técnicas Crazy pasan por R, así que no deberían disparar el salto (pendiente de confirmar en placa: Crazy Dash y
 Crazy Drift). Ventana elegida con el usuario: 1 s (2 s era la alternativa). Misma forma de construir que `ct2h5`.
+
+**⚠️ Formato de la cabecera (2026-11-09):** las imágenes hechas antes de subir `DIMM_RANGES`/`DIMM_TRACKS` a 32/64
+(`ct2h4`, `ysgw5`, `nmus6`, `ikaruga_joy` y anteriores) usan 4/8. **No se les puede cambiar solo el loader**: el
+residente nuevo leería la tabla de parches en otro sitio y no aplicaría ninguno. Así salieron `ct2h5` y la primera
+`ct2h6` (malas en placa; en Flycast arrancan igual porque Flycast no necesita los parches para llegar al menú).
+`tools/convhdr.py VIEJA.bin.gz NUEVA.bin.gz TITULO [PADMAP]` reescribe la cabecera al formato actual con el
+`app/loader.bin` de ahora; la `ct2h6` buena está hecha así (comprobado: parches en su sitio, `pad_map` 0).
+
+**Yu Suzuki, `ysgw6` (2026-11-09):** mandos `ysgw` (`DIMM_PAD_YSGW` = 5): los del mueble por defecto y, a petición del
+usuario, un modo avión manual: **START + volante a tope a la derecha** = avión (palanca adelante = arriba, atrás =
+abajo, en cruceta y stick; acelerador = A disparo, freno = B misil; volante = stick X y cruceta desde media vuelta),
+**START + volante a tope a la izquierda** = coche. Con START apretado el volante no manda cruceta. Pendiente de
+confirmar en placa qué botón es disparo y cuál misil en After Burner II, y el sentido de la palanca. Hecha con el
+programa desde el CHD (disco idéntico a `ysgw5`). En Flycast llega a PRESS START.

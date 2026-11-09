@@ -393,7 +393,7 @@ def build(name, game, source, work, image, out, log=print):
     hdr += struct.pack("<3I", first_track, len(tracks), leadout)
     hdr += struct.pack(f"<{DIMM_TRACKS}I", *(tracks + [0] * (DIMM_TRACKS - len(tracks))))
     hook = list(game.get("hook_pc", [])) + [0, 0]
-    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4}[game.get("pads", "ct")]) + b"\0" * 28
+    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5}[game.get("pads", "ct")]) + b"\0" * 28
     for p in patches:
         hdr += struct.pack("<4I", *p)
     hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))
