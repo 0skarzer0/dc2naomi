@@ -100,8 +100,12 @@ Para desarrollo, `./build.sh PERFIL disco.gdi` construye un perfil concreto de `
 
 ## Contribuir
 
-El código es abierto y **aceptamos pull requests verificados**: un juego nuevo, un ajuste de mandos o un arreglo,
-indicando en qué placa y mueble se ha probado (o en qué emulador, si es un primer paso).
+El código es abierto y **aceptamos pull requests verificados**: un juego nuevo, un ajuste de mandos o un arreglo.
+
+**Verificado quiere decir probado en hardware real** (indica placa, NAOMI 1 o 2, NetDIMM y mueble). Probarlo solo en
+Flycast no basta: el emulador es mucho más permisivo que la placa. Por ejemplo, F355 Challenge llega a PRESS START y
+18 Wheeler al menú en Flycast, y en la placa real ninguno de los dos pasa de la carga. Flycast sirve para un primer
+paso, pero el juego solo cuenta como probado cuando funciona en la placa.
 
 ## Agradecimientos
 
