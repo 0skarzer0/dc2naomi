@@ -34,8 +34,8 @@
 #define DIMM_PATCHES    64
 
 /* pad_map: how the cabinet (wheel, pedals, lever, START) becomes a Dreamcast pad, per game */
-#define DIMM_PAD_CT     0             /* Crazy Taxi 2: DIMM_PAD_WHEEL, but lever forward already in drive = Y (Crazy Hop):
-                                         the resident keeps the gear (lever back = reverse) */
+#define DIMM_PAD_CT     0             /* Crazy Taxi 2: DIMM_PAD_WHEEL, but two taps of the lever forward within ~1 s =
+                                         Y (Crazy Hop); the first tap is drive (B) and arms it, lever back disarms */
 #define DIMM_PAD_MENU   1             /* Yu Suzuki GW: START plain (sent on release); START + lever = up/down; lever = B/A;
                                          wheel lock = left/right */
 #define DIMM_PAD_POLE   3             /* Namco Museum (Pole Position): as MENU, but gas = A, brake = B (digital) and the

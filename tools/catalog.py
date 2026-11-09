@@ -44,7 +44,7 @@ PADS_TEXT = {
     "pole": ["Menús: como Yu Suzuki (START al soltar, START + palanca = arriba/abajo)",
              "Pole Position: acelerador = A, freno = B, palanca = cambio Low/High"],
     "ct": ["Como el mueble por defecto, y además:",
-           "Palanca adelante en R = marcha D (B); adelante estando ya en D = salto (Crazy Hop)",
+           "Palanca adelante = marcha D (B) y prepara el salto; otro toque adelante antes de 1 s = salto",
            "Palanca atrás = marcha R (A)",
            "START = START al soltarlo; con START apretado: palanca = arriba/abajo, freno = X, acelerador = Y"],
 }

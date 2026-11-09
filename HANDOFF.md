@@ -856,3 +856,9 @@ acelerador = Y) más la marcha: la palanca del mueble vuelve al centro, así que
 del juego y la del residente se desincronizan, basta un toque atrás y otro adelante. Imagen hecha cambiando solo el
 loader de `ct2h4` (el disco de CT2 ya no está aquí; la cabecera conserva `pad_map` 0). En Flycast llega a la pantalla
 de memory card. `app/loader.bin` regenerado.
+
+**Crazy Taxi 2, `ct2h6` (2026-11-09):** sustituye a `ct2h5` (que recordaba la marcha). Ahora el salto es un **doble toque
+adelante**: el primer toque = D (B) y "carga" el salto durante `HOP_WINDOW` = 60 sondeos (~1 s, uno por fotograma);
+un segundo toque adelante dentro de esa ventana = Crazy Hop (Y). Palanca atrás (R, A) o START apretado descargan.
+Las técnicas Crazy pasan por R, así que no deberían disparar el salto (pendiente de confirmar en placa: Crazy Dash y
+Crazy Drift). Ventana elegida con el usuario: 1 s (2 s era la alternativa). Misma forma de construir que `ct2h5`.

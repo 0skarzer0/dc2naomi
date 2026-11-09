@@ -715,7 +715,8 @@ static u32 wheel(u32 v) {
 #define DC_X 0x0400
 
 static u32 start_frames, start_used, start_pulse;
-static u32 gear_drive = 1, lever_prev_fwd, lever_hop;   /* DIMM_PAD_CT: the gear the game is in (starts in drive) */
+#define HOP_WINDOW 60                                    /* polls (one per frame: ~1 s) */
+static u32 lever_prev_fwd, lever_hop, hop_window;       /* DIMM_PAD_CT: double tap forward = Crazy Hop */
 
 static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
     u32 b = 0;
@@ -756,18 +757,23 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             if (acc > 64) b |= DC_Y;
             if (fwd || back || brk > 64 || acc > 64) start_used = 1;
             start_frames = 1;
+            hop_window = 0;
             acc = brk = 0;
         } else {
             if (start_frames && !start_used) start_pulse = 30;
             start_frames = 0;
             start_used = 0;
             if (H.pad_map == DIMM_PAD_CT) {
-                /* Crazy Taxi 2 (2026-11-09): the cabinet lever springs back to the centre, so we keep the gear.
-                   Lever forward in reverse (R) = drive (B); lever forward already in drive (D) = Crazy Hop (Y);
-                   lever back = reverse (A). */
-                if (fwd && !lever_prev_fwd) lever_hop = (gear_drive != 0);
-                if (fwd) { b |= lever_hop ? DC_Y : DC_B; gear_drive = 1; }
-                if (back) { b |= DC_A; gear_drive = 0; }
+                /* Crazy Taxi 2 (2026-11-09, v6): a tap of the lever forward = drive (B) and arms the Crazy Hop for
+                   HOP_WINDOW polls (~1 s); a second tap forward inside that window = Crazy Hop (Y). Lever back =
+                   reverse (A) and disarms it (the Crazy Dash/Drift go through R, so they never double-tap D). */
+                if (fwd && !lever_prev_fwd) {
+                    lever_hop = hop_window != 0;
+                    hop_window = lever_hop ? 0 : HOP_WINDOW;
+                }
+                if (fwd) b |= lever_hop ? DC_Y : DC_B;
+                if (back) { b |= DC_A; hop_window = 0; }
+                if (hop_window) hop_window--;
             } else {
                 if (fwd) b |= DC_B;
                 if (back) b |= DC_A;
