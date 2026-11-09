@@ -103,6 +103,31 @@ Para desarrollo, `./build.sh PERFIL disco.gdi` construye un perfil concreto de `
 El código es abierto y **aceptamos pull requests verificados**: un juego nuevo, un ajuste de mandos o un arreglo,
 indicando en qué placa y mueble se ha probado (o en qué emulador, si es un primer paso).
 
+## Agradecimientos
+
+Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
+
+- **[KallistiOS](https://github.com/KallistiOS/KallistiOS)** (licencia BSD) y sus desarrolladores: el loader está
+  hecho con KallistiOS para NAOMI (`KOS_SUBARCH=naomi`) y se empaqueta con su `naomibintool`. El soporte MIE/JVS de
+  KallistiOS ([PR #1440](https://github.com/KallistiOS/KallistiOS/pull/1440)) sirvió de referencia para los mandos.
+- **[Flycast](https://github.com/flyinghead/flycast)** (flyinghead y colaboradores): el emulador con el que se ha
+  probado todo antes de llevarlo a la placa, y su HLE de la BIOS de Dreamcast (reios) fue la referencia para las
+  llamadas al sistema que imita el residente.
+- **[MAME](https://github.com/mamedev/mame)** y su equipo: el formato CHD y `chdman`. El lector de CHD de este
+  proyecto (`tools/chd.py`) está escrito siguiendo su código (`chd.cpp`, `chdcodec.cpp`, `cdrom.cpp`, BSD-3-Clause).
+- **[DreamShell](https://github.com/DC-SWAT/DreamShell)** y **SWAT** ([DC-SWAT](http://www.dc-swat.ru)): DreamShell
+  se estudió y probó por netboot, y sus notas sobre NAOMI y JVS fueron de mucha ayuda.
+- La comunidad de **Dreamcast y NAOMI** que ha documentado durante años el hardware (Katana, Holly, AICA, maple, JVS,
+  NetDIMM) y los desarrolladores de los **netbooters** para NAOMI.
+- **[DejaVu Fonts](https://dejavu-fonts.github.io)**: la letra de los mensajes en pantalla sale de DejaVu Sans Mono.
+- **[PyInstaller](https://pyinstaller.org)** y **GitHub Actions**, con los que se compilan los ejecutables de Windows.
+- Herramientas usadas durante el desarrollo: GCC para SH-4, Python, ffmpeg y genisoimage.
+- Proyectos hermanos de los que viene buena parte de lo aprendido:
+  [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-games) y
+  [mame4all-naomi](https://github.com/0skarzer0/mame4all-naomi) (incluido su parche MIE para Flycast).
+
+Si hemos usado algo tuyo y no apareces aquí, abre una incidencia y lo añadimos.
+
 ## Aviso legal
 
 Este repositorio **no contiene** juegos, imágenes de disco, BIOS ni desensamblados: solo código propio y, de los

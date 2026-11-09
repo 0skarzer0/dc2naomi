@@ -844,3 +844,7 @@ Para WiPi Netbooter: `gzip build/ysgw.bin` y una línea en `romsinfo.csv`.
    librería NAOMI, o es el modo de disparo de `ADTSEL`?). La versión NAOMI de Ikaruga sí usa DMA G2: comparar su
    secuencia de inicio del AICA con la de Dreamcast.
 5. YSGW: además del sonido, queda el error del TA (ISTERR 0x10) y la ruta de texturas 0x11 (ver arriba).
+
+## Agradecimientos (regla)
+
+Citar en el README (sección "Agradecimientos") todo lo que se use de otros, y también lo que haya servido de inspiración o ayuda directa o indirecta. Añadirlo en el mismo commit en que se empiece a usar.
