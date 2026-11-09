@@ -895,3 +895,13 @@ de 2048 bytes/sector. **No es Katana sino KallistiOS 2.x**, así que se trata co
 - En Flycast (`FC_SYSM_RAM=1`): vídeo de intro, título "INICIO", START entra en "Elegir carnet", A (palanca atrás)
   crea licencia y escribe el nombre. Con `AUTOSTART=1` también pasa del título. Carrera sin comprobar.
   Mandos `wheel` (los del mueble por defecto). Sin probar en placa.
+
+**⚠️ Corrección (2026-11-09 noche): la `ct2h6` entregada no aplicaba ningún parche** (el usuario: "no ve el mando en el
+puerto A"). `convhdr.py` suponía el formato viejo con `DIMM_TRACKS` 8, pero `ct2h4` se hizo con 4 rangos y **32**
+pistas (el historial de `resident.h`: 8 pistas hasta el 08-11 13:10, 32 hasta el 09-11 02:12, luego 32/64). La tabla
+de parches quedó con 6 entradas vacías delante y el residente se para en la primera. Mi comprobación filtraba las
+vacías y no lo vio. `convhdr.py` ahora deduce el formato (la tabla debe empezar por una comprobación de grupo) y lo
+comprueba. Imagen buena: **`ct2h7`** (= la v6 bien hecha). Comprobado en Flycast en la RAM: literal del gancho
+`0x8c166ee0` = `0x8dc01884`, cable parcheado, mando en el puerto A, START pasa de la pantalla de VMU.
+**Ojo al probar mandos en Flycast:** sin `FC_PEDALS=1` el acelerador y el freno están a media carrera (`0x8000`), así
+que con los mapas `wheel`/`ct` START cuenta como "usado" (pedal > 64) y no se envía. Usar `FC_PEDALS=1`.
