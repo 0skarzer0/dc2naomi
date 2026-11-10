@@ -1093,7 +1093,7 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
 - `18wheeler2` con mandos `wheel`: **usuario: perfecto, no tocar**.
 - Ojo: `/boot/config/romsinfo.csv` no acababa en salto de línea; al añadir con `>>` la fila se pegaba a la anterior.
 
-## Sega Rally 2 (USA) — Windows CE, en estudio (2026-11-10). NO funciona todavía
+## Sega Rally 2 (USA) — Windows CE (2026-11-10). Arranca en Flycast; placa sin probar
 Perfil `sr2` (como `mw2`). Probado solo en Flycast (NAOMI, `FC_SYSM_RAM=1`); en placa no se ha enviado.
 Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Programa: `RALLY2.EXE`.
 
@@ -1113,21 +1113,38 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
    (NetDIMM → `RES_SCRATCH+0x800`) para que salte la interrupción de fin de DMA, **fuera** de la syscall (si salta dentro,
    el hilo de CE entra anidado y se ignora).
    Mapa de interrupciones del núcleo de CE (`0x8c02e020`...): ISTNRM bit 14 → SYSINTR 21; ISTEXT bit 0 (unidad GD-ROM) → 20.
-4. Resultado en Flycast: arranca CE (logo "Powered by Windows CE"), lee el ISO, carga `RALLY2.EXE` por PIO y DMA... y
-   **ahí se para** (sigue el logo): no hay más llamadas al GD-ROM.
+4. **`REQ_PIO_TRANS` y el callback PIO, como el HLE de Flycast** (`core/reios/gdrom_hle.cpp`): `REQ_PIO_TRANS` solo
+   anota la petición; la copia la hace el siguiente `EXEC_SERVER`, y **al terminar esa llamada** el residente llama al
+   callback (`SET_PIO_CALLBACK`), que pide el trozo siguiente. Mientras hay un `REQ_PIO_TRANS` pendiente,
+   `GET_CMD_STAT` devuelve BUSY (solo con MMU encendida). **Error que costó horas:** hacer la copia y llamar al
+   callback dentro del propio `REQ_PIO_TRANS`: el driver avanza su lista de búferes *después* de que la llamada
+   vuelve, así que el callback anidado pedía otra vez el mismo trozo y los ficheros salían revueltos. Síntoma:
+   CE se quedaba en el logo; el hilo que cargaba `CEMM.DLL` moría en `DoImports` del núcleo (`0x8c02094c`) leyendo un
+   puntero basura (tabla de imports con datos de otra parte del fichero) y el despachador de excepciones del núcleo
+   se quedaba dando vueltas (`NKLookupFunctionEntry` `0x8c0268f4` con el mismo PC) acaparando la CPU.
+5. **No hizo falta parchear `WSEGACD.DLL`** (la espera de la interrupción de la unidad, ISTEXT bit 0): con lo de
+   arriba el driver funciona sondeando, igual que en el HLE de Flycast, que tampoco levanta esa interrupción.
+6. **Mandos (maple) en Windows CE:** `MAPLE.DLL` (en la ROM, `0x8c098000` = fichero `0x10001000`) escribe SB_MDSTAR
+   una sola vez (su lista, un búfer común) y deja que el hardware lance la DMA en cada vblank (SB_MDTSEL = 1,
+   MSYS `0xc3501000`, rearme con SB_MSHTCL). Corre en modo usuario con MMU: no puede llamar al residente. El gancho va
+   en **el manejador de interrupciones del núcleo**: la rama de ISTNRM bits 12/13 (SYSINTR 18) en `0x8c02e114`
+   salta a `ce_maple_isr` (head.S; parche `CEMAPLE` = `PATCH_CEMAPLE` sobre el literal `0x8c02e194` + `jmp @r3`),
+   que llama a `ce_maple_poll()`: contesta la lista de CE con `maple_hook()` y apunta SB_MDSTAR a nuestro sondeo del
+   MIE para el vblank siguiente. CE ve un mando en el puerto A (GETCOND) y nada en B-D.
+   Tabla de interrupciones del núcleo: `0x8c02e020` (ISTERR, nivel 2), `0x8c02e0ac` (ISTNRM & IML4NRM: bits 0-11 →
+   SYSINTR 16, 12-13 → 18 maple, 14 → 21 fin DMA G1, 15 → 24), `0x8c02e13c` (ISTEXT & IML6EXT: bit 0 → 20, bit 1 → 23).
+7. **Resultado en Flycast (NAOMI): arranca.** Logo de CE → título "PRESS START BUTTON" → demo con coches → ranking.
+   Pendiente: probar START/menús/carrera en Flycast, VMU + partida, y la placa real.
 
-**Dónde está el problema ahora (hipótesis):** el driver espera también la interrupción de la **unidad** GD-ROM
-(ISTEXT bit 0, SYSINTR 20) para mirar el estado de cada orden (hilo en `WSEGACD+0x7a4`: `WaitForSingleObject(evento, 15 s)`
-y, si vence, `READ_ABORT`). La NAOMI no tiene unidad y no podemos levantar ese bit. Probé a parchear la espera en la
-copia de `0x8c0937b2` (bt → bra, 15 s → 5 ms) sin efecto visible: **no está claro que el driver se ejecute desde esa
-copia** (en ejecución está mapeado en otra dirección virtual; buscar su código por firma en el intérprete de Flycast
-no lo encontró porque en el intérprete CE ni siquiera llega a ese punto: otra carrera de tiempos sin resolver).
-Siguientes pasos: (a) averiguar la dirección virtual de WSEGACD (firma `d02d 9562` = su `+0x7a8`) con el dynarec y
-gdb; (b) o sustituir la espera de SYSINTR 20 parcheando el núcleo (que `InterruptInitialize(20)` use otra fuente que
-sí podamos disparar, p. ej. el bit 14 compartido); (c) mirar el HLE de Flycast, que sí corre juegos CE sin unidad.
-Herramientas: `EXTRA=-DGDTRACE bash app/make_loader.sh` registra cada llamada GD (r7<<8|r4, r5, r15) en el log
-(`tools/flycast/ramlog.py`); el `Makefile` del residente acepta `EXTRA`. Flycast (local): `FC_PCTRACE=dir,dir` en el
-intérprete imprime los PC elegidos. Referencia útil del usuario: github.com/maximqaxd/wince-dc (SDK de CE 2.12 de
-Dreamcast, mapas de símbolos del núcleo, `wrap-image.ps1` confirma el formato de `0WINCEOS.BIN`).
+**Cómo se encontró (herramientas de depuración añadidas al Flycast local, no al repo):** variables de entorno
+`FC_INTPC=N` (PC, registros Holly y TMU en 1 de cada N interrupciones), `FC_GDLOG=1|2` (peticiones y todas las
+syscalls GD del HLE en modo Dreamcast: **correr el .gdi original en Flycast modo Dreamcast da la secuencia de
+referencia para comparar**), `FC_APILOG` (llamadas a la API de CE: son excepciones de dirección en `0xffffxxxx`;
+comparar por hilo, el hilo se distingue por los bits altos de r15), `FC_TLBLOG`, `FC_EXCLOG`, `FC_REGS` (registros y
+direcciones de retorno de la pila en un rango de PC), `FC_G1LOG`, `FC_TMULOG`, `FC_PCTRACE`. Ojo: leer TCNT0 desde el
+emulador tiene efectos (recarga el contador). Símbolos del núcleo: los `.map` de wince-dc son de otra compilación
+(desplazados ~0x10020-0x10f3c según la zona); sirven de orientación.
+Módulos de la ROM de SR2: nk, coredll, device, gwes, filesys, sysstart, platutil, wdevice, maple, wdmlib, wdmoem,
+wsegacd (`0x8c093000`, virtual `0x01df1000`), ddraw, d3dim, ddhal, sndcore, dinputx, ole32, cemm...
 **Regresión:** CT2 (`ct2h8`) con el loader nuevo llega igual a la pantalla de la VMU en Flycast (los cambios de CE
 solo actúan con la MMU encendida).

@@ -540,9 +540,9 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     r0 = gd_syscall_body(r4, r5, r6, r7);
     gd_va = 0;
     gd_inside = 0;
-    /* The BIOS calls the PIO callback (SET_PIO_CALLBACK) when a REQ_PIO_TRANS transfer ends (from the GD-ROM
-       interrupt). Windows CE's CD driver (WSEGACD.DLL) asks for the next piece from that callback, and waits
-       for it. Called here, out of the syscall, since the callback calls the syscalls again. */
+    /* The BIOS calls the PIO callback (SET_PIO_CALLBACK) when a REQ_PIO_TRANS transfer ends. Windows CE's CD
+       driver (WSEGACD.DLL) asks for the next piece from that callback. Called here, when the EXEC_SERVER call
+       that moved the data ends (as Flycast's HLE BIOS does), out of the syscall: the callback calls it again. */
     if (gd.dma_kick) {
         /* Windows CE (MMU on): its CD driver waits for the G1 DMA end interrupt (ASIC ISTNRM bit 14) in an
            interrupt thread before it asks for the next piece. Our copy raises none, so a real 32-byte G1 DMA from
@@ -586,6 +586,9 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         if (gd.status == GDC_OK || gd.status == GDC_BUSY) return gd.status;
         if (r4 != gd.last_id) return GDC_OK;
         r0 = gd.status;
+        /* As Flycast's HLE BIOS: a stream read waiting for its next REQ_PIO_TRANS to be served reads "busy".
+           Windows CE's driver (MMU on) then polls again; with "continue" it waited for the drive's interrupt. */
+        if (gd.status == GDC_CONTINUE && gd.command == GDCC_REQ_PIO_TRANS && (REG32(0xff000010) & 1)) r0 = GDC_BUSY;
         if (gd.status == GDC_CONTINUE && gd.multi_count == 0) {
             gd.status = GDC_COMPLETE;
             gd.result[3] = 0;
@@ -651,16 +654,10 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         gd.params[0] = ((volatile u32 *)r5)[0];
         gd.params[1] = ((volatile u32 *)r5)[1];
         if (gd.status != GDC_CONTINUE || gd.params[1] > gd.multi_count) return GDC_ERR;
-        if (gd.callback && (REG32(0xff000010) & 1)) {
-            /* Windows CE (MMU on), with a PIO callback (Windows CE's WSEGACD.DLL), the BIOS moves the data from its GD-ROM interrupt and
-               then calls the callback; the driver waits on an event and calls no EXEC_SERVER meanwhile. So the
-               transfer is done now, and the callback is called once out of the syscall (gd_syscall). */
-            multi_xfer(gd.params[0], gd.params[1], 0);
-            gd.result[2] = gd.multi_total - gd.multi_count;
-            gd.result[3] = 0;
-            gd.pio_ended = 1;
-            return 0;
-        }
+        /* (The transfer is done by the next EXEC_SERVER, and then the PIO callback is called: see gd_syscall.
+           Doing both here was wrong: Windows CE's driver moves on in its buffer list only after this call
+           returns, so a callback called from inside asked for the same piece again and the file data came out
+           scrambled: Sega Rally 2 died with a wild pointer while loading CEMM.DLL.) */
         gd.command = GDCC_REQ_PIO_TRANS;
         return 0;
     case 13: /* CHECK_PIO_TRANS */
@@ -1341,6 +1338,23 @@ u32 maple_hook(u32 list) {
 }
 
 /* KallistiOS: maple_dma_addr(list) writes SB_MDSTAR itself; its body becomes a jump here (PATCH_HOOKST). */
+/* Windows CE (Sega Rally 2, 2026-11-10). MAPLE.DLL writes SB_MDSTAR once (its frame list, a common buffer) and
+   lets the hardware start the DMA at every vblank (SB_MDTSEL = 1); its interrupt thread reads the answers after
+   the DMA end interrupt and writes the next frames in the same list. The driver runs in user mode with the MMU
+   on, so its code cannot call us; the kernel's interrupt handler can: the branch for ISTNRM bits 12/13 (SYSINTR
+   18) jumps to ce_maple_isr (head.S, PATCH_CEMAPLE), which calls this and returns as the original code.
+   Here: the list CE gave is answered as for any game (maple_hook) and SB_MDSTAR is pointed to our MIE poll for
+   the next vblank. */
+extern void ce_maple_isr(void);
+static u32 ce_list, ce_ours;
+void ce_maple_poll(void) {
+    u32 cur = REG32(0xa05f6c04) & 0x1fffffe0u;
+    if (cur && cur != ce_ours) ce_list = cur;       /* CE's own list (written at its init) */
+    if (!ce_list) return;
+    ce_ours = maple_hook(ce_list) & 0x1fffffe0u;
+    REG32(0xa05f6c04) = ce_ours;
+}
+
 u32 maple_hook_mdstar(u32 list) {
     u32 phys = maple_hook(list);
     REG32(0xa05f6c04) = phys;
@@ -1543,7 +1557,8 @@ static void apply_patches(void) {
               : p->value == PATCH_G2CHK0 ? (u32)g2chk0
               : p->value == PATCH_G2CHK4 ? (u32)g2chk4
               : p->value == PATCH_G2CPU ? (u32)g2cpu
-              : p->value == PATCH_HOOKST ? (u32)maple_hook_mdstar : p->value;
+              : p->value == PATCH_HOOKST ? (u32)maple_hook_mdstar
+              : p->value == PATCH_CEMAPLE ? (u32)ce_maple_isr : p->value;
         if (kind == PATCH_R4FIX) {
             if (fx >= nfix) continue;
             volatile u32 *a = (volatile u32 *)p->addr;

@@ -262,3 +262,35 @@ _r4fix3: mov #3, r0
     .align 2
 _r4fix_target: .space 16
     .text
+
+/* Windows CE's interrupt handler, branch for the maple DMA end (see ce_maple_poll in resident.c). Entered by a
+   jmp with r1 = &SB_IML4NRM and r2 = its value; the code it replaces: mask bits 12/13, r0 = 18 (SYSINTR), rts. */
+    .global _ce_maple_isr
+    .align 2
+_ce_maple_isr:
+    mov.l   .Lcemask, r3
+    and     r3, r2
+    mov.l   r2, @r1
+    mov.l   @r1, r2
+    sts.l   pr, @-r15
+    mov.l   r4, @-r15
+    mov.l   r5, @-r15
+    mov.l   r6, @-r15
+    mov.l   r7, @-r15
+    sts.l   mach, @-r15
+    sts.l   macl, @-r15
+    mov.l   .Lcepoll, r0
+    jsr     @r0
+    nop
+    lds.l   @r15+, macl
+    lds.l   @r15+, mach
+    mov.l   @r15+, r7
+    mov.l   @r15+, r6
+    mov.l   @r15+, r5
+    mov.l   @r15+, r4
+    lds.l   @r15+, pr
+    rts
+    mov     #18, r0
+    .align 2
+.Lcemask: .long 0xffffcfff
+.Lcepoll: .long _ce_maple_poll
