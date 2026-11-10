@@ -1054,3 +1054,16 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
   maple, cada syscall GD y el tick de TMU2 (con `DIMM_PCSAMPLE` 0x0200, que además deja los últimos PC en `pcs_ring`).
   Primera imagen con ello: `ysgw7` (sin probar en placa). Guardar el `nm` del residente de cada imagen de prueba
   para saber las direcciones (`_hook_calls`, `_jvs`, `_dbg_val`, `_pcs_ring`...).
+
+## 18 Wheeler en placa con lectura en directo (2026-11-10)
+- `ct2h8` + partida al 100 %: confirmado por el usuario en el mueble (todo desbloqueado).
+- `18wheeler_novmu` con el loader actual y `0x20200` (caja negra + muestreador): **no se cuelga**. 0 excepciones,
+  llamadas GD y maple subiendo, vídeo VGA encendido (`FB_R_CTRL 0x800005`, `SOF1 0x582800`). PCs en el bucle
+  `0x8c069ce0`: espera a que la ranura 0 de la tabla `0x8c3a12d8` (pasos de 0x80; +4 = ocupada, +8 = orden) quede
+  libre; la orden la pone `0x8c04ecc0(0)` → `0x8c160b00(0, 0x8c240848, 0xf420)` + `0x8c15fa60` (orden 1). Librerías:
+  NAOMI LIBRARY 0.9 AM R&D, libsnd 1.05a, ADX 5.x, bu 2.13. Último sector `0x7ac6d`, última llamada GD `0x04ec`.
+- **En Flycast (misma imagen y residente) a los 25 s el estado es el mismo** (ranura 0 = 1, mismo sector) y la pantalla
+  muestra un texto de memory card ("There are not enough free memory blocks... Press START"): ese bucle es normal.
+- Con VMU (`18wheeler_dc2naomi` + loader actual, `0x28204`): en placa **0 llamadas al hook maple** (en Flycast 0x1ea, con
+  0xe8 tramas de VMU) y muchas más llamadas GD. Pendiente: saber qué se ve en la pantalla del mueble.
+
