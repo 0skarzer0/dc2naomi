@@ -68,7 +68,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
 | Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ **VMU en fichero (`daytona5`) confirmada**: guarda, se carga otro juego, se vuelve a cargar y recupera la partida | Crazy Taxi |
-| F355, 18 Wheeler | ❌ aparcados (Now Loading / negro tras SEGA) | Crazy Taxi |
+| F355, 18 Wheeler | ✅ funcionan en placa con VMU (`f355b`, `18wheeler2`); F355 sin música | Crazy Taxi |
 | KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
 | SF3 Double Impact | ❌ el hook no llega (menú que carga dos programas) | estándar |
 | Virtua Tennis (US) | llegó a "No VMU found" (2026-11-08, perfil antiguo) | — |
@@ -1079,3 +1079,15 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
   gateway is not found". Arreglado (lo relanza tras el envío). Ojo con `pkill -f` y `pgrep -f`: el patrón también casa
   con la propia orden `bash -c` que lo contiene (hay que usar un fichero `.sh` aparte o `[t]` y que no aparezca el resto).
 
+
+## F355 Challenge en placa (2026-11-10)
+- `f355_dc2naomi` (la de VMU) tenía **la cabecera antigua** (como 18 Wheeler) y `f355_novmu` un loader anterior.
+- **`f355b_dc2naomi`**: `tools/addvmu_stream.py /boot/roms/f355_novmu_dc2naomi.bin.gz OUT /root/loader_cur.bin 4`
+  hecho **en la propia Raspberry** (es `addvmu.py` sin cargar la imagen en RAM, y además pone `pad_map`; la Pi 3B+
+  tarda ~4 min). md5 `e8f500b2ee030154db8c3b1d01f4787f`. Mandos `wheel` (4). `.vmu` con la «Perfect Save!» de
+  dreamcast-saves (`f355_2` = `F355DATA.SYS` 14 bloques + `f355_1` = `F355DATA.PLY` 8 bloques). Fila en el CSV e importada.
+- **Usuario, en el mueble: todo funciona** (juego, volante, pedales, cambio de marcha). Falta: **la música no suena**.
+  No es CDDA: el TOC de la imagen tiene solo la pista 3 (`first_track 3, ntracks 1`), el disco no tiene pistas de audio.
+  Pendiente de investigar (¿streaming desde ficheros por la DMA G2/AICA?).
+- `18wheeler2` con mandos `wheel`: **usuario: perfecto, no tocar**.
+- Ojo: `/boot/config/romsinfo.csv` no acababa en salto de línea; al añadir con `>>` la fila se pegaba a la anterior.

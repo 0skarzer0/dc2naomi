@@ -79,7 +79,9 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: el sonido petardea; salir con B deja negro) |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
-| F355 Challenge, 18 Wheeler, SF III Double Impact | ❌ no funcionan todavía | ❌ |
+| F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (sin música, en estudio) |
+| 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
+| SF III Double Impact | ❌ no funciona todavía | ❌ |
 | Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
 | Cualquier otro juego de Dreamcast | experimental | experimental |
 
@@ -129,8 +131,8 @@ Para desarrollo, `./build.sh PERFIL disco.gdi` construye un perfil concreto de `
 El código es abierto y **aceptamos pull requests verificados**: un juego nuevo, un ajuste de mandos o un arreglo.
 
 **Verificado quiere decir probado en hardware real** (indica placa, NAOMI 1 o 2, NetDIMM y mueble). Probarlo solo en
-Flycast no basta: el emulador es mucho más permisivo que la placa. Por ejemplo, F355 Challenge llega a PRESS START y
-18 Wheeler al menú en Flycast, y en la placa real ninguno de los dos pasa de la carga. Flycast sirve para un primer
+Flycast no basta: el emulador es mucho más permisivo que la placa. Por ejemplo, Power Drift y Namco Museum leían los
+mandos en Flycast y en la placa no (SB_MDAPRO). Flycast sirve para un primer
 paso, pero el juego solo cuenta como probado cuando funciona en la placa.
 
 ## Agradecimientos
