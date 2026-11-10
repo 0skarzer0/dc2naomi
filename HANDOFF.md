@@ -1093,7 +1093,7 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
 - `18wheeler2` con mandos `wheel`: **usuario: perfecto, no tocar**.
 - Ojo: `/boot/config/romsinfo.csv` no acababa en salto de línea; al añadir con `>>` la fila se pegaba a la anterior.
 
-## Sega Rally 2 (USA) — Windows CE (2026-11-10). Arranca en Flycast; placa sin probar
+## Sega Rally 2 (USA) — Windows CE. ✅ FUNCIONA EN PLACA (2026-11-11 00:31, mueble Crazy Taxi)
 Perfil `sr2` (como `mw2`). Probado solo en Flycast (NAOMI, `FC_SYSM_RAM=1`); en placa no se ha enviado.
 Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Programa: `RALLY2.EXE`.
 
@@ -1189,6 +1189,20 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      `0x8dcf4000` tick) y restauran r15 al salir. Si era esto, el cuelgue de la primera imagen (sin gancho de tick)
      sería el mismo fallo en el gancho de maple.
      Regla para ganchos en ISR de CE: solo direcciones P1/P2, pila propia, nada de coma flotante.
+   - **✅ CONFIRMADO (usuario, 00:31): con la pila propia en los ganchos "funciona perfectamente"** en la placa
+     (diagnóstico 3). Era eso: fallo de TLB con SR.BL = 1 al apilar en la pila del hilo interrumpido.
+     Falta la música de las carreras (pistas CDDA 4-20, no se reproducen).
+   - **Imagen limpia definitiva:** `sega_rally2_dc2naomi.bin.gz` md5 `b61bf3b07d478e1f1ea7f2acfe77f37e` (sin comprimir
+     `8aed51a83f3f21dc7335a20164160f99`), perfil `sr2` (flags `0x48004`, mandos `wheel`), en `/boot/roms` de la Pi .60
+     y en el PC. Lleva también el gancho del tick (peek por red con CE en marcha). `.vmu` con «US - ALL UNLOCKED».
+   - El vigilante viejo de CT2 no tocó su tarjeta (el usuario tiene los ficheros renombrados con prefijo `dc-`:
+     `dc-ct2h8_dc2naomi.vmu`..., fecha sin cambios).
+   - **Ideas pendientes del usuario:** (1) CDDA a baja calidad (quedan ~98 MB libres de 512: ADPCM 4 bits de la AICA
+     a 32 kHz estéreo ≈ 91 MB, o 22 kHz ≈ 62 MB; habría que robar 2 canales de la AICA al driver de sonido de CE y
+     alimentarlos desde el gancho del tick; órdenes CD_PLAY/STOP/REQ_STAT/subcódigo en `gd_command`); (2) el juego
+     tiene trucos en la pantalla de título: 30 FPS = Arriba, A, Abajo, Abajo, Izq, Der, B, B, Arriba; 60 FPS (con menos
+     detalle) = lo mismo acabando en Abajo. Quiere los 30 FPS por defecto: buscar la tabla de la secuencia en
+     `RALLY2.EXE` y dejar el modo activado de serie, o que el residente teclee la secuencia solo.
    - Descartado: no hay instrucción `sleep` en el núcleo (no es STBCR/standby); las esperas del FIFO G2 no se
      atascan en placa (tabla de variantes).
    - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del

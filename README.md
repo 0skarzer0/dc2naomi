@@ -81,6 +81,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
+| Sega Rally 2 (USA; arranca con Windows CE) | experimental | ✅ probado con VMU en fichero (sin la música de las carreras: son pistas de audio CD) |
 | SF III Double Impact | ❌ no funciona todavía | ❌ |
 | Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
 | Cualquier otro juego de Dreamcast | experimental | experimental |
@@ -93,8 +94,9 @@ con partidas con todo desbloqueado de cientos de juegos):
   de la placa y se pierde al apagarla, salvo que uses los scripts de [`wipi/`](wipi/README.md) (WiPi Netbooter), que
   guardan la tarjeta de cada juego en un fichero `.vmu` junto a su imagen. El resto de juegos (menos los tres que ya
   iban bien sin ella) la llevan activada sin haberse probado con ella en placa.
-- **No están soportados los juegos especiales:** los que arrancan con Windows CE (como Sega Rally 2 o los
-  Midway's Greatest Arcade Hits; en estudio: ver HANDOFF) y los que son un menú que carga varios programas (como SF III Double Impact).
+- **No están soportados los juegos especiales:** los que arrancan con Windows CE solo están resueltos para Sega Rally 2
+  (cada juego trae su propio núcleo y hay que localizar sus manejadores de interrupción: ver HANDOFF); los
+  Midway's Greatest Arcade Hits siguen sin funcionar y los que son un menú que carga varios programas (como SF III Double Impact).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
 
 ### Ideas para el futuro
