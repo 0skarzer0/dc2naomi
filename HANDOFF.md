@@ -454,8 +454,12 @@ o recargar.
 - **`ct2h8` (2026-11-10):** `addvmu.py ct2h7_dc2naomi.bin.gz ct2h8_dc2naomi.bin.gz app/loader.bin` sobre la `ct2h7` de
   la Pi (md5 `2e3f5cb9…`). Sólo cambian 4 bytes de la cabecera tras el loader (flags `0x8004`, `vmu_offset`
   `0x9844000`); parches y mandos iguales. Flycast: mando en el puerto A y VMU en el Socket 1 con 200 bloques libres.
-  Subida a `/boot/roms/` de la Pi del Crazy Taxi. Placa: pendiente.
-- **Por qué la Pi del Crazy Taxi va lenta (2026-11-10):** es una **Raspberry Pi 3 Model B** (sólo WiFi de 2,4 GHz: canal
+  En `/boot/roms/` de la Pi del Crazy Taxi (md5 `716ef768…`) con su fila en `/boot/config/romsinfo.csv` (copia de la de
+  `ct2h7`; copia del CSV en `romsinfo.csv.bak_ct2h8`). Enviada con `dc2naomi_send.py` (49 s): el residente contesta
+  (`RES_VMU_INFO` = "VMUS") y el vigilante de la VMU está en marcha. Mandos y guardado: pendiente de probar en el mueble.
+- **Resuelto el mismo día:** el usuario puso una Pi 3 B+ también en el mueble Crazy Taxi; las dos van en 5 GHz a
+  325 Mbit/s (~1,4 MB/s por SSH; 96 MB en 57 s). Las dos siguen marcando subtensión (`0x50005`).
+- **Por qué la Pi del Crazy Taxi iba lenta (2026-11-10):** es una **Raspberry Pi 3 Model B** (sólo WiFi de 2,4 GHz: canal
   2457 MHz, 57,7 Mbit/s, ~0,5 MB/s medidos por SSH); la del mueble estándar es una **Pi 3 Model B+** en 5 GHz
   (292 Mbit/s, ~1,8 MB/s). El `eth0` de las dos está ocupado con la NetDIMM (10.0.0.1, 100 Mbit/s). La SD no es el
   cuello (16,5 MB/s de escritura). `vcgencmd get_throttled`: 0x50000 en la del CT y 0x50005 en la estándar
