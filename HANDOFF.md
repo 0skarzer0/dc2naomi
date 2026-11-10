@@ -68,7 +68,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
 | Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ **VMU en fichero (`daytona5`) confirmada**: guarda, se carga otro juego, se vuelve a cargar y recupera la partida | Crazy Taxi |
-| F355, 18 Wheeler | ✅ funcionan en placa con VMU (`f355b`, `18wheeler2`); F355 sin música | Crazy Taxi |
+| F355, 18 Wheeler | ✅ terminados: funcionan en placa con VMU (`f355b`, `18wheeler2`) | Crazy Taxi |
 | KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
 | SF3 Double Impact | ❌ el hook no llega (menú que carga dos programas) | estándar |
 | Virtua Tennis (US) | llegó a "No VMU found" (2026-11-08, perfil antiguo) | — |
@@ -1086,8 +1086,9 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
   hecho **en la propia Raspberry** (es `addvmu.py` sin cargar la imagen en RAM, y además pone `pad_map`; la Pi 3B+
   tarda ~4 min). md5 `e8f500b2ee030154db8c3b1d01f4787f`. Mandos `wheel` (4). `.vmu` con la «Perfect Save!» de
   dreamcast-saves (`f355_2` = `F355DATA.SYS` 14 bloques + `f355_1` = `F355DATA.PLY` 8 bloques). Fila en el CSV e importada.
-- **Usuario, en el mueble: todo funciona** (juego, volante, pedales, cambio de marcha). Falta: **la música no suena**.
-  No es CDDA: el TOC de la imagen tiene solo la pista 3 (`first_track 3, ntracks 1`), el disco no tiene pistas de audio.
-  Pendiente de investigar (¿streaming desde ficheros por la DMA G2/AICA?).
+- **Usuario, en el mueble: todo funciona** (juego, volante, pedales, cambio de marcha, música). **Terminado.**
+  La música no sonaba porque la «Perfect Save!» de dreamcast-saves trae en `F355DATA.SYS` (opciones) el volumen de la
+  música a 0; el usuario lo subió en Options y lo guardó en su `.vmu`. (El disco no tiene CDDA: TOC solo pista 3.)
+  **Ojo con las partidas descargadas:** traen también las opciones de quien las grabó (volumen, controles...).
 - `18wheeler2` con mandos `wheel`: **usuario: perfecto, no tocar**.
 - Ojo: `/boot/config/romsinfo.csv` no acababa en salto de línea; al añadir con `>>` la fila se pegaba a la anterior.

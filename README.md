@@ -79,7 +79,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: el sonido petardea; salir con B deja negro) |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
-| F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (sin música, en estudio) |
+| F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
 | SF III Double Impact | ❌ no funciona todavía | ❌ |
 | Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
