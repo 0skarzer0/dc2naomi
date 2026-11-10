@@ -1141,9 +1141,71 @@ static u32 vmu_frame(u32 cmd, u32 dst, const u32 *data, u32 n, u32 *out) {
    starts the DMA: answer every frame into its receive buffer, and hand the
    hardware our MIE poll instead (its end interrupt is the game's). */
 static u32 hook_calls, cond_calls;
+static u32 vmu_trace_n, hook_bad;
+static u32 hook_out;
+
+/* (debug, DIMM_BLACKBOX) Black box at 0x8dda0000, written through P2 and above everything boot() clears: it
+   survives the board resetting itself and another image being loaded (one WITHOUT the flag, which would clear
+   it), which then reads it over the NetDIMM. This is how the VMU's address error was found.
+   [0] "BOX!" [1] exceptions [2] maple hooks entered [3] left [4] VMU frames [5] bad lists [6] TMU2 samples
+   [8..] 16 exceptions x 8 words: EXPEVT, SPC, SSR, TEA, r15, PR at the time, hooks, 0
+   [0x100..] the first 32 VMU frames x 4 words; [0x200..0x20f] the last 16 sampled PCs */
+#define BOX ((volatile u32 *)0xadda0000u)
+static int box_on;
+void exc_record(void) {
+    u32 n = BOX[1], spc, ssr, pr, sp;
+    __asm__ volatile("stc spc,%0" : "=r"(spc));
+    __asm__ volatile("stc ssr,%0" : "=r"(ssr));
+    __asm__ volatile("sts pr,%0" : "=r"(pr));
+    __asm__ volatile("mov r15,%0" : "=r"(sp));
+    if (n < 16) {
+        volatile u32 *e = &BOX[8 + n * 8];
+        e[0] = REG32(0xff000024);
+        e[1] = spc;
+        e[2] = ssr;
+        e[3] = REG32(0xff00000c);
+        e[4] = sp;
+        e[5] = REG32(sp);              /* the PR the stub pushed */
+        e[6] = BOX[2];
+        (void)pr;
+    }
+    BOX[1] = n + 1;
+}
+/* General exceptions (VBR + 0x100) pass through exc_record: the Katana entry starts with five nops and has
+   free room at +0x140. */
+static int exc_armed;
+extern void icache_inval(void);
+static void exc_arm(void) {
+    u32 vbr;
+    if (exc_armed) return;
+    __asm__ volatile("stc vbr,%0" : "=r"(vbr));
+    if (vbr != 0x8c00f400u) return;
+    volatile u16 *c = (volatile u16 *)0xac00f500u;
+    for (int i = 0; i < 5; i++) if (c[i] != 0x0009) return;
+    for (int i = 0x20; i < 0x2c; i++) if (c[i] != 0x0009 && c[i] != 0) return;
+    static const u16 stub[10] = {0x2f06, 0x4f22, 0xd003, 0x400b, 0x0009, 0x4f26, 0x60f6, 0xafd9, 0x0009, 0x0009};
+    cache_purge(0x8c00f500u, 0x60);
+    for (int i = 0; i < 10; i++) c[0x20 + i] = stub[i];
+    *(volatile u32 *)0xac00f554u = (u32)exc_record;
+    c[0] = 0xa01e;
+    icache_inval();
+    exc_armed = 1;
+}
+
+/* The game's frame list, read uncached after a purge: whatever way the game wrote it (through P2 as Daytona
+   does, or through the cache), we see what is in RAM now and not lines cached on an earlier call. (Written as
+   a suspect for the VMU crash on the board; the cause was the pattern word below. Kept: it is the safe way.) */
+static const u32 *frame_at(u32 a, u32 words) {
+    cache_purge((a & 0x1fffffffu) | 0x80000000u, words * 4);
+    return (const u32 *)P2(a);
+}
 
 u32 maple_hook(u32 list) {
-    const u32 *in = (const u32 *)list;
+    const u32 *in = frame_at(list, 3);
+    if (box_on) {
+        exc_arm();
+        BOX[2]++;
+    }
     /* SB_MDAPRO: maple DMA allowed range. Some Katana games (Namco Museum, Power Drift, F355) set 0x6155404f =
        0x0c000000-0x0cffffff only, which blocks the hardware DMA of our MIE poll in RES_MAPLE (0x0dd40000): no JVS
        inputs at all on the board (Flycast does not check it). 0x6155407f = 0x0c000000-0x0fffffff, as Ikaruga. */
@@ -1160,11 +1222,25 @@ u32 maple_hook(u32 list) {
         u32 hdr = in[2];
         u32 cmd = hdr & 0xff, dst = (hdr >> 8) & 0xff;
         u32 port = (dst >> 6) & 3;
+        if ((w0 >> 8 & 7) == 0) frame_at((u32)in + 12, len);
         static u32 out[2 + 2 + 128];
         u32 olen = 0;
+        if ((w0 >> 8 & 7) == 0 && (len > 0x90 || (recv & 0x1fffffffu) < 0x0c000000u || (recv & 0x1fffffffu) >= 0x0e000000u)) {
+            hook_bad++;                                           /* not a frame list: touch nothing */
+            break;
+        }
         int answer = (port == 0 || (port == 1 && H.pad_map == DIMM_PAD_JOY)) && (dst & 0x20) && (w0 >> 8 & 7) == 0;
         int vmu = (H.flags & DIMM_VMU) && port == 0 && (dst & 0x3f) == 0x01 && (w0 >> 8 & 7) == 0;
         if (vmu) {
+            if (box_on && vmu_trace_n < 32) {
+                volatile u32 *e = &BOX[0x100 + vmu_trace_n * 4];
+                e[0] = hdr;
+                e[1] = len ? in[3] : 0;
+                e[2] = recv;
+                e[3] = hook_calls | (len > 1 ? in[4] & 0xffff0000u : 0);
+            }
+            if (box_on) BOX[4] = vmu_trace_n + 1;
+            vmu_trace_n++;
             olen = vmu_frame(cmd, dst, in + 3, len, out);
         } else if (answer) {
             u32 rcmd = 7; /* ACK */
@@ -1188,15 +1264,23 @@ u32 maple_hook(u32 list) {
             out[0] = 0xffffffffu; /* nothing connected */
             olen = 1;
         }
-        cache_purge(recv, olen * 4);
-        u32 *r = P2(recv);
-        for (u32 i = 0; i < olen; i++) r[i] = out[i];
-        if ((w0 >> 8 & 7) != 0) {
-            in += 1;
-        } else {
-            in += 3 + len;
+        /* Only a frame with a receive buffer gets an answer. A pattern word (reset, NOP, light gun: bits 8-10)
+           stands alone: the word after it is the next frame, not an address. We used to store "nothing
+           connected" through it: with a VMU the Katana driver sends such a word, the next frame began with
+           0x00000001, and the store to 0xa0000001 was an address error (EXPEVT 0x100 at hook 42 on the real
+           board, read from the black box; Flycast lets the store go, so there it always worked). */
+        if ((w0 >> 8 & 7) == 0 && !(recv & 3)) {
+            cache_purge(recv, olen * 4);
+            u32 *r = P2(recv);
+            for (u32 i = 0; i < olen; i++) r[i] = out[i];
         }
         if (w0 & 0x80000000u) break;
+        in = frame_at((u32)in + ((w0 >> 8 & 7) != 0 ? 4 : (3 + len) * 4), 3);
+    }
+    hook_out++;
+    if (box_on) {
+        BOX[3]++;
+        BOX[5] = hook_bad;
     }
     return mie_build();
 }
@@ -1464,6 +1548,10 @@ void tmu2_isr(void) {
     u32 spc, ssr;
     __asm__ volatile("stc spc,%0" : "=r"(spc));
     __asm__ volatile("stc ssr,%0" : "=r"(ssr));
+    if (box_on) {
+        BOX[0x200 + (pcs_n & 15)] = spc;
+        BOX[6] = pcs_n + 1;
+    }
     pcs_ring[pcs_n & 7] = spc;
     pcs_ssr = ssr;
     pcs_n++;
@@ -1810,6 +1898,11 @@ void boot(const struct dimm_header *h) {
     REG32(0x8c0000bc) = (u32)gd_syscall;
     REG32(0x8c0000e0) = (u32)misc_syscall;
     if (H.flags & DIMM_VMU) vmu_format();
+    box_on = (H.flags & DIMM_BLACKBOX) != 0;
+    if (box_on) {
+        for (u32 i = 0; i < 0x220; i++) BOX[i] = 0;
+        BOX[0] = 0x21584f42u;
+    }
     if (H.flags & DIMM_CONSOLE) {
         REG32(0x8c004004) = 0xdeadbeefu;
         REG32(0x8c004008) = (u32)dcl_syscall;

@@ -16,7 +16,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
 | Namco Museum (US) | ✅ **Terminado** (`nmus6`: sin VMU, mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
-| Daytona USA 2001 (US) | `daytona3` pendiente de probar (antes: negro tras SEGA) | Crazy Taxi |
+| Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); `daytona4` = con VMU emulada, arranca en placa (guardar: por confirmar) | Crazy Taxi |
 | F355, 18 Wheeler | ❌ aparcados (Now Loading / negro tras SEGA) | Crazy Taxi |
 | KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
 | SF3 Double Impact | ❌ el hook no llega (menú que carga dos programas) | estándar |
@@ -365,6 +365,30 @@ START tras soltar pasa de 8 a 30 sondeos. `ysgw4_autostart` (`AUTOSTART=1`, flag
 solo 30 de cada 300 sondeos; si en placa Power Drift arranca carreras solo, el gancho maple de PD funciona y el fallo
 es de tiempos; si no, PD no está usando nuestro mando en la placa. (Las filas DIAG no salen en PD ni en Flycast.)
 PD guarda doble búfer de maple (`xor` en `0x10b8` del contexto) y escribe MDEN/MDST/MSYS con base `0xa05f6c00`.
+
+**⭐ Por qué la VMU emulada colgaba la placa real (2026-11-10, resuelto).** Con `DIMM_VMU` todos los juegos se
+quedaban en negro tras el logo de SEGA en placa (Namco, 18 Wheeler, Daytona) y en Flycast iban bien. Causa: con una
+VMU el driver maple de Katana mete en la lista una **palabra de patrón** (bits 8-10 de la primera palabra ≠ 0:
+reset/NOP), que va sola, sin dirección de respuesta ni cabecera. `maple_hook` avanzaba bien (`in += 1`) pero antes
+**escribía "nada conectado" usando la palabra siguiente como dirección**: valía `0x00000001` → escritura de 32 bits en
+`0xa0000001` → **excepción de dirección (EXPEVT 0x100)** dentro del residente (SPC en el bucle `r[i] = out[i]`), en
+el sondeo 42, con la primera escritura del LCD. Flycast no da excepción por una escritura desalineada ni por escribir
+en la ROM. Arreglo: sólo se contesta a tramas con patrón 0 y dirección alineada. `daytona4` (= `daytona3` + flag
+`0x8000` + este residente): en placa, miles de sondeos, 0 excepciones, lee raíz/FAT/directorio de la VMU.
+Descartado por el camino: caché (Daytona escribe la lista por P2 y pasa `0xac2e28a0`; `frame_at()` se queda por
+seguridad) y el LCD (con VMU sólo-memoria moría igual).
+**Caja negra (`DIMM_BLACKBOX` 0x20000):** `0x8dda0000` por P2, por encima de lo que borra `boot()`: sobrevive al
+reinicio de la placa y a cargar otra imagen. `[0]` "BOX!", `[1]` nº excepciones, `[2]/[3]` hooks maple
+entrados/salidos, `[4]` tramas VMU, `[5]` listas malas, `[6]` muestras TMU2; `[8..]` 16 excepciones × 8 palabras
+(EXPEVT, SPC, SSR, TEA, r15, PR, hook); `[0x100..]` primeras 32 tramas VMU × 4 (cabecera, función, recv,
+hook | bloque); `[0x200..]` últimos 16 PC (con `0x0200`). Las excepciones se capturan con un desvío en `VBR+0x100`
+(la entrada de Katana empieza con 5 `nop`; stub en `VBR+0x140`) a `exc_record()`. **Método:** cargar el juego con
+`0x20000` (+`0x0200`), esperar al cuelgue, cargar otra imagen **sin** ese flag y con residente ≥ `d93afaf`
+(`dcl.py BASE /tmp/loader.bin IP 0`) y leer `pk.py IP 0x8dda0000:8 0x8dda0020:16 0x8dda0400:32 0x8dda0800:16`.
+Ojo: la `ysgw7` de `/boot/roms` de la Pi lleva un residente anterior (`2e03659`) que no lee RAM (`badadd00`); con el
+juego colgado nadie contesta los peeks (ni con `0x0200` si murió por excepción) y los timeouts no rompen nada.
+En esta sesión el fallo se leyó con `loader_vmu4` (la caja iba siempre activa); `0x20000` fue antes, sólo en pruebas,
+"VMU sin LCD".
 
 **VMU emulada (`DIMM_VMU` 0x8000, `"vmu": True` en el perfil; 2026-11-09):** el residente contesta como una Visual
 Memory en la ranura 1 del mando del puerto A (el mando anuncia la subunidad 0x01): DEVINFO como Flycast
