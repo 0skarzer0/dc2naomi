@@ -1134,7 +1134,15 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
    Tabla de interrupciones del núcleo: `0x8c02e020` (ISTERR, nivel 2), `0x8c02e0ac` (ISTNRM & IML4NRM: bits 0-11 →
    SYSINTR 16, 12-13 → 18 maple, 14 → 21 fin DMA G1, 15 → 24), `0x8c02e13c` (ISTEXT & IML6EXT: bit 0 → 20, bit 1 → 23).
 7. **Resultado en Flycast (NAOMI): arranca.** Logo de CE → título "PRESS START BUTTON" → demo con coches → ranking.
-   Pendiente: probar START/menús/carrera en Flycast, VMU + partida, y la placa real.
+   Probado después en Flycast con mandos: START, MODE SELECT, SELECT CAR, NAME ENTRY y carrera (el coche apenas
+   corría en la prueba: revisar pedales en placa). Con `vmu=True` el juego carga de la tarjeta ("Load complete").
+8. **Imagen para la placa (2026-11-10, 23:15):** `sega_rally2_dc2naomi.bin.gz` (md5 `9c44f9b76b720d5747fc7cd6580bedee`,
+   268 MB; sin comprimir 414 MB, md5 `361b65e50e40473acfa41ffcb18d84bb`; flags `0x48004` = NO_UBC + VMU + WINCE,
+   `pad_map` 4 `wheel`) y `sega_rally2_dc2naomi.vmu` con la partida «US - ALL UNLOCKED» de dreamcast-saves
+   (`r/segarally/SGRALLY2.VMI`, fichero `SGRALLY2I0VD`, 61 bloques; **sin probar si el juego la acepta**). Subidas a
+   `/boot/roms` de la Pi del Crazy Taxi (192.168.68.60), fila añadida a `/boot/config/romsinfo.csv` e importada, y
+   enviada a la NetDIMM 10.0.0.4 con `/root/sendsr2.sh`. **Pendiente: resultado en la placa real** (lo dirá el
+   usuario). Copia también en el PC: `C:\Users\Usuario\Documents\dc2naomi\`.
 
 **Cómo se encontró (herramientas de depuración añadidas al Flycast local, no al repo):** variables de entorno
 `FC_INTPC=N` (PC, registros Holly y TMU en 1 de cada N interrupciones), `FC_GDLOG=1|2` (peticiones y todas las
