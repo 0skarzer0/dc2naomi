@@ -552,6 +552,7 @@ GAMES["or2006"] = {
 
 # Sega Rally 2 (USA, 1999; Sega). A Windows CE disc like mw2: IP.BIN boots 0WINCEOS.BIN. Music in 17 CDDA
 # tracks (4-20; not played by the resident). Boot patches only, to start the study of Windows CE.
+CETICK = 0xFFFFFFF9        # PATCH_CETICK: the resident's ce_tick_isr
 CEMAPLE = 0xFFFFFFFA       # PATCH_CEMAPLE: the resident's ce_maple_isr
 GAMES["sr2"] = dict(GAMES["mw2"], title="SEGA RALLY 2 DC", pads="wheel", vmu=True, groups=GAMES["mw2"]["groups"] + [
     # 0WINCEOS.BIN is a container with a 0x800-byte header (see GdiDisc.boot in build_image.py), so base =
@@ -561,5 +562,9 @@ GAMES["sr2"] = dict(GAMES["mw2"], title="SEGA RALLY 2 DC", pads="wheel", vmu=Tru
         (0x8C02E194, 4, CEMAPLE),   # literal 0xffffcfff (used only there) -> ce_maple_isr
         (0x8C02E116, 2, 0x432B),    # and r3,r2 -> jmp @r3
         (0x8C02E118, 2, 0x0009),    # mov #18,r0 -> nop
+        # The timer tick handler (0x8c02e228) through the resident too (ce_tick: serves the NetDIMM peek).
+        (0x8C02E24C, 4, CETICK),    # literal 0xffd80000 -> ce_tick_isr
+        (0x8C02E22C, 2, 0x412B),    # mov.w @(16,r1),r0 -> jmp @r1 (delay slot: and #255,r0)
     ]},
 ])
+GAMES["sr2_diag"] = dict(GAMES["sr2"], flags=GAMES["sr2"]["flags"] | 0x0008)   # rows of bits on screen (DIMM_DIAG)

@@ -1144,6 +1144,30 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
    enviada a la NetDIMM 10.0.0.4 con `/root/sendsr2.sh`. **Pendiente: resultado en la placa real** (lo dirá el
    usuario). Copia también en el PC: `C:\Users\Usuario\Documents\dc2naomi\`.
 
+9. **PLACA REAL (2026-11-10, 23:16-23:50): se queda colgado en la pantalla "SEGA / Powered by Windows CE"**
+   (dos intentos del usuario, mueble Crazy Taxi). En Flycast esa misma imagen llega al título y a la carrera.
+   - El peek por la NetDIMM (`/root/pk.py`) **no responde** (antes de mandar el juego sí): nadie llama a
+     `dimm_service()`, o sea, ni syscalls GD ni el gancho de maple se están ejecutando.
+   - Añadido **`ce_tick_isr`/`ce_tick()`** (`PATCH_CETICK` = `CETICK` en games.py): el manejador del tick de CE
+     (`0x8c02e228`, TMU0 cada 25 ms) pasa por el residente y atiende la NetDIMM, para poder leer la placa con CE en
+     marcha. Parche: literal `0x8c02e24c` (`0xffd80000`) → `ce_tick_isr`, y `0x8c02e22c` → `jmp @r1`. Funciona en
+     Flycast (1538 ticks en 60 s). **En la placa el peek sigue sin responder → el tick de CE tampoco corre: el
+     cuelgue es muy temprano** (arranque del núcleo, o antes), no en la carga del juego.
+   - Descartado mirando el código: el núcleo no escribe registros BSC ni SCIF; el RTC (`0xa0710000`) lo lee una vez.
+   - **En curso:** imagen `sr2diag_dc2naomi.bin.gz` (perfil `sr2_diag` = `sr2` + `DIMM_DIAG` 0x8; md5 del .gz
+     `6c4100761e976d45b5b492bcfb5e76af`) enviada al mueble: dibuja filas de bits arriba a la izquierda desde las
+     syscalls, el gancho de maple y el tick (fila 0 llamadas a diag/4, 1 nº de llamadas GD, 2 última llamada
+     `r7<<8|r4`, 3 sondeos maple, 4 último FAD, 5 otras syscalls, 16 ticks de CE, 17 llamadas al gancho, 18 MMUCR).
+     Pedida foto al usuario. La secuencia de llamadas GD es determinista: con el nº de la fila 1 y la traza de
+     Flycast (`EXTRA=-DGDTRACE`) se sabe en qué paso se paró.
+   - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del
+     "kick" (`cart_dma` 32 bytes; las lecturas por DMA G1 de la NetDIMM nunca funcionaron en placa, ver tabla de
+     flags) — alternativa ya pensada: que `ce_maple_isr` devuelva SYSINTR 21 en vez de 18 cuando haya un kick
+     pendiente, sin enmascarar los bits 12/13 (la interrupción de maple vuelve a saltar enseguida); (c) la primera
+     DMA de maple con la lista de CE va al MIE real antes de que el gancho la cambie.
+   - Ojo en la Pi: quedó un vigilante viejo `dc2naomi_vmu.py watch ... ct2h8_dc2naomi.vmu` corriendo a la vez que el
+     de SR2 (pid 8363); comprobar que el `.vmu` de CT2 no se haya sobrescrito (copia buena: `/root/vmu/*.orig`/`.bak`).
+
 **Cómo se encontró (herramientas de depuración añadidas al Flycast local, no al repo):** variables de entorno
 `FC_INTPC=N` (PC, registros Holly y TMU en 1 de cada N interrupciones), `FC_GDLOG=1|2` (peticiones y todas las
 syscalls GD del HLE en modo Dreamcast: **correr el .gdi original en Flycast modo Dreamcast da la secuencia de

@@ -294,3 +294,50 @@ _ce_maple_isr:
     .align 2
 .Lcemask: .long 0xffffcfff
 .Lcepoll: .long _ce_maple_poll
+
+/* Windows CE's timer interrupt handler (see ce_tick in resident.c). The kernel's routine (Sega Rally 2:
+   0x8c02e228) is "r1 = 0xffd80000; r2 = &tick counters; clear TCR0.UNF; both counters += 25; return 1": its first
+   literal becomes this address and its third instruction "jmp @r1", so this is entered with r2 loaded and does
+   the rest itself. */
+    .global _ce_tick_isr
+    .align 2
+_ce_tick_isr:
+    sts.l   pr, @-r15
+    mov.l   r2, @-r15
+    mov.l   r4, @-r15
+    mov.l   r5, @-r15
+    mov.l   r6, @-r15
+    mov.l   r7, @-r15
+    sts.l   mach, @-r15
+    sts.l   macl, @-r15
+    mov.l   .Lcetick, r0
+    jsr     @r0
+    nop
+    lds.l   @r15+, macl
+    lds.l   @r15+, mach
+    mov.l   @r15+, r7
+    mov.l   @r15+, r6
+    mov.l   @r15+, r5
+    mov.l   @r15+, r4
+    mov.l   @r15+, r2
+    lds.l   @r15+, pr
+    mov.l   .Lcetmu, r1
+1:  mov.w   @(16,r1), r0
+    and     #255, r0
+    mov.w   r0, @(16,r1)
+    mov     #1, r3
+    mov.w   @(16,r1), r0
+    shll8   r3
+    tst     r3, r0
+    bf      1b
+    mov.l   @r2, r3
+    mov.l   @(4,r2), r0
+    add     #25, r3
+    add     #25, r0
+    mov.l   r3, @r2
+    mov.l   r0, @(4,r2)
+    rts
+    mov     #1, r0
+    .align 2
+.Lcetick: .long _ce_tick
+.Lcetmu:  .long 0xffd80000

@@ -109,6 +109,7 @@ void dbg_sample(u32 spc) {
     dbg_row(sof, line, 14, (patches_done & 0xff) << 8 | (hook_hits & 0xff), 16); /* patches, program starts */
 }
 
+extern u32 ce_ticks;
 static void diag_draw(void);
 static struct dimm_header H;
 static u32 err_seen, err_last, err_first, err_firstval;
@@ -1346,6 +1347,19 @@ u32 maple_hook(u32 list) {
    Here: the list CE gave is answered as for any game (maple_hook) and SB_MDSTAR is pointed to our MIE poll for
    the next vblank. */
 extern void ce_maple_isr(void);
+/* Windows CE's timer tick (every 25 ms), from ce_tick_isr (head.S, PATCH_CETICK): the NetDIMM is served from here
+   too, so the board can be read over the network (peek) while CE runs, whatever the game is doing. */
+extern void ce_tick_isr(void);
+u32 ce_ticks;
+static int ce_tick_busy;
+void ce_tick(void) {
+    ce_ticks++;
+    dbg_draw();
+    if (ce_tick_busy) return;
+    ce_tick_busy = 1;
+    dimm_service();
+    ce_tick_busy = 0;
+}
 static u32 ce_list, ce_ours;
 void ce_maple_poll(void) {
     u32 cur = REG32(0xa05f6c04) & 0x1fffffe0u;
@@ -1420,6 +1434,9 @@ static void diag_draw(void) {
     dbg_row(sof, line, 13, err_seen, 16);           /* times seen */
     dbg_row(sof, line, 14, REG32(0xa05f6900), 32);  /* ISTNRM */
     dbg_row(sof, line, 15, REG32(0xa05f6904), 16);  /* ISTEXT */
+    dbg_row(sof, line, 16, ce_ticks, 16);           /* Windows CE: timer ticks (ce_tick) */
+    dbg_row(sof, line, 17, hook_calls, 16);         /* maple hook calls */
+    dbg_row(sof, line, 18, REG32(0xff000010), 16);  /* MMUCR (bit 0: MMU on) */
 }
 
 /* G2 FIFO watch: a Shinobi "is the G2 FIFO empty" check (SB_FFST bit 0 or 4; called in a loop,
@@ -1558,7 +1575,8 @@ static void apply_patches(void) {
               : p->value == PATCH_G2CHK4 ? (u32)g2chk4
               : p->value == PATCH_G2CPU ? (u32)g2cpu
               : p->value == PATCH_HOOKST ? (u32)maple_hook_mdstar
-              : p->value == PATCH_CEMAPLE ? (u32)ce_maple_isr : p->value;
+              : p->value == PATCH_CEMAPLE ? (u32)ce_maple_isr
+              : p->value == PATCH_CETICK ? (u32)ce_tick_isr : p->value;
         if (kind == PATCH_R4FIX) {
             if (fx >= nfix) continue;
             volatile u32 *a = (volatile u32 *)p->addr;
