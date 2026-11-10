@@ -549,3 +549,7 @@ GAMES["or2006"] = {
         ]},
     ],
 }
+
+# Sega Rally 2 (USA, 1999; Sega). A Windows CE disc like mw2: IP.BIN boots 0WINCEOS.BIN. Music in 17 CDDA
+# tracks (4-20; not played by the resident). Boot patches only, to start the study of Windows CE.
+GAMES["sr2"] = dict(GAMES["mw2"], title="SEGA RALLY 2 DC")  # (0WINCEOS.BIN: see GdiDisc.boot in build_image.py)

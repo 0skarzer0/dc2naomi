@@ -94,7 +94,7 @@ con partidas con todo desbloqueado de cientos de juegos):
   guardan la tarjeta de cada juego en un fichero `.vmu` junto a su imagen. El resto de juegos (menos los tres que ya
   iban bien sin ella) la llevan activada sin haberse probado con ella en placa.
 - **No están soportados los juegos especiales:** los que arrancan con Windows CE (como Sega Rally 2 o los
-  Midway's Greatest Arcade Hits) y los que son un menú que carga varios programas (como SF III Double Impact).
+  Midway's Greatest Arcade Hits; en estudio: ver HANDOFF) y los que son un menú que carga varios programas (como SF III Double Impact).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
 
 ### Ideas para el futuro
@@ -164,6 +164,9 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
   (Falco Girgis), [dcvmu-tool](https://github.com/bucanero/dcvmu-tool) (bucanero),
   [waterbear](https://github.com/wtetzner/waterbear) (wtetzner) y [chao](https://github.com/lordbananza/chao)
   (lordbananza), que nos pasó el usuario como referencia.
+- **[wince-dc](https://github.com/maximqaxd/wince-dc)** (maximqaxd), que nos pasó el usuario: su SDK de Windows CE
+  2.12 para Dreamcast, los mapas de símbolos del núcleo y su `wrap-image.ps1` sirven de referencia para el estudio de
+  los juegos con Windows CE (formato de `0WINCEOS.BIN`).
 - La comunidad de **Dreamcast y NAOMI** que ha documentado durante años el hardware (Katana, Holly, AICA, maple, JVS,
   NetDIMM) y los desarrolladores de los **netbooters** para NAOMI.
 - **[DejaVu Fonts](https://dejavu-fonts.github.io)**: la letra de los mensajes en pantalla sale de DejaVu Sans Mono.

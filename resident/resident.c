@@ -265,6 +265,8 @@ static struct {
     u32 multi_sector, multi_offset, multi_count, multi_total;
     u32 callback, callback_arg;
     int dma_ended;
+    int pio_ended;      /* a REQ_PIO_TRANS finished: call the PIO callback once out of the syscall */
+    int dma_kick;       /* a REQ_DMA_TRANS finished under Windows CE: raise a G1 DMA end interrupt out of the syscall */
     u32 mode[4];
 } gd;
 
@@ -278,9 +280,17 @@ static void gd_reset_state(void) {
     gd.mode[3] = 0x08;   /* read retry */
 }
 
+static int gd_va;   /* inside a GD-ROM syscall */
+
 static int in_ram(u32 a) {
     u32 p = a & 0x1fffffffu;
-    return p >= 0x0c000000u && p < 0x0e000000u;
+    if (p >= 0x0c000000u && p < 0x0e000000u) return 1;
+    /* Windows CE (Sega Rally 2, 2026-11-10) runs with the MMU on and passes virtual addresses (P0/P3) to the
+       GD-ROM syscalls: with MMUCR.AT set, a P0/P3 address is the caller's own mapped memory (not below 64 KB:
+       REQ_CMD INIT comes with r5 = 0, and reading address 0 killed the CE driver thread). Only for the
+       GD-ROM syscalls: answering the flash INFO call at a virtual address makes CE read the flash settings and
+       then it never calls the GD-ROM (Flycast). */
+    return gd_va && (REG32(0xff000010) & 1) && ((a >= 0x00010000u && a < 0x80000000u) || (a >= 0xc0000000u && a < 0xe0000000u));
 }
 
 static void put32(u32 addr, u32 v) {
@@ -406,6 +416,7 @@ static void gd_command(void) {
         multi_xfer(gd.params[0], gd.params[1], 0);
         gd.result[2] = gd.multi_total - gd.multi_count;
         gd.result[3] = 0;
+        gd.pio_ended = 1;
         break;
     default:
         /* PLAY, PAUSE, SEEK, STOP, GETSCD, REQ_SES...: nothing to do */
@@ -419,6 +430,7 @@ static void gd_command(void) {
 typedef s32 (*callback_t)(u32);
 
 static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7);
+static inline u32 r15_now(void) { u32 v; __asm__ volatile("mov r15,%0" : "=r"(v)); return v; }
 
 /* The game calls in from its main loop and from interrupts: a call that
    comes in while another is copying sectors gets "busy" (as the BIOS's
@@ -501,6 +513,7 @@ static void dimm_service(void) {
 }
 
 static volatile int gd_inside;
+static int pio_cb_running;
 
 static void patch_poll(void);
 
@@ -519,12 +532,33 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
         return 0;
     }
     gd_inside = 1;
+    gd_va = 1;
 #ifdef GDTRACE
-    if (dbg_val[0] < 200) dlog(dbg_val[0], r7 << 8 | (r4 & 0xff), r7 == 0 ? REG32(r5) : 0, r7 == 0 ? REG32(r5 + 8) : REG32(0xa05f6904));
+    if (dbg_val[0] < 200) dlog(dbg_val[0], r7 << 8 | (r4 & 0xff), r5, r15_now());
 #endif
     patch_poll();
     r0 = gd_syscall_body(r4, r5, r6, r7);
+    gd_va = 0;
     gd_inside = 0;
+    /* The BIOS calls the PIO callback (SET_PIO_CALLBACK) when a REQ_PIO_TRANS transfer ends (from the GD-ROM
+       interrupt). Windows CE's CD driver (WSEGACD.DLL) asks for the next piece from that callback, and waits
+       for it. Called here, out of the syscall, since the callback calls the syscalls again. */
+    if (gd.dma_kick) {
+        /* Windows CE (MMU on): its CD driver waits for the G1 DMA end interrupt (ASIC ISTNRM bit 14) in an
+           interrupt thread before it asks for the next piece. Our copy raises none, so a real 32-byte G1 DMA from
+           the NetDIMM to a scratch buffer gives it one; here, out of the syscall, as the interrupt thread runs
+           the syscalls again. */
+        gd.dma_kick = 0;
+        cart_dma(PHYS(RES_SCRATCH) + 0x800, H.archive_base & ~31u, 32);
+    }
+    if (!pio_cb_running) {          /* (the callback's own syscalls leave the next call to this loop) */
+        pio_cb_running = 1;
+        while (gd.pio_ended) {
+            gd.pio_ended = 0;
+            if (gd.callback) ((callback_t)gd.callback)(gd.callback_arg);
+        }
+        pio_cb_running = 0;
+    }
     return r0;
 }
 
@@ -544,7 +578,7 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         gd.command = r4;
         gd.multi_count = 0;
         gd.read_total = 0;
-        dlog(0x52510000u | r4, gd.params[0], gd.params[1], gd.params[2]);
+        dlog(0x52510000u | r4, gd.params[0], gd.params[1], r5);
         return (s32)gd.last_id;
     case 1: { /* GET_CMD_STAT */
         s32 r0;
@@ -588,6 +622,7 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         gd.result[2] = 2048;
         gd.result[3] = gd.multi_count ? 1 : 0;
         gd.dma_ended = 1;
+        if (REG32(0xff000010) & 1) gd.dma_kick = 1; /* Windows CE: see gd_syscall */
         if (gd.multi_count == 0) gd.status = GDC_COMPLETE;
         dlog(0x444d4154u, gd.params[0], gd.params[1], gd.multi_count); /* (no DMA interrupt to give) */
         return 0;
@@ -616,6 +651,16 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         gd.params[0] = ((volatile u32 *)r5)[0];
         gd.params[1] = ((volatile u32 *)r5)[1];
         if (gd.status != GDC_CONTINUE || gd.params[1] > gd.multi_count) return GDC_ERR;
+        if (gd.callback && (REG32(0xff000010) & 1)) {
+            /* Windows CE (MMU on), with a PIO callback (Windows CE's WSEGACD.DLL), the BIOS moves the data from its GD-ROM interrupt and
+               then calls the callback; the driver waits on an event and calls no EXEC_SERVER meanwhile. So the
+               transfer is done now, and the callback is called once out of the syscall (gd_syscall). */
+            multi_xfer(gd.params[0], gd.params[1], 0);
+            gd.result[2] = gd.multi_total - gd.multi_count;
+            gd.result[3] = 0;
+            gd.pio_ended = 1;
+            return 0;
+        }
         gd.command = GDCC_REQ_PIO_TRANS;
         return 0;
     case 13: /* CHECK_PIO_TRANS */
@@ -634,6 +679,9 @@ static u8 *const flash = (u8 *)RES_FLASH;
 
 static s32 sys_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     dbg_val[4]++;
+#ifdef GDTRACE
+    dlog(0x53590000u | r7, r4, r5, r6); /* "SY" */
+#endif
     dbg_draw();
     (void)r5;
     (void)r6;
@@ -669,6 +717,9 @@ static const u32 part_size[5] = {0x2000, 0x2000, 0x4000, 0x8000, 0x10000};
 
 static s32 flash_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     dbg_val[4]++;
+#ifdef GDTRACE
+    dlog(0x464c0000u | r7, r4, r5, r6); /* "FL" */
+#endif
     dbg_draw();
     switch (r7) {
     case 0: /* INFO */
@@ -1939,6 +1990,7 @@ void boot(const struct dimm_header *h) {
     read_sectors(0x8c008000, H.ip_fad, 16, 0);
     boot_sectors = (H.boot_size + 2047) >> 11;
     read_sectors(0x8c010000, H.boot_fad, boot_sectors, 0);
+    if (H.flags & DIMM_WINCE) read_sectors(0x8ce01000, H.boot_fad - 1, 1, 0);
     apply_patches();
 
     /* system id for SYSINFO (0x8c000068) */

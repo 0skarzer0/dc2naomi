@@ -117,6 +117,13 @@ class GdiDisc:
 
     def boot(self):
         lba, size = self.gdi.find(self.boot_name)
+        head = self.gdi.sector(lba)
+        n, load, off, length, entry = struct.unpack_from("<5I", head, 16)
+        if self.boot_name == "0WINCEOS.BIN" and n == 1 and load == entry == 0x0c010000 and off % 2048 == 0:
+            # Windows CE: the file is a container (word 4 = 1 section: load address, file offset, size, entry);
+            # the Dreamcast BIOS loads the section, not the file, at 0x8c010000. Same here: skip the header.
+            self.wince = True
+            return lba + 150 + off // 2048, length
         return lba + 150, size
 
     def toc(self):
@@ -387,7 +394,8 @@ def build(name, game, source, work, image, out, log=print):
     assert len(image) <= base
     image += b"\0" * (base - len(image))
 
-    hdr = struct.pack("<10I", 0x47434459, 0x32474d49, 2, 0, game["flags"], FLASH_OFFSET,
+    flags = game["flags"] | (0x40000 if getattr(disc, "wince", False) else 0)   # DIMM_WINCE
+    hdr = struct.pack("<10I", 0x47434459, 0x32474d49, 2, 0, flags, FLASH_OFFSET,
                       boot_fad, boot_size, BASE_LBA + 150, len(rtab))
     for i in range(DIMM_RANGES):
         hdr += struct.pack("<3I", *(rtab[i] if i < len(rtab) else (0, 0, 0)))

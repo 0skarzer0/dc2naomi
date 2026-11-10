@@ -77,6 +77,8 @@
 #define DIMM_NOBIOSHW   0x4000u       /* skip the "as the Dreamcast BIOS leaves it" writes (AICA SCI*, DMAOR, PCTRA) */
 #define DIMM_VMU        0x8000u       /* a Visual Memory (128 KB, in RAM at RES_VMU) in slot 1 of the port A controller */
 #define DIMM_AUTOSTART  0x10000u      /* (test) the pad presses START by itself for 30 polls every 300 polls */
+#define DIMM_WINCE      0x40000u      /* Windows CE: boot_fad is the 2nd sector of 0WINCEOS.BIN; its first (the header) goes to
+                                         0x8ce01000, as Flycast's HLE BIOS does (reios.cpp) */
 #define DIMM_BLACKBOX   0x20000u      /* (debug) black box at 0x8dda0000: exceptions (through VBR + 0x100), maple and
                                          VMU counters, sampled PCs; read over the NetDIMM after a crash */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */

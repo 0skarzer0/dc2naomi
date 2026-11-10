@@ -1092,3 +1092,42 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
   **Ojo con las partidas descargadas:** traen también las opciones de quien las grabó (volumen, controles...).
 - `18wheeler2` con mandos `wheel`: **usuario: perfecto, no tocar**.
 - Ojo: `/boot/config/romsinfo.csv` no acababa en salto de línea; al añadir con `>>` la fila se pegaba a la anterior.
+
+## Sega Rally 2 (USA) — Windows CE, en estudio (2026-11-10). NO funciona todavía
+Perfil `sr2` (como `mw2`). Probado solo en Flycast (NAOMI, `FC_SYSM_RAM=1`); en placa no se ha enviado.
+Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Programa: `RALLY2.EXE`.
+
+**Lo que ya está resuelto (en el loader y el builder):**
+1. **`0WINCEOS.BIN` es un contenedor:** cabecera de 0x800 bytes (`D61A`, 1 sección: carga `0x0c010000`, desplazamiento
+   `0x800`, tamaño, entrada). La BIOS carga la sección, no el fichero. `GdiDisc.boot()` lo detecta y apunta `boot_fad`
+   al 2.º sector; además pone el flag nuevo `DIMM_WINCE` (0x40000) y el residente copia la cabecera en `0x8ce01000`,
+   como hace el HLE de Flycast (`core/reios/reios.cpp`). Antes: excepción de instrucción ilegal en `0xac010010`.
+2. **CE llama a las syscalls del GD-ROM con la MMU encendida y direcciones virtuales** (pila del hilo en P0, p. ej.
+   `0x0205fb5c`). `in_ram()` las rechazaba y el driver nunca veía resultados. Ahora, solo dentro de `gd_syscall` y con
+   `MMUCR.AT`, acepta P0/P3 **salvo por debajo de 64 KB**: `REQ_CMD INIT` llega con `r5 = 0` y leer la dirección 0
+   mataba el hilo del driver (ese fue el falso "depende de la compilación": la traza `GDTRACE` también leía `*r5`).
+3. **El driver de CE (`WSEGACD.DLL`, dentro de la imagen ROM; WDM) usa lecturas en flujo** (`MULTI_PIOREAD` 0x27,
+   `MULTI_DMAREAD` 0x26) con `SET_PIO_CALLBACK` / `REQ_PIO_TRANS` y un hilo de interrupción (SYSINTR 21 = ISTNRM bit 14,
+   fin de DMA G1) que pide cada trozo de DMA. Con MMU encendida: `REQ_PIO_TRANS` copia en el momento y el callback se
+   llama al salir de la syscall (en bucle, sin anidar); tras `REQ_DMA_TRANS` el residente hace una DMA G1 real de 32 bytes
+   (NetDIMM → `RES_SCRATCH+0x800`) para que salte la interrupción de fin de DMA, **fuera** de la syscall (si salta dentro,
+   el hilo de CE entra anidado y se ignora).
+   Mapa de interrupciones del núcleo de CE (`0x8c02e020`...): ISTNRM bit 14 → SYSINTR 21; ISTEXT bit 0 (unidad GD-ROM) → 20.
+4. Resultado en Flycast: arranca CE (logo "Powered by Windows CE"), lee el ISO, carga `RALLY2.EXE` por PIO y DMA... y
+   **ahí se para** (sigue el logo): no hay más llamadas al GD-ROM.
+
+**Dónde está el problema ahora (hipótesis):** el driver espera también la interrupción de la **unidad** GD-ROM
+(ISTEXT bit 0, SYSINTR 20) para mirar el estado de cada orden (hilo en `WSEGACD+0x7a4`: `WaitForSingleObject(evento, 15 s)`
+y, si vence, `READ_ABORT`). La NAOMI no tiene unidad y no podemos levantar ese bit. Probé a parchear la espera en la
+copia de `0x8c0937b2` (bt → bra, 15 s → 5 ms) sin efecto visible: **no está claro que el driver se ejecute desde esa
+copia** (en ejecución está mapeado en otra dirección virtual; buscar su código por firma en el intérprete de Flycast
+no lo encontró porque en el intérprete CE ni siquiera llega a ese punto: otra carrera de tiempos sin resolver).
+Siguientes pasos: (a) averiguar la dirección virtual de WSEGACD (firma `d02d 9562` = su `+0x7a8`) con el dynarec y
+gdb; (b) o sustituir la espera de SYSINTR 20 parcheando el núcleo (que `InterruptInitialize(20)` use otra fuente que
+sí podamos disparar, p. ej. el bit 14 compartido); (c) mirar el HLE de Flycast, que sí corre juegos CE sin unidad.
+Herramientas: `EXTRA=-DGDTRACE bash app/make_loader.sh` registra cada llamada GD (r7<<8|r4, r5, r15) en el log
+(`tools/flycast/ramlog.py`); el `Makefile` del residente acepta `EXTRA`. Flycast (local): `FC_PCTRACE=dir,dir` en el
+intérprete imprime los PC elegidos. Referencia útil del usuario: github.com/maximqaxd/wince-dc (SDK de CE 2.12 de
+Dreamcast, mapas de símbolos del núcleo, `wrap-image.ps1` confirma el formato de `0WINCEOS.BIN`).
+**Regresión:** CT2 (`ct2h8`) con el loader nuevo llega igual a la pantalla de la VMU en Flycast (los cambios de CE
+solo actúan con la MMU encendida).
