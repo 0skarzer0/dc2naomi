@@ -16,7 +16,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
 | Namco Museum (US) | ✅ **Terminado** (`nmus6`: sin VMU, mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
-| Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); `daytona4` = con VMU emulada, arranca en placa (guardar: por confirmar) | Crazy Taxi |
+| Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ con VMU emulada (`daytona4`): crea su fichero de 24 bloques y arranca | Crazy Taxi |
 | F355, 18 Wheeler | ❌ aparcados (Now Loading / negro tras SEGA) | Crazy Taxi |
 | KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
 | SF3 Double Impact | ❌ el hook no llega (menú que carga dos programas) | estándar |
@@ -377,6 +377,19 @@ en la ROM. Arreglo: sólo se contesta a tramas con patrón 0 y dirección alinea
 `0x8000` + este residente): en placa, miles de sondeos, 0 excepciones, lee raíz/FAT/directorio de la VMU.
 Descartado por el camino: caché (Daytona escribe la lista por P2 y pasa `0xac2e28a0`; `frame_at()` se queda por
 seguridad) y el LCD (con VMU sólo-memoria moría igual).
+**Confirmado en el mueble (2026-11-10):** Daytona con VMU pregunta si guarda 24 bloques, se acepta y el juego sigue
+con normalidad. Primera vez que la VMU emulada funciona en placa. **Pendiente:** el programa (`app/dc2naomi.py`)
+sigue forzando `vmu=False`; antes de activarla por defecto, probar en placa Namco Museum (`nmus5`), Crazy Taxi 2,
+F355 y 18 Wheeler con VMU (estos dos fallaban también sin ella). La VMU está en RAM (`RES_VMU`): se pierde al apagar
+o recargar.
+**Idea para hacerla permanente (hablado con el usuario, sin empezar):** un `JUEGO.vmu` de 128 KB junto al `.bin.gz`
+en la Raspberry. (1) Al enviar: hueco fijo para la VMU en la imagen, que el loader copia a `RES_VMU`; la Pi lo
+rellena con los parches al vuelo de `netdimm_send`. (2) Al guardar: el residente lleva un contador de escrituras y
+un mapa de bloques sucios (BLOCKWRITE); un servicio en la Pi lo sondea por NetDIMM (peeks de 32 bits, ~0,02 s cada
+uno: 128 KB enteros ≈ 10 min, una partida de 24 bloques ≈ 1 min) y baja sólo esos bloques. Por mirar: cómo lanza
+WiPi los envíos (para enganchar el servicio) y la ventana entre guardar y apagar. Descartada la SRAM con pila de la
+NAOMI (32 KB, compartida, pisa los ajustes de los juegos NAOMI).
+
 **Caja negra (`DIMM_BLACKBOX` 0x20000):** `0x8dda0000` por P2, por encima de lo que borra `boot()`: sobrevive al
 reinicio de la placa y a cargar otra imagen. `[0]` "BOX!", `[1]` nº excepciones, `[2]/[3]` hooks maple
 entrados/salidos, `[4]` tramas VMU, `[5]` listas malas, `[6]` muestras TMU2; `[8..]` 16 excepciones × 8 palabras

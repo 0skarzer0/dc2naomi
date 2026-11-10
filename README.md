@@ -59,13 +59,16 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: el sonido petardea; salir con B deja negro) |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | F355 Challenge, 18 Wheeler, SF III Double Impact | ❌ no funcionan todavía | ❌ |
-| Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | |
+| Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU emulada |
 | Cualquier otro juego de Dreamcast | experimental | experimental |
 
 ### Limitaciones
 
 - **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella.
-- **No hay memorias (VMU):** los juegos arrancan sin tarjeta de memoria y no guardan partida.
+- **Memorias (VMU), todavía no en el programa:** las imágenes que genera arrancan sin tarjeta de memoria y no
+  guardan partida. La VMU emulada ya funciona en placa real (Daytona USA 2001 crea y guarda su fichero), pero vive
+  en la memoria de la placa: se pierde al apagar o al cargar otro juego. Falta probarla en más juegos y hacerla
+  permanente antes de activarla para todos.
 - **No están soportados los juegos especiales:** los que arrancan con Windows CE (como Sega Rally 2 o los
   Midway's Greatest Arcade Hits) y los que son un menú que carga varios programas (como SF III Double Impact).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
@@ -73,7 +76,8 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 ### Ideas para el futuro
 
 - Audio de CD (recodificado para caber en la NetDIMM).
-- Memorias VMU que funcionen en la placa.
+- Memorias VMU permanentes: un fichero `.vmu` por juego junto a su `.bin.gz` en el netbooter, que se envía con el
+  juego y se actualiza por red cuando el juego guarda.
 - Llevar la vibración (Puru Puru Pack) al force feedback de los muebles NAOMI que lo tengan.
 
 ## Cómo funciona
