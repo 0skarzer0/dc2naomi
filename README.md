@@ -31,6 +31,13 @@ El programa te dice:
 
 Formatos de entrada: `.chd` (versión 5, la de cualquier `chdman` reciente) y `.gdi`. No hace falta `chdman`.
 
+**La memoria (VMU).** Salvo en los juegos que ya iban bien sin ella (Crazy Taxi 2, Ikaruga, Yu Suzuki GW), el
+programa activa la VMU emulada y deja junto al `.bin.gz` un `JUEGO_dc2naomi.vmu` vacío (128 KB). Para que las partidas
+no se pierdan al apagar la placa hacen falta los scripts de la carpeta [`wipi/`](wipi/README.md) en tu WiPi Netbooter
+(vienen también dentro del zip de Windows, con sus instrucciones en `LEEME_WIPI.txt`): copiar los dos `.py` a
+`/sbin/piforce/`, cambiar dos líneas de `/sbin/piforce/wipiloader.py` y dejar el `.bin.gz` y el `.vmu` juntos en
+`/boot/roms/`. Opciones para forzarlo: `--vmu` / `--sin-vmu`.
+
 Algunos antivirus desconfían de los ejecutables hechos con PyInstaller. El código está en este repositorio y los
 ejecutables se compilan en GitHub Actions (`.github/workflows/windows.yml`).
 
@@ -65,11 +72,10 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 ### Limitaciones
 
 - **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella.
-- **Memorias (VMU), todavía no en el programa:** las imágenes que genera arrancan sin tarjeta de memoria y no
-  guardan partida. La VMU emulada ya funciona en placa real (Daytona USA 2001 y Namco Museum guardan), y con los
-  scripts de [`wipi/`](wipi/README.md) cada juego conserva su tarjeta en un fichero `.vmu` junto a su imagen en el
-  netbooter. De momento hay que añadírsela a la imagen a mano (`tools/addvmu.py`); falta probarla en más juegos
-  antes de activarla para todos.
+- **Memorias (VMU):** emulada, y probada en placa real solo con Namco Museum y Daytona USA 2001. Vive en la memoria
+  de la placa y se pierde al apagarla, salvo que uses los scripts de [`wipi/`](wipi/README.md) (WiPi Netbooter), que
+  guardan la tarjeta de cada juego en un fichero `.vmu` junto a su imagen. El resto de juegos (menos los tres que ya
+  iban bien sin ella) la llevan activada sin haberse probado con ella en placa.
 - **No están soportados los juegos especiales:** los que arrancan con Windows CE (como Sega Rally 2 o los
   Midway's Greatest Arcade Hits) y los que son un menú que carga varios programas (como SF III Double Impact).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
@@ -77,7 +83,7 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 ### Ideas para el futuro
 
 - Audio de CD (recodificado para caber en la NetDIMM).
-- VMU activada de serie en el programa, y la pantalla de la VMU en algún sitio visible.
+- Un aviso visible de "guardado en el fichero" (hoy solo está en el registro de la Raspberry).
 - Llevar la vibración (Puru Puru Pack) al force feedback de los muebles NAOMI que lo tengan.
 
 ## Cómo funciona

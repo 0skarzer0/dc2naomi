@@ -6,7 +6,8 @@ https://github.com/0skarzer0/dc2naomi
 
 USO: arrastra el .chd (o .gdi) de tu juego encima del icono del programa que
 corresponda a tu mueble. Al terminar tendras JUEGO_dc2naomi.bin.gz (o
-JUEGO_dc2naomict.bin.gz) junto al .chd, listo para tu netbooter.
+JUEGO_dc2naomict.bin.gz) junto al .chd, listo para tu netbooter, y casi siempre
+tambien JUEGO_dc2naomi.vmu: la memoria (VMU) del juego, vacia.
 
 El programa indica si el juego esta PROBADO en placa real con ese mueble,
 si es EXPERIMENTAL o si sabemos que NO FUNCIONA todavia, como quedan los
@@ -14,7 +15,13 @@ mandos y si la imagen no cabe en la NetDIMM de 512 MB.
 
 LIMITACIONES
 - Sin audio de CD (CDDA): los juegos que ponen asi su musica quedan sin ella.
-- Sin memorias (VMU): no se guardan partidas.
+- La VMU es emulada y vive en la memoria de la placa: se pierde al apagarla.
+  Para guardarla de forma permanente hace falta WiPi Netbooter con los scripts
+  de la carpeta wipi (instrucciones en wipi/LEEME_WIPI.txt): ponen el .vmu junto
+  al .bin.gz en /boot/roms y el netbooter lo envia con el juego y lo actualiza
+  cuando el juego guarda. Esperar un minuto tras guardar antes de apagar.
+  Probada con Namco Museum y Daytona USA 2001; los juegos que ya iban bien sin
+  VMU (Crazy Taxi 2, Ikaruga, Yu Suzuki GW) se dejan sin ella.
 - No soporta juegos con Windows CE (Sega Rally 2, Midway's Greatest Arcade
   Hits...) ni los que son un menu que carga varios programas.
 - Probado con NAOMI 2 y NetDIMM de 512 MB; no probado con NAOMI 1, aunque

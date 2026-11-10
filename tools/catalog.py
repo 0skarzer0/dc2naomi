@@ -83,6 +83,10 @@ UNSUPPORTED = {
 
 DEFAULT_PADS = {"joy": "joy", "ct": "wheel"}
 
+# Games tested on the real board WITHOUT the emulated Visual Memory and left that way (the tuned, working build
+# stays as it was tested). Every other game gets the VMU (Namco Museum and Daytona USA 2001 tested with it).
+NO_VMU = {"ct2h", "ikaruga", "ysgw"}
+
 
 def status(profile, cab):
     """(name, status, pads, note) of a known profile on a cabinet."""

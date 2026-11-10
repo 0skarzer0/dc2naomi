@@ -17,14 +17,16 @@ import time
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = getattr(sys, "_MEIPASS", None)  # PyInstaller one-file bundle
 sys.path.insert(0, os.path.join(ROOT, "tools") if ROOT else os.path.join(HERE, "..", "tools"))
+sys.path.insert(0, ROOT if ROOT else os.path.join(HERE, "..", "wipi"))
 
 import build_image  # noqa: E402
+import dc2naomi_vmu  # noqa: E402
 import catalog  # noqa: E402
 import findpatch  # noqa: E402
 import games  # noqa: E402
 from gdi import open_disc  # noqa: E402
 
-VERSION = "0.1"
+VERSION = "0.2"
 NETDIMM = 512 * 1024 * 1024
 CABS = {"joy": "mueble NAOMI estándar (2 palancas, 6 botones, 2 START)",
         "ct": "mueble NAOMI Crazy Taxi (volante, pedales, palanca, START)"}
@@ -149,7 +151,7 @@ class Progress(io.RawIOBase):
         return True
 
 
-def convert(path, cab, interactive):
+def convert(path, cab, interactive, vmu=None):
     say(f"dc2naomi {VERSION} - {CABS[cab]}")
     say("=" * 72)
     if not os.path.isfile(path):
@@ -178,7 +180,7 @@ def convert(path, cab, interactive):
     notes = []
     if prof:
         name, st, pads, note = catalog.status(prof, cab)
-        game = dict(games.GAMES[prof], pads=pads, vmu=False)
+        game = dict(games.GAMES[prof], pads=pads)
         say(f"        {name}")
         if note:
             notes.append(note)
@@ -191,6 +193,10 @@ def convert(path, cab, interactive):
             return 1
         game, notes = auto_profile(ip, first, info, pads)
         notes.insert(0, "Juego no probado (o versión distinta de la probada): parches localizados automáticamente.")
+    if vmu is None:  # the default: every game but the ones tested (and left) without it
+        vmu = prof not in catalog.NO_VMU
+    game["vmu"] = vmu
+    game["flags"] = (game["flags"] | 0x8000) if vmu else (game["flags"] & ~0x8000)
     say(f"Estado: {STATUS[st]}")
     if st == "broken":
         for n in notes:
@@ -221,12 +227,21 @@ def convert(path, cab, interactive):
         with contextlib.suppress(OSError):
             os.remove(tmp)
         return 1
+    vmu_file = out[:-len(".bin.gz")] + ".vmu"
+    if vmu and not os.path.exists(vmu_file):
+        dc2naomi_vmu.save(vmu_file, dc2naomi_vmu.blank())
     gzsize = os.path.getsize(out)
     say(f"\nListo en {time.time() - t0:.0f} s: {out}")
     say(f"  Imagen: {size / 1048576:.1f} MB (comprimida {gzsize / 1048576:.1f} MB)")
     if size > NETDIMM:
         say(f"\n  AVISO: la imagen ocupa {size / 1048576:.0f} MB y NO CABE en la NetDIMM (512 MB).")
         say("  Reduce el juego (vídeos, datos que no uses) y vuelve a convertirlo.")
+    if vmu:
+        say(f"\nMemoria (VMU) emulada: {os.path.basename(vmu_file)} (tarjeta vacía de 128 KB; déjala junto al .bin.gz).")
+        say("  Con los scripts de la carpeta wipi (ver LEEME_WIPI.txt) el netbooter guarda ahí las partidas;")
+        say("  sin ellos el juego ve la tarjeta pero se pierde al apagar la placa.")
+    else:
+        say("\nSin memoria (VMU): este juego se probó sin ella y se deja como se probó.")
     say("\nMandos:")
     for line in catalog.PADS_TEXT[pads]:
         say(f"  - {line}")
@@ -245,7 +260,8 @@ def main(default_cab):
         cab = args[i + 1]
         del args[i:i + 2]
     interactive = "--batch" not in args
-    args = [a for a in args if a != "--batch"]
+    vmu = True if "--vmu" in args else False if "--sin-vmu" in args else None
+    args = [a for a in args if a not in ("--batch", "--vmu", "--sin-vmu")]
     if not args:
         say(f"dc2naomi {VERSION} - {CABS[cab]}\n")
         say("Arrastra aquí el archivo .chd del juego y pulsa Enter:")
@@ -256,7 +272,7 @@ def main(default_cab):
     rc = 1
     for a in args:
         try:
-            rc = convert(a, cab, interactive)
+            rc = convert(a, cab, interactive, vmu)
         except KeyboardInterrupt:
             say("\nCancelado.")
             rc = 1

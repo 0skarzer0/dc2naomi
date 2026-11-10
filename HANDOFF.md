@@ -443,7 +443,12 @@ o recargar.
 - Probado en placa: Namco Museum crea `NAMCOMUS.SYS` al arrancar (10 bloques, idénticos a los de Flycast), "Save
   Mini-Game to VMU" (`PACIT_NM.VMU`, bloques 0-8) llega al fichero en 24 s, y al reenviar el juego arranca con la
   tarjeta del fichero (`[2]` = 1, contador 0). Era también la primera vez que Namco arranca con VMU en placa.
-- Pendiente: probar apagando el mueble; activar la VMU en el programa de Windows; Crazy Taxi 2, F355, 18 Wheeler.
+- **Programa de Windows (2026-11-10, v0.2):** activa la VMU por defecto salvo `catalog.NO_VMU` (`ct2h`, `ikaruga`,
+  `ysgw`: probados y buenos sin ella); `--vmu` / `--sin-vmu` fuerzan. Crea `JUEGO_dc2naomi[ct].vmu` vacío si no
+  existe (`dc2naomi_vmu.blank()`) y el zip del workflow lleva `wipi/` (scripts + `LEEME_WIPI.txt`). Probado en
+  Linux con Virtua Tennis (cabecera 0x8004, hueco de 128 KB, Flycast llega a la pantalla de título). Los juegos
+  "experimentales" llevan la VMU sin haberse probado con ella en placa.
+- Pendiente: probar apagando el mueble; Crazy Taxi 2, F355 y 18 Wheeler con VMU en placa.
 - Cannonball (`outrun_1986.bin.gz`) NO sirve de banco de pruebas: es un programa NAOMI nativo, sin residente.
 
 **Caja negra (`DIMM_BLACKBOX` 0x20000):** `0x8dda0000` por P2, por encima de lo que borra `boot()`: sobrevive al

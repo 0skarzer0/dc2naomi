@@ -19,8 +19,8 @@ jobs:
       - run: pip install pyinstaller==6.11.1
       - name: build
         run: |
-          pyinstaller --onefile --console --name dc2naomi --paths tools --add-data "app/loader.bin;." app/dc2naomi.py
-          pyinstaller --onefile --console --name dc2naomict --paths tools --add-data "app/loader.bin;." app/dc2naomi.py
+          pyinstaller --onefile --console --name dc2naomi --paths tools --paths wipi --add-data "app/loader.bin;." app/dc2naomi.py
+          pyinstaller --onefile --console --name dc2naomict --paths tools --paths wipi --add-data "app/loader.bin;." app/dc2naomi.py
       - name: smoke test
         shell: bash
         run: |
@@ -32,7 +32,10 @@ jobs:
       - name: zip
         run: |
           Copy-Item app/LEEME.txt dist/
-          Compress-Archive -Path dist/dc2naomi.exe, dist/dc2naomict.exe, dist/LEEME.txt -DestinationPath dc2naomi-windows.zip
+          New-Item -ItemType Directory dist/wipi | Out-Null
+          Copy-Item wipi/dc2naomi_send.py, wipi/dc2naomi_vmu.py dist/wipi/
+          Copy-Item wipi/README.md dist/wipi/LEEME_WIPI.txt
+          Compress-Archive -Path dist/dc2naomi.exe, dist/dc2naomict.exe, dist/LEEME.txt, dist/wipi -DestinationPath dc2naomi-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: dc2naomi-windows
