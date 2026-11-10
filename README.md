@@ -66,9 +66,10 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 
 - **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella.
 - **Memorias (VMU), todavía no en el programa:** las imágenes que genera arrancan sin tarjeta de memoria y no
-  guardan partida. La VMU emulada ya funciona en placa real (Daytona USA 2001 crea y guarda su fichero), pero vive
-  en la memoria de la placa: se pierde al apagar o al cargar otro juego. Falta probarla en más juegos y hacerla
-  permanente antes de activarla para todos.
+  guardan partida. La VMU emulada ya funciona en placa real (Daytona USA 2001 y Namco Museum guardan), y con los
+  scripts de [`wipi/`](wipi/README.md) cada juego conserva su tarjeta en un fichero `.vmu` junto a su imagen en el
+  netbooter. De momento hay que añadírsela a la imagen a mano (`tools/addvmu.py`); falta probarla en más juegos
+  antes de activarla para todos.
 - **No están soportados los juegos especiales:** los que arrancan con Windows CE (como Sega Rally 2 o los
   Midway's Greatest Arcade Hits) y los que son un menú que carga varios programas (como SF III Double Impact).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
@@ -76,8 +77,7 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 ### Ideas para el futuro
 
 - Audio de CD (recodificado para caber en la NetDIMM).
-- Memorias VMU permanentes: un fichero `.vmu` por juego junto a su `.bin.gz` en el netbooter, que se envía con el
-  juego y se actualiza por red cuando el juego guarda.
+- VMU activada de serie en el programa, y la pantalla de la VMU en algún sitio visible.
 - Llevar la vibración (Puru Puru Pack) al force feedback de los muebles NAOMI que lo tengan.
 
 ## Cómo funciona
@@ -90,6 +90,7 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
   Dreamcast y los parches de cada juego (`tools/games.py`), comprobados contra el disco al construir.
 - **`tools/catalog.py`**: qué juegos están probados y con qué mueble; un juego se reconoce por la huella (SHA-1)
   de su programa. **`tools/findpatch.py`** localiza los parches de un juego desconocido.
+- **`wipi/`**: scripts para WiPi Netbooter que guardan la VMU de cada juego en un fichero.
 - **`tools/chd.py`**: lector de CHD propio. **`app/dc2naomi.py`**: el programa.
 
 Los detalles técnicos, las direcciones y lo aprendido en la placa están en [HANDOFF.md](HANDOFF.md).
@@ -129,7 +130,14 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
   documenta el protocolo de peticiones de la NetDIMM (`dimmcomms.c`), que el residente sigue para contestar las
   lecturas de memoria por red, y sus [herramientas de netboot](https://github.com/DragonMinded/netboot) son las que
   usamos para depurar en la placa real.
-- **WiPi Netbooter** y sus autores: el netbooter con el que se carga y prueba todo en las placas.
+- **[WiPi Netbooter](https://github.com/chunksin/WiPiNetbooter)** (chunksin y colaboradores): el netbooter con el
+  que se carga y prueba todo en las placas, y en el que se apoyan los scripts de la VMU (`wipi/`), hechos a imagen
+  de su `timehack.py`.
+- **VMU:** el formato de la tarjeta y las respuestas maple siguen las de Flycast; para entenderla sirvieron también
+  [MaplePad](https://github.com/mackieks/MaplePad) (mackieks), [libevmu](https://github.com/gyrovorbis/libevmu)
+  (Falco Girgis), [dcvmu-tool](https://github.com/bucanero/dcvmu-tool) (bucanero),
+  [waterbear](https://github.com/wtetzner/waterbear) (wtetzner) y [chao](https://github.com/lordbananza/chao)
+  (lordbananza), que nos pasó el usuario como referencia.
 - La comunidad de **Dreamcast y NAOMI** que ha documentado durante años el hardware (Katana, Holly, AICA, maple, JVS,
   NetDIMM) y los desarrolladores de los **netbooters** para NAOMI.
 - **[DejaVu Fonts](https://dejavu-fonts.github.io)**: la letra de los mensajes en pantalla sale de DejaVu Sans Mono.

@@ -14,7 +14,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 |---|---|---|
 | Crazy Taxi 2 (US) | ✅ **Terminado** (`ct2h4`, mandos `ct`) | Crazy Taxi |
 | Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
-| Namco Museum (US) | ✅ **Terminado** (`nmus6`: sin VMU, mandos `pole`) | Crazy Taxi |
+| Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
 | Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ con VMU emulada (`daytona4`): crea su fichero de 24 bloques y arranca | Crazy Taxi |
 | F355, 18 Wheeler | ❌ aparcados (Now Loading / negro tras SEGA) | Crazy Taxi |
@@ -382,13 +382,25 @@ con normalidad. Primera vez que la VMU emulada funciona en placa. **Pendiente:**
 sigue forzando `vmu=False`; antes de activarla por defecto, probar en placa Namco Museum (`nmus5`), Crazy Taxi 2,
 F355 y 18 Wheeler con VMU (estos dos fallaban también sin ella). La VMU está en RAM (`RES_VMU`): se pierde al apagar
 o recargar.
-**Idea para hacerla permanente (hablado con el usuario, sin empezar):** un `JUEGO.vmu` de 128 KB junto al `.bin.gz`
-en la Raspberry. (1) Al enviar: hueco fijo para la VMU en la imagen, que el loader copia a `RES_VMU`; la Pi lo
-rellena con los parches al vuelo de `netdimm_send`. (2) Al guardar: el residente lleva un contador de escrituras y
-un mapa de bloques sucios (BLOCKWRITE); un servicio en la Pi lo sondea por NetDIMM (peeks de 32 bits, ~0,02 s cada
-uno: 128 KB enteros ≈ 10 min, una partida de 24 bloques ≈ 1 min) y baja sólo esos bloques. Por mirar: cómo lanza
-WiPi los envíos (para enganchar el servicio) y la ventana entre guardar y apagar. Descartada la SRAM con pila de la
-NAOMI (32 KB, compartida, pisa los ajustes de los juegos NAOMI).
+**⭐ VMU en ficheros (2026-11-10, hecho y probado en placa con Namco Museum `nmus7`).** Ver `wipi/README.md`.
+- Imagen: `dimm_header.vmu_offset` (palabra 176, antes `reserved[0]`) = hueco de 128 KB al final del archivo
+  (`build_image.py` lo pone si el perfil lleva VMU; `tools/addvmu.py IN OUT [LOADER]` lo añade a una imagen hecha).
+- Loader: lee el hueco; si es una tarjeta formateada (raíz `0x55`×16, FAT en 254) la copia a `RES_VMU` y deja
+  "1GMI" en `RES_VMU_INFO+8`. Si no, vale la que hubiera en RAM o una nueva (`vmu_format`).
+- Residente: `RES_VMU_INFO` = `0x8de20000`: `[0]` "VMUS", `[1]` nº de BLOCKWRITE desde el arranque, `[2]` 1 = tarjeta
+  de la imagen; desde `+0x40`, por bloque, el valor de `[1]` en su última escritura.
+- Pi (`/sbin/piforce`): `dc2naomi_send.py IP IMG` (= `netdimm_send --disable-crc` con el `.vmu` metido al vuelo con
+  `FileBytes`, y deja `dc2naomi_vmu.py watch` en marcha); `dc2naomi_vmu.py` sondea cada 3 s, espera a que el
+  contador se quede quieto y baja los bloques con secuencia mayor que la ya guardada (128 peeks por bloque, ~2,2 s).
+  Un peek sin contestar tarda >2 s y se toma por fallo (6 seguidos = fin). `stop IP` (antes de cada envío) mata al
+  vigilante y hace una última pasada. Estado en `/var/log/dc2naomi_vmu_IP.state`, log `/var/log/dc2naomi_vmu.log`.
+- `wipiloader.py` de la Pi del Crazy Taxi (192.168.68.60) está modificado; el original es `wipiloader.py.orig`.
+  **La otra Pi (192.168.68.59, mueble estándar) no está tocada.**
+- Probado en placa: Namco Museum crea `NAMCOMUS.SYS` al arrancar (10 bloques, idénticos a los de Flycast), "Save
+  Mini-Game to VMU" (`PACIT_NM.VMU`, bloques 0-8) llega al fichero en 24 s, y al reenviar el juego arranca con la
+  tarjeta del fichero (`[2]` = 1, contador 0). Era también la primera vez que Namco arranca con VMU en placa.
+- Pendiente: probar apagando el mueble; activar la VMU en el programa de Windows; Crazy Taxi 2, F355, 18 Wheeler.
+- Cannonball (`outrun_1986.bin.gz`) NO sirve de banco de pruebas: es un programa NAOMI nativo, sin residente.
 
 **Caja negra (`DIMM_BLACKBOX` 0x20000):** `0x8dda0000` por P2, por encima de lo que borra `boot()`: sobrevive al
 reinicio de la placa y a cargar otra imagen. `[0]` "BOX!", `[1]` nº excepciones, `[2]/[3]` hooks maple

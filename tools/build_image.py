@@ -29,6 +29,7 @@ ALIGN = 0x10000
 BASE_LBA = 45000
 FLASH_OFFSET = 0x1000
 DATA_OFFSET = 0x40000
+VMU_SIZE = 0x20000
 DIMM_RANGES, DIMM_TRACKS, DIMM_PATCHES = 32, 64, 64
 PATCH_CHECK, PATCH_W16, PATCH_W32, PATCH_TRAMP, PATCH_R4FIX = 1, 2, 4, 8, 16
 
@@ -393,7 +394,9 @@ def build(name, game, source, work, image, out, log=print):
     hdr += struct.pack("<3I", first_track, len(tracks), leadout)
     hdr += struct.pack(f"<{DIMM_TRACKS}I", *(tracks + [0] * (DIMM_TRACKS - len(tracks))))
     hook = list(game.get("hook_pc", [])) + [0, 0]
-    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5}[game.get("pads", "ct")]) + b"\0" * 28
+    # the Visual Memory slot (128 KB after the sectors): empty here, filled by the netbooter from JUEGO.vmu
+    vmu_offset = offset if game["flags"] & 0x8000 else 0
+    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + b"\0" * 24
     for p in patches:
         hdr += struct.pack("<4I", *p)
     hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))
@@ -403,7 +406,8 @@ def build(name, game, source, work, image, out, log=print):
     archive += make_flash(game["region"], game["language"])
     archive += b"\0" * (DATA_OFFSET - len(archive))
 
-    total = len(image) + len(archive) + sum(n for _f, n in ranges) * 2048
+    slot = b"\0" * VMU_SIZE if vmu_offset else b""
+    total = len(image) + len(archive) + sum(n for _f, n in ranges) * 2048 + len(slot)
     if hasattr(out, "set_total"):
         out.set_total(total)
     if isinstance(out, str):
@@ -411,6 +415,7 @@ def build(name, game, source, work, image, out, log=print):
             o.write(image)
             o.write(archive)
             disc.write_sectors(o)
+            o.write(slot)
         total = os.path.getsize(out)
         print(f"{out}: archive at 0x{base:08x}, {total} bytes ({total / 1048576:.1f} MB)")
         if total > 512 * 1048576:
@@ -419,6 +424,7 @@ def build(name, game, source, work, image, out, log=print):
         out.write(image)
         out.write(archive)
         disc.write_sectors(out)
+        out.write(slot)
     return total
 
 

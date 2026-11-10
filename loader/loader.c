@@ -67,10 +67,26 @@ int main(int argc, char **argv) {
     size_t res_size = resident_bin_end - resident_bin;
     memcpy((void *)RES_BASE, resident_bin, res_size);
     cart_read((void *)RES_FLASH, base + hdr.flash_offset, 0x20000);
+    /* the Visual Memory the image brings (the netbooter puts the game's .vmu file in the slot while sending):
+       taken only if it is a formatted card; otherwise the one still in RAM, or a new one (resident) */
+    *(volatile uint32_t *)(RES_VMU_INFO + 8) = 0;
+    if ((hdr.flags & DIMM_VMU) && hdr.vmu_offset) {
+        static uint8_t card[0x20000] __attribute__((aligned(32)));
+        cart_read(card, base + hdr.vmu_offset, sizeof card);
+        const uint8_t *root = card + 255 * 512;
+        int ok = root[0x46] == 0xfe;                  /* FAT at block 254 */
+        for (int i = 0; i < 16; i++) ok = ok && root[i] == 0x55;
+        if (ok) {
+            memcpy((void *)RES_VMU, card, sizeof card);
+            *(volatile uint32_t *)(RES_VMU_INFO + 8) = 0x494d4731;
+        }
+        printf("  Visual Memory: %s\n", ok ? "from the image" : "no card in the image");
+    }
     const res_table_t *t = (const res_table_t *)RES_BASE;
     if (t->magic != RES_MAGIC) fail("resident part");
     printf("  resident part: %u bytes, maple hook at %08lx\n", (unsigned)res_size, (unsigned long)t->maple_hook);
     dcache_wback_range(RES_BASE, 0x200000);
+    dcache_wback_range(RES_VMU, 0x21000);
     icache_sync_range(RES_BASE, res_size);
 
     /* a moment for the JVS board, then off we go */

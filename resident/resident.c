@@ -1041,6 +1041,7 @@ static u32 mie_build(void) {
    Answers as Flycast's VMU does (DEVINFO, GETMEMINFO, BLOCKREAD/WRITE, GETLASTERROR; LCD and clock accepted). */
 
 #define VMU ((u8 *)RES_VMU)
+#define VMU_INFO ((volatile u32 *)RES_VMU_INFO)
 
 static void vmu_format(void) {
     u8 *v = VMU;
@@ -1121,8 +1122,11 @@ static u32 vmu_frame(u32 cmd, u32 dst, const u32 *data, u32 n, u32 *out) {
     } else if (cmd == 12 && func == 0x02000000u && n >= 2) {      /* BLOCKWRITE: phase = 128-byte quarter */
         u32 blk = vmu_block(data[1]), phase = (data[1] >> 8) & 0xff;
         u32 adr = blk * 512 + phase * 128, bytes = (n - 2) * 4;
-        if (adr + bytes <= 128 * 1024) mcpy(VMU + adr, &data[2], bytes);
-        else rcmd = 0xfb;                                         /* file error */
+        if (adr + bytes <= 128 * 1024) {
+            mcpy(VMU + adr, &data[2], bytes);
+            VMU_INFO[1]++;                                        /* for the netbooter: this block changed */
+            VMU_INFO[16 + (blk & 0xff)] = VMU_INFO[1];
+        } else rcmd = 0xfb;                                       /* file error */
     } else if (cmd == 12 || cmd == 13 || cmd == 14) {             /* LCD / clock writes, GETLASTERROR, SETCOND */
         rcmd = 7;
     } else if (cmd == 9) {                                        /* GETCOND: nothing to report */
@@ -1897,7 +1901,13 @@ void boot(const struct dimm_header *h) {
     REG32(0x8c0000b8) = (u32)flash_syscall;
     REG32(0x8c0000bc) = (u32)gd_syscall;
     REG32(0x8c0000e0) = (u32)misc_syscall;
-    if (H.flags & DIMM_VMU) vmu_format();
+    if (H.flags & DIMM_VMU) {
+        vmu_format();                                 /* (the loader has put the image's card there, if any) */
+        u32 from_image = VMU_INFO[2] == 0x494d4731u;  /* "1GMI": left by the loader */
+        for (u32 i = 0; i < 16 + 256; i++) VMU_INFO[i] = 0;
+        VMU_INFO[2] = from_image;
+        VMU_INFO[0] = VMU_INFO_MAGIC;
+    }
     box_on = (H.flags & DIMM_BLACKBOX) != 0;
     if (box_on) {
         for (u32 i = 0; i < 0x220; i++) BOX[i] = 0;

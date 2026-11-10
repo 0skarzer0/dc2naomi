@@ -16,6 +16,12 @@
 #define RES_LOG         0x8dd80000u   /* debug log ring */
 #define RES_VMU         0x8de00000u   /* emulated Visual Memory, 128 KB (lost when the board is reset or reloaded) */
 
+/* After the Visual Memory: what the netbooter needs to keep the game's .vmu file up to date over the NetDIMM
+   (wipi/dc2naomi_vmu.py). Word 0 "VMUS", 1 = number of block writes since boot, 2 = 1 if the card came from the
+   image's slot; from +0x40, per block (256 words): the value of word 1 at its last write (0 = not written). */
+#define RES_VMU_INFO    (RES_VMU + 0x20000u)
+#define VMU_INFO_MAGIC  0x53554d56u   /* "VMUS" */
+
 #define RES_MAGIC       0x524c4344u   /* "DCLR" */
 
 /* The archive the build script puts after the loader in the netboot image,
@@ -126,7 +132,10 @@ struct dimm_header {
     uint32_t tracks[DIMM_TRACKS];
     uint32_t hook_pc[2];              /* program entry points that re-apply the patches */
     uint32_t pad_map;                 /* cabinet controls: DIMM_PAD_* */
-    uint32_t reserved[7];
+    uint32_t vmu_offset;              /* 128 KB in the archive: the Visual Memory to start with (0 = no slot; a slot
+                                         that does not hold a formatted card is ignored). The netbooter fills it
+                                         from the game's .vmu file while sending (wipi/dc2naomi_send.py) */
+    uint32_t reserved[6];
     struct dimm_patch patches[DIMM_PATCHES];
 };
 
