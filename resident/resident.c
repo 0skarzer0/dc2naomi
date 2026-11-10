@@ -89,6 +89,17 @@ static void dbg_rowx(u32 sof, u32 line, u32 r, u32 v, u32 bits, u32 x0) {
     }
 }
 
+/* (DIMM_DIAG) a progress mark drawn at once: row 19 = n, row 20 = v. For hangs with nothing else to read. */
+static u32 diag_on;
+static void stage(u32 n, u32 v) {
+    if (!diag_on) return;
+    u32 sof = REG32(0xa05f8050) & 0x00fffffc, size = REG32(0xa05f805c);
+    u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+    if (line < 640 || line > 4096) line = 1280;
+    dbg_row(sof, line, 19, n, 16);
+    dbg_row(sof, line, 20, v, 32);
+}
+
 /* Every 2^20 instructions (the user break trap, head.S): the PC into a
    ring, and everything on the screen. */
 static u32 patches_done, hook_hits;
@@ -520,10 +531,13 @@ static void patch_poll(void);
 
 static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     s32 r0;
+    stage(1, r7 << 8 | (r4 & 0xff));
     dimm_service();
+    stage(2, r5);
     dbg_val[0]++;
     dbg_val[1] = r7 << 8 | (r4 & 0xff);
     dbg_draw();
+    stage(3, dbg_val[0]);
     if (gd_inside) {
         dlog(0x4e455354u, r7, r4, 0);
         if (r6 == 0 && r7 == 1) { /* GET_CMD_STAT */
@@ -538,7 +552,9 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     if (dbg_val[0] < 200) dlog(dbg_val[0], r7 << 8 | (r4 & 0xff), r5, r15_now());
 #endif
     patch_poll();
+    stage(4, r6);
     r0 = gd_syscall_body(r4, r5, r6, r7);
+    stage(5, r0);
     gd_va = 0;
     gd_inside = 0;
     /* The BIOS calls the PIO callback (SET_PIO_CALLBACK) when a REQ_PIO_TRANS transfer ends. Windows CE's CD
@@ -560,6 +576,7 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
         }
         pio_cb_running = 0;
     }
+    stage(6, dbg_val[0]);
     return r0;
 }
 
@@ -676,6 +693,7 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
 static u8 *const flash = (u8 *)RES_FLASH;
 
 static s32 sys_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
+    stage(16, r7 << 8 | (r4 & 0xff));
     dbg_val[4]++;
 #ifdef GDTRACE
     dlog(0x53590000u | r7, r4, r5, r6); /* "SY" */
@@ -714,6 +732,7 @@ static const u32 part_offset[5] = {0x1a000, 0x18000, 0x1c000, 0x10000, 0x00000};
 static const u32 part_size[5] = {0x2000, 0x2000, 0x4000, 0x8000, 0x10000};
 
 static s32 flash_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
+    stage(32, r7 << 8 | (r4 & 0xff));
     dbg_val[4]++;
 #ifdef GDTRACE
     dlog(0x464c0000u | r7, r4, r5, r6); /* "FL" */
@@ -747,6 +766,7 @@ static s32 flash_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
 static u32 boot_sectors;
 
 static s32 misc_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
+    stage(48, r7 << 8 | (r4 & 0xff));
     dbg_val[4]++;
     dbg_draw();
     (void)r5;
@@ -1355,6 +1375,15 @@ static int ce_tick_busy;
 void ce_tick(void) {
     ce_ticks++;
     dbg_draw();
+    if (diag_on) {      /* row 21: where the tick interrupted (SPC), row 22: SSR */
+        u32 spc, ssr, sof = REG32(0xa05f8050) & 0x00fffffc, size = REG32(0xa05f805c);
+        u32 line = (((size & 0x3ff) + 1) + (((size >> 20) & 0x3ff) - 1)) * 4;
+        if (line < 640 || line > 4096) line = 1280;
+        __asm__ volatile("stc spc,%0" : "=r"(spc));
+        __asm__ volatile("stc ssr,%0" : "=r"(ssr));
+        dbg_row(sof, line, 21, spc, 32);
+        dbg_row(sof, line, 22, ssr, 32);
+    }
     if (ce_tick_busy) return;
     ce_tick_busy = 1;
     dimm_service();
@@ -1406,7 +1435,8 @@ static void vga_save(void) {
 }
 
 static void diag_draw(void) {
-    if (!(H.flags & DIMM_DIAG) || (++diag_calls & 3)) return;
+    diag_on = H.flags & DIMM_DIAG;
+    if (!(H.flags & DIMM_DIAG) || ((++diag_calls & 3) && !(REG32(0xff000010) & 1))) return;
     u32 spg = REG32(0xa05f80d0), fbr = REG32(0xa05f8044), load = REG32(0xa05f80d8);
     if (vga_saved && (!(fbr & 0x800000u) || (spg & 0xd0u))) {
         for (int i = 0; i < 8; i++) REG32(0xa05f8000u + vga_reg_off[i]) = vga_reg[i];

@@ -1160,6 +1160,20 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      `r7<<8|r4`, 3 sondeos maple, 4 último FAD, 5 otras syscalls, 16 ticks de CE, 17 llamadas al gancho, 18 MMUCR).
      Pedida foto al usuario. La secuencia de llamadas GD es determinista: con el nº de la fila 1 y la traza de
      Flycast (`EXTRA=-DGDTRACE`) se sabe en qué paso se paró.
+   - **Foto 1 del usuario (23:48), filas leídas (bit más alto a la izquierda):** fila 1 (llamadas GD) = 0, fila 2
+     (última llamada) = `0x0200`, fila 3 (maple) = 0, fila 4 (FAD) ≈ `0xA800`, fila 5 = 0, fila 6 = 0, fila 8 (FB_R_CTRL)
+     = `0xD`, fila 14 (ISTNRM) = `0x38`, fila 15 (ISTEXT) = 0, **fila 16 (ticks de CE) = 3**, fila 17 (gancho maple) = 0,
+     fila 18 (MMUCR) con el bit 0 a 1. **Conclusión: CE arranca en la placa (MMU encendida, 3 ticks de 25 ms) y se
+     congela del todo (ni ticks) justo donde en Flycast llega la primera syscall GD de CE** (en Flycast las llamadas
+     nº 7 a 26 — `INIT` r7=3, `REQ_CMD 0x18`, `EXEC_SERVER`, `GET_CMD_STAT`, TOC `0x13`, primeras lecturas — caen todas en
+     el tick 3; traza: `EXTRA=-DGDTRACE` con `ce_ticks` como último dato del `dlog`). Los contadores a 0 con "última
+     llamada 0x200" indican además que **las variables del residente vuelven a valores viejos**: CE reinicia la caché
+     (CCR) y se pierde lo que el residente tenía solo en caché desde el `ocbwb` de `boot()`.
+   - **Diagnóstico 2 (en curso, md5 del .gz `9a2a584c1a3c624808cbf076bdb49cb4`):** `stage(n, v)` dibuja al momento la
+     fila 19 = paso y la 20 = dato: en `gd_syscall` 1 = entrada (v = `r7<<8|r4`), 2 = tras `dimm_service` (v = r5),
+     3 = tras `dbg_draw` (v = nº de llamada), 4 = tras `patch_poll` (v = r6), 5 = tras el cuerpo (v = r0), 6 = salida;
+     `0x10` = `sys_syscall`, `0x20` = `flash_syscall`, `0x30` = `misc_syscall` (v = `r7<<8|r4`). Filas 21/22 = SPC y SSR
+     del último tick. Con MMU encendida `diag_draw` dibuja en todas las llamadas (antes 1 de cada 4).
    - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del
      "kick" (`cart_dma` 32 bytes; las lecturas por DMA G1 de la NetDIMM nunca funcionaron en placa, ver tabla de
      flags) — alternativa ya pensada: que `ce_maple_isr` devuelva SYSINTR 21 en vez de 18 cuando haya un kick
