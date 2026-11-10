@@ -439,7 +439,8 @@ o recargar.
   Un peek sin contestar tarda >2 s y se toma por fallo (6 seguidos = fin). `stop IP` (antes de cada envío) mata al
   vigilante y hace una última pasada. Estado en `/var/log/dc2naomi_vmu_IP.state`, log `/var/log/dc2naomi_vmu.log`.
 - `wipiloader.py` de la Pi del Crazy Taxi (192.168.68.60) está modificado; el original es `wipiloader.py.orig`.
-  **La otra Pi (192.168.68.59, mueble estándar) no está tocada.**
+  La otra Pi (192.168.68.59, mueble estándar) tiene el mismo cambio desde el 2026-11-10 (mismos ficheros, mismo md5;
+  su `wipiloader.py` original era idéntico al de la Pi del Crazy Taxi y está en `wipiloader.py.orig`).
 - Probado en placa: Namco Museum crea `NAMCOMUS.SYS` al arrancar (10 bloques, idénticos a los de Flycast), "Save
   Mini-Game to VMU" (`PACIT_NM.VMU`, bloques 0-8) llega al fichero en 24 s, y al reenviar el juego arranca con la
   tarjeta del fichero (`[2]` = 1, contador 0). Era también la primera vez que Namco arranca con VMU en placa.
@@ -454,6 +455,12 @@ o recargar.
   la Pi (md5 `2e3f5cb9…`). Sólo cambian 4 bytes de la cabecera tras el loader (flags `0x8004`, `vmu_offset`
   `0x9844000`); parches y mandos iguales. Flycast: mando en el puerto A y VMU en el Socket 1 con 200 bloques libres.
   Subida a `/boot/roms/` de la Pi del Crazy Taxi. Placa: pendiente.
+- **Por qué la Pi del Crazy Taxi va lenta (2026-11-10):** es una **Raspberry Pi 3 Model B** (sólo WiFi de 2,4 GHz: canal
+  2457 MHz, 57,7 Mbit/s, ~0,5 MB/s medidos por SSH); la del mueble estándar es una **Pi 3 Model B+** en 5 GHz
+  (292 Mbit/s, ~1,8 MB/s). El `eth0` de las dos está ocupado con la NetDIMM (10.0.0.1, 100 Mbit/s). La SD no es el
+  cuello (16,5 MB/s de escritura). `vcgencmd get_throttled`: 0x50000 en la del CT y 0x50005 en la estándar
+  (subtensión ahora mismo en la estándar). Subir 96 MB a la Pi del CT tarda ~3 min y las órdenes de la terminal de la
+  app se cortan a los 180 s: subir por tramos (append) o copiar la imagen a la SD a mano.
 - Acceso a la Pi desde la sesión de Claude: la terminal de la app de escritorio solo llega a la red de casa si la
   cuenta tiene activado el acceso a **todos los dominios** (sin eso: "Network is unreachable").
 - **Programa de Windows (2026-11-10, v0.2):** activa la VMU por defecto salvo `catalog.NO_VMU` (`ct2h`, `ikaruga`,

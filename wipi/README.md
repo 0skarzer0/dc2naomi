@@ -56,3 +56,5 @@ Probado con WiPi Netbooter en una Raspberry (Python 3.7), NAOMI 2 y NetDIMM 3.17
 
 Sin WiPi: `python3 dc2naomi_send.py IP JUEGO_dc2naomi.bin.gz` (necesita las herramientas de netboot de
 DragonMinded, que WiPi trae en `/sbin/piforce/dm_netboot`).
+
+Instalado y en uso en las dos Raspberry del usuario (mueble Crazy Taxi y mueble estándar), 2026-11-10.
