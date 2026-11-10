@@ -272,6 +272,12 @@ _ce_maple_isr:
     and     r3, r2
     mov.l   r2, @r1
     mov.l   @r1, r2
+    /* On our own stack (2026-11-11): the kernel's handlers are leaf routines that use r0-r3 only, and r15 is
+       whatever the interrupted thread had, maybe a user stack. With SR.BL = 1 a TLB miss on that stack page hangs
+       the real CPU (64 TLB entries; Flycast hardly ever misses). The C code only touches P1/P2 addresses. */
+    mov     r15, r3
+    mov.l   .Lcemstk, r15
+    mov.l   r3, @-r15
     sts.l   pr, @-r15
     mov.l   r4, @-r15
     mov.l   r5, @-r15
@@ -289,11 +295,13 @@ _ce_maple_isr:
     mov.l   @r15+, r5
     mov.l   @r15+, r4
     lds.l   @r15+, pr
+    mov.l   @r15, r15
     rts
     mov     #18, r0
     .align 2
 .Lcemask: .long 0xffffcfff
 .Lcepoll: .long _ce_maple_poll
+.Lcemstk: .long 0x8dcf8000
 
 /* Windows CE's timer interrupt handler (see ce_tick in resident.c). The kernel's routine (Sega Rally 2:
    0x8c02e228) is "r1 = 0xffd80000; r2 = &tick counters; clear TCR0.UNF; both counters += 25; return 1": its first
@@ -302,6 +310,9 @@ _ce_maple_isr:
     .global _ce_tick_isr
     .align 2
 _ce_tick_isr:
+    mov     r15, r3         /* own stack, as ce_maple_isr */
+    mov.l   .Lcetstk, r15
+    mov.l   r3, @-r15
     sts.l   pr, @-r15
     mov.l   r2, @-r15
     mov.l   r4, @-r15
@@ -321,6 +332,7 @@ _ce_tick_isr:
     mov.l   @r15+, r4
     mov.l   @r15+, r2
     lds.l   @r15+, pr
+    mov.l   @r15, r15
     mov.l   .Lcetmu, r1
 1:  mov.w   @(16,r1), r0
     and     #255, r0
@@ -341,3 +353,4 @@ _ce_tick_isr:
     .align 2
 .Lcetick: .long _ce_tick
 .Lcetmu:  .long 0xffd80000
+.Lcetstk: .long 0x8dcf4000

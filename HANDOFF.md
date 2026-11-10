@@ -1174,6 +1174,23 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      3 = tras `dbg_draw` (v = nº de llamada), 4 = tras `patch_poll` (v = r6), 5 = tras el cuerpo (v = r0), 6 = salida;
      `0x10` = `sys_syscall`, `0x20` = `flash_syscall`, `0x30` = `misc_syscall` (v = `r7<<8|r4`). Filas 21/22 = SPC y SSR
      del último tick. Con MMU encendida `diag_draw` dibuja en todas las llamadas (antes 1 de cada 4).
+   - **Fotos 2-5 (00:00, diagnóstico 2):** fila 1 (llamadas GD) = `0x13` (19), fila 2 (última) = `0x0105`
+     (`GET_CMD_STAT` de la petición 5), fila 4 (FAD) = `0xB075`, fila 16 (ticks) = 3, fila 17 (gancho maple) = 0,
+     **fila 19 (paso) = 6 y fila 20 = `0x13`: la llamada 19 terminó y volvió a CE**; fila 21 (SPC del último tick) ≈
+     `0x000115xx` (código de usuario), fila 22 (SSR) = `0x00008001`. Es decir: en la placa CE hace `INIT`, las dos TOC
+     y **la primera lectura de datos (`DMAREAD` FAD `0xb06e`, 8 sectores) completa y correcta**, y se congela antes
+     del 4.º tick (en Flycast la llamada 20 llega ya en el tick 4). No hay reinicio (la BIOS recargaría el juego).
+   - **Hipótesis actual (arreglo en el diagnóstico 3, md5 del .gz `1f569f2d97d5b599a69dfc29c9d2114e`, enviado a las
+     00:20): los ganchos de interrupción usaban la pila del hilo interrumpido.** Los manejadores del núcleo de CE son
+     rutinas hoja que solo usan r0-r3; `ce_tick_isr`/`ce_maple_isr` apilaban en r15 y llamaban a C. Si r15 es la
+     pila de usuario del hilo interrumpido y su página no está en la TLB, con SR.BL = 1 un fallo de TLB **cuelga la
+     CPU real** (64 entradas de TLB; Flycast casi nunca falla). Los ticks 1-3 caen con el núcleo ocupado; el 4.º es
+     el primero con el sistema en reposo. Ahora los dos ganchos pasan a **pila propia** (`0x8dcf8000` maple,
+     `0x8dcf4000` tick) y restauran r15 al salir. Si era esto, el cuelgue de la primera imagen (sin gancho de tick)
+     sería el mismo fallo en el gancho de maple.
+     Regla para ganchos en ISR de CE: solo direcciones P1/P2, pila propia, nada de coma flotante.
+   - Descartado: no hay instrucción `sleep` en el núcleo (no es STBCR/standby); las esperas del FIFO G2 no se
+     atascan en placa (tabla de variantes).
    - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del
      "kick" (`cart_dma` 32 bytes; las lecturas por DMA G1 de la NetDIMM nunca funcionaron en placa, ver tabla de
      flags) — alternativa ya pensada: que `ce_maple_isr` devuelva SYSINTR 21 en vez de 18 cuando haya un kick
