@@ -56,17 +56,31 @@ con su START.
 
 Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy Taxi 2 START es el salto).
 
+### Partidas guardadas (`vmutool.exe`)
+
+`vmutool.exe` (en el mismo zip) mete y saca partidas del `.vmu` de un juego, en el formato `.VMI` + `.VMS` de las
+descargas de partidas de Dreamcast (por ejemplo [bucanero/dreamcast-saves](https://github.com/bucanero/dreamcast-saves),
+con partidas con todo desbloqueado de cientos de juegos):
+
+- **Importar:** arrastra a la vez el `.vmu` del juego y el `.VMI` de la partida (con su `.VMS` en la misma carpeta)
+  sobre `vmutool.exe`. Si la VMU ya tiene un fichero con ese nombre, lo sustituye y guarda la VMU anterior en `.bak`.
+- **Exportar:** arrastra solo el `.vmu`: lista lo que hay y lo saca a la carpeta `JUEGO_partidas/` como `.VMI` + `.VMS`.
+- En línea de comandos: `vmutool list|export|import|format ...` (`vmutool.exe` sin argumentos muestra la ayuda).
+- Ojo: la partida tiene que ser de la misma región que el juego (en Daytona USA 2001, las americanas dicen
+  "DAYTONA USA" en la cabecera y las japonesas "DAYTONA USA 2001"), y **no toques el `.vmu` de un juego mientras está
+  cargado en el mueble** (la Raspberry lo sobrescribiría al guardar): carga otro juego, cambia el `.vmu` y vuelve a cargarlo.
+
 ### Juegos
 
 | Juego | Mueble estándar | Mueble Crazy Taxi |
 |---|---|---|
-| Crazy Taxi 2 (USA) | experimental | ✅ probado |
+| Crazy Taxi 2 (USA) | experimental | ✅ probado (también con VMU en fichero) |
 | Ikaruga (Japón) | ✅ probado | experimental |
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: el sonido petardea; salir con B deja negro) |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | F355 Challenge, 18 Wheeler, SF III Double Impact | ❌ no funcionan todavía | ❌ |
-| Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU emulada |
+| Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
 | Cualquier otro juego de Dreamcast | experimental | experimental |
 
 ### Limitaciones
@@ -137,6 +151,9 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
   documenta el protocolo de peticiones de la NetDIMM (`dimmcomms.c`), que el residente sigue para contestar las
   lecturas de memoria por red, y sus [herramientas de netboot](https://github.com/DragonMinded/netboot) son las que
   usamos para depurar en la placa real.
+- **[dreamcast-saves](https://github.com/bucanero/dreamcast-saves)** (bucanero, Damian Parrino): la colección de
+  partidas `.VMI`/`.VMS` de la que salen las partidas con todo desbloqueado que ponemos en los `.vmu`, y la referencia
+  del formato `.VMI` para `tools/vmutool.py`.
 - **[WiPi Netbooter](https://github.com/chunksin/WiPiNetbooter)** (chunksin y colaboradores): el netbooter con el
   que se carga y prueba todo en las placas, y en el que se apoyan los scripts de la VMU (`wipi/`), hechos a imagen
   de su `timehack.py`.

@@ -1,4 +1,4 @@
-# Builds dc2naomi.exe and dc2naomict.exe (one program, the cabinet comes from the name).
+# Builds dc2naomi.exe and dc2naomict.exe (one program, the cabinet comes from the name) and vmutool.exe (VMU saves).
 # Run by hand (Actions > windows > Run workflow): the zip is left as an artifact.
 # A tag v* also publishes it as a GitHub release.
 name: windows
@@ -21,6 +21,7 @@ jobs:
         run: |
           pyinstaller --onefile --console --name dc2naomi --paths tools --paths wipi --add-data "app/loader.bin;." app/dc2naomi.py
           pyinstaller --onefile --console --name dc2naomict --paths tools --paths wipi --add-data "app/loader.bin;." app/dc2naomi.py
+          pyinstaller --onefile --console --name vmutool tools/vmutool.py
       - name: smoke test
         shell: bash
         run: |
@@ -29,13 +30,15 @@ jobs:
           grep -q "NAOMI est" out1.txt
           ./dist/dc2naomict.exe --batch nada.chd | tee out2.txt || true
           grep -q "Crazy Taxi" out2.txt
+          ./dist/vmutool.exe format prueba.vmu --batch | tee out3.txt
+          grep -q "200 bloques libres" out3.txt
       - name: zip
         run: |
           Copy-Item app/LEEME.txt dist/
           New-Item -ItemType Directory dist/wipi | Out-Null
           Copy-Item wipi/dc2naomi_send.py, wipi/dc2naomi_vmu.py dist/wipi/
           Copy-Item wipi/README.md dist/wipi/LEEME_WIPI.txt
-          Compress-Archive -Path dist/dc2naomi.exe, dist/dc2naomict.exe, dist/LEEME.txt, dist/wipi -DestinationPath dc2naomi-windows.zip
+          Compress-Archive -Path dist/dc2naomi.exe, dist/dc2naomict.exe, dist/vmutool.exe, dist/LEEME.txt, dist/wipi -DestinationPath dc2naomi-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: dc2naomi-windows

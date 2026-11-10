@@ -27,4 +27,12 @@ LIMITACIONES
 - Probado con NAOMI 2 y NetDIMM de 512 MB; no probado con NAOMI 1, aunque
   deberia funcionar.
 
+PARTIDAS (vmutool.exe)
+- Importar: arrastra a la vez el .vmu del juego y el .VMI de una partida (con
+  su .VMS en la misma carpeta) sobre vmutool.exe. Hay partidas con todo
+  desbloqueado en https://github.com/bucanero/dreamcast-saves
+- Exportar: arrastra solo el .vmu; las partidas salen en la carpeta
+  JUEGO_partidas como .VMI + .VMS.
+- No cambies el .vmu de un juego mientras este cargado en el mueble.
+
 Necesitas tu propio volcado del juego. Este programa no contiene juegos ni BIOS.

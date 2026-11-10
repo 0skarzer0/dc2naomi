@@ -43,6 +43,13 @@ usuario las dos filas de CSV (my y csv2) con el nombre nuevo.
 `wipiloader.py`, con copia `.orig`). Comprobar: `tail /var/log/dc2naomi_vmu.log` debe decir `sending … with …`,
 `watching …` y, cuando el juego guarda, `saved … blocks […]`.
 
+**6b. Partidas en la VMU (`tools/vmutool.py`, también `vmutool.exe`):** `vmutool.py import JUEGO.vmu PARTIDA.vmi`
+(el `.VMS` al lado), `export`, `list`, `format`. **Regla del usuario: al crear un juego nuevo, buscar en
+[bucanero/dreamcast-saves](https://github.com/bucanero/dreamcast-saves) una partida con todo desbloqueado de la misma
+región y meterla en su `.vmu`.** Con el juego cargado en el mueble: `dc2naomi_vmu.py stop IP` (baja lo último), importar,
+y volver a enviar con `dc2naomi_send.py`. En la Pi del Crazy Taxi la herramienta y las partidas están en `/root/vmu/`
+(con las tarjetas anteriores en `*.orig` / `*.bak`).
+
 **7. Al terminar cualquier cambio:** HANDOFF + README (agradecer todo lo usado), commit, push, y decir al usuario
 con claridad qué se ha probado en placa y qué sólo en Flycast.
 
@@ -465,6 +472,12 @@ o recargar.
   cuello (16,5 MB/s de escritura). `vcgencmd get_throttled`: 0x50000 en la del CT y 0x50005 en la estándar
   (subtensión ahora mismo en la estándar). Subir 96 MB a la Pi del CT tarda ~3 min y las órdenes de la terminal de la
   app se cortan a los 180 s: subir por tramos (append) o copiar la imagen a la SD a mano.
+- **`ct2h8` en placa (2026-11-10):** guarda en su `.vmu` (`C_TAXI02.SYS`, 20 bloques, bajado en ~47 s, dos veces).
+- **Partidas con todo desbloqueado (2026-11-10, en la Pi del Crazy Taxi):** `ct2h8_dc2naomi.vmu` ← `v51513`
+  (CT2 al 100 %; en Flycast desaparece "No Save File" y quedan 180 bloques libres) y `daytona5_dc2naomi.vmu` ←
+  `v57953` ("ALL CARS", versión USA: cabecera "DAYTONA USA"; las "DAYTONA USA 2001" son japonesas; se descartó
+  `v58535` porque cambia la configuración de mandos). Las tarjetas del usuario quedaron en `/root/vmu/*.orig`.
+  Placa: CT2 reenviado y arranca con la tarjeta del fichero; falta que el usuario lo vea en el juego.
 - Acceso a la Pi desde la sesión de Claude: la terminal de la app de escritorio solo llega a la red de casa si la
   cuenta tiene activado el acceso a **todos los dominios** (sin eso: "Network is unreachable").
 - **Programa de Windows (2026-11-10, v0.2):** activa la VMU por defecto salvo `catalog.NO_VMU` (`ct2h`, `ikaruga`,
