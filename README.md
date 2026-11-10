@@ -72,7 +72,8 @@ Los juegos probados pueden tener su propia configuración (por ejemplo, en Crazy
 ### Limitaciones
 
 - **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella.
-- **Memorias (VMU):** emulada, y probada en placa real solo con Namco Museum y Daytona USA 2001. Vive en la memoria
+- **Memorias (VMU):** emulada, y probada en placa real solo con Namco Museum y Daytona USA 2001 (con los scripts de
+  `wipi/` las partidas se conservan entre cargas de otros juegos: comprobado en placa con Daytona y Namco). Vive en la memoria
   de la placa y se pierde al apagarla, salvo que uses los scripts de [`wipi/`](wipi/README.md) (WiPi Netbooter), que
   guardan la tarjeta de cada juego en un fichero `.vmu` junto a su imagen. El resto de juegos (menos los tres que ya
   iban bien sin ella) la llevan activada sin haberse probado con ella en placa.

@@ -60,7 +60,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
 | Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
-| Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ con VMU emulada (`daytona4`): crea su fichero de 24 bloques y arranca | Crazy Taxi |
+| Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ **VMU en fichero (`daytona5`) confirmada**: guarda, se carga otro juego, se vuelve a cargar y recupera la partida | Crazy Taxi |
 | F355, 18 Wheeler | ❌ aparcados (Now Loading / negro tras SEGA) | Crazy Taxi |
 | KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
 | SF3 Double Impact | ❌ el hook no llega (menú que carga dos programas) | estándar |
@@ -443,6 +443,15 @@ o recargar.
 - Probado en placa: Namco Museum crea `NAMCOMUS.SYS` al arrancar (10 bloques, idénticos a los de Flycast), "Save
   Mini-Game to VMU" (`PACIT_NM.VMU`, bloques 0-8) llega al fichero en 24 s, y al reenviar el juego arranca con la
   tarjeta del fichero (`[2]` = 1, contador 0). Era también la primera vez que Namco arranca con VMU en placa.
+- **Prueba definitiva (2026-11-10, hecha por el usuario en el mueble Crazy Taxi):** `daytona5` guarda datos, se carga
+  `nmus7` (Namco Museum) y después otra vez `daytona5`: arranca con los datos de la sesión anterior y los carga bien.
+  Log de la Pi: `sending /boot/roms/daytona5_dc2naomi.bin.gz with /boot/roms/daytona5_dc2naomi.vmu at 0x1dd45000`.
+  La VMU por fichero queda **funcionando de punta a punta** (envío con el `.vmu`, vigilante, recarga).
+- **Siguiente (lo hace el usuario poco a poco):** reconvertir con VMU los juegos que se hicieron sin ella
+  (`tools/addvmu.py` para una imagen ya hecha, o el programa 0.2, que la pone por defecto). Ojo: CT2, Ikaruga y
+  YSGW se dieron por buenos sin VMU; si se les añade, probarlos de nuevo en placa.
+- Acceso a la Pi desde la sesión de Claude: la terminal de la app de escritorio solo llega a la red de casa si la
+  cuenta tiene activado el acceso a **todos los dominios** (sin eso: "Network is unreachable").
 - **Programa de Windows (2026-11-10, v0.2):** activa la VMU por defecto salvo `catalog.NO_VMU` (`ct2h`, `ikaruga`,
   `ysgw`: probados y buenos sin ella); `--vmu` / `--sin-vmu` fuerzan. Crea `JUEGO_dc2naomi[ct].vmu` vacío si no
   existe (`dc2naomi_vmu.blank()`) y el zip del workflow lleva `wipi/` (scripts + `LEEME_WIPI.txt`). Probado en
