@@ -1066,4 +1066,15 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
   muestra un texto de memory card ("There are not enough free memory blocks... Press START"): ese bucle es normal.
 - Con VMU (`18wheeler_dc2naomi` + loader actual, `0x28204`): en placa **0 llamadas al hook maple** (en Flycast 0x1ea, con
   0xe8 tramas de VMU) y muchas más llamadas GD. Pendiente: saber qué se ve en la pantalla del mueble.
+- **Lo que se veía en el mueble (el usuario):** no era negro sino el aviso de memory card (texto blanco pequeño sobre
+  negro). Con `18wheeler_dc2naomi` (la de VMU) además salía "the controller has been removed": **esa imagen tiene la
+  cabecera antigua** (lista de parches en otro sitio, todo ceros en la palabra 183+) y el residente actual no aplica
+  ningún parche, ni el del mando. `dcl.py` no lo comprueba: usar sólo imágenes con la cabecera actual (o `convhdr.py`).
+- **`18wheeler2_dc2naomi` (2026-11-10):** `addvmu.py 18wheeler_novmu… 18wheeler2… app/loader.bin` (md5 `c5c185b9…`).
+  Flycast: aviso normal de VMU → ADX → título → MODE SELECT → camión. VMU con `18LUN` de dreamcast-saves ("Perfect
+  Save! All Secret Unlocked!", `18WHDATA.SYS`, 5 bloques): en Flycast se salta el aviso y entra en Arcade. En la Pi del
+  Crazy Taxi con su `.vmu`, fila en el CSV (importada) y enviada; placa: pendiente de que el usuario la pruebe.
+- **`dcl.py` mataba `timehack.py` y no lo volvía a arrancar:** a los pocos minutos la placa se reinicia con "error 33
+  gateway is not found". Arreglado (lo relanza tras el envío). Ojo con `pkill -f` y `pgrep -f`: el patrón también casa
+  con la propia orden `bash -c` que lo contiene (hay que usar un fichero `.sh` aparte o `[t]` y que no aparezca el resto).
 

@@ -31,3 +31,6 @@ print("built", out, os.path.getsize(out), "flags", hex(fl), flush=True)
 os.system("pkill -f timehack.py")
 r = subprocess.call(["python3", "/sbin/piforce/dm_netboot/netdimm_send", ip, out, "--disable-crc"])
 print("netdimm_send rc", r, flush=True)
+# The WiPi keeps the NetDIMM alive with timehack.py (without it the board resets with "error 33 gateway is not found").
+subprocess.Popen("nohup python3 /sbin/piforce/timehack.py %s > /dev/null 2>&1 &" % ip, shell=True)
+print("timehack.py restarted", flush=True)
