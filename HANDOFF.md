@@ -56,7 +56,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 
 | Juego | Placa real | Mueble |
 |---|---|---|
-| Crazy Taxi 2 (US) | ✅ **Terminado** (`ct2h4`, mandos `ct`) | Crazy Taxi |
+| Crazy Taxi 2 (US) | ✅ **Terminado** (`ct2h7`, salto con doble toque); `ct2h8` = `ct2h7` + VMU en fichero (Flycast OK, placa pendiente) | Crazy Taxi |
 | Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
 | Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
@@ -450,6 +450,10 @@ o recargar.
 - **Siguiente (lo hace el usuario poco a poco):** reconvertir con VMU los juegos que se hicieron sin ella
   (`tools/addvmu.py` para una imagen ya hecha, o el programa 0.2, que la pone por defecto). Ojo: CT2, Ikaruga y
   YSGW se dieron por buenos sin VMU; si se les añade, probarlos de nuevo en placa.
+- **`ct2h8` (2026-11-10):** `addvmu.py ct2h7_dc2naomi.bin.gz ct2h8_dc2naomi.bin.gz app/loader.bin` sobre la `ct2h7` de
+  la Pi (md5 `2e3f5cb9…`). Sólo cambian 4 bytes de la cabecera tras el loader (flags `0x8004`, `vmu_offset`
+  `0x9844000`); parches y mandos iguales. Flycast: mando en el puerto A y VMU en el Socket 1 con 200 bloques libres.
+  Subida a `/boot/roms/` de la Pi del Crazy Taxi. Placa: pendiente.
 - Acceso a la Pi desde la sesión de Claude: la terminal de la app de escritorio solo llega a la red de casa si la
   cuenta tiene activado el acceso a **todos los dominios** (sin eso: "Network is unreachable").
 - **Programa de Windows (2026-11-10, v0.2):** activa la VMU por defecto salvo `catalog.NO_VMU` (`ct2h`, `ikaruga`,
