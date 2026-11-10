@@ -1071,6 +1071,7 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
   cabecera antigua** (lista de parches en otro sitio, todo ceros en la palabra 183+) y el residente actual no aplica
   ningún parche, ni el del mando. `dcl.py` no lo comprueba: usar sólo imágenes con la cabecera actual (o `convhdr.py`).
 - **`18wheeler2_dc2naomi` (2026-11-10):** `addvmu.py 18wheeler_novmu… 18wheeler2… app/loader.bin` (md5 `c5c185b9…`).
+- **Mandos de 18 Wheeler (2026-11-10, placa):** con `pad_map` 1 (`menu`) todo funciona pero no hay X/Y: no se puede cambiar la vista (Y) ni tocar la bocina (X), y con START pulsado los pedales siguen acelerando. Cambiado a `pad_map` 4 (`wheel`): START mantenido + acelerador = Y (vista), START + freno = X (bocina), START + palanca = arriba/abajo, START al soltar. Solo cambian 4 bytes de la cabecera (`pad_map` es la palabra 175 de la cabecera, en `0x40000 + 175*4` de la imagen; `vmu_offset` la 176). Imagen nueva: md5 `1d8c9cea030f37a2c503561d8688e4f2`, mismo nombre `18wheeler2_dc2naomi.bin.gz`. `tools/games.py` (`w18`) ya usa `wheel`.
   Flycast: aviso normal de VMU → ADX → título → MODE SELECT → camión. VMU con `18LUN` de dreamcast-saves ("Perfect
   Save! All Secret Unlocked!", `18WHDATA.SYS`, 5 bloques): en Flycast se salta el aviso y entra en Arcade. En la Pi del
   Crazy Taxi con su `.vmu`, fila en el CSV (importada) y enviada; placa: pendiente de que el usuario la pruebe.

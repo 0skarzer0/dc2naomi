@@ -444,6 +444,9 @@ GAMES["f355"] = _katana_drive("FERRARI 355 DC",  # no title starting "F355": Fly
                                   0x8C0DE946, 0x8C0EC81C)
 # 18 Wheeler: American Pro Trucker (USA, 2001; AM2). Same startup and maple driver (KAMUI2, Shinobi).
 GAMES["w18"] = _katana_drive("18 WHEELER DC", 0x8C15B2A6, 0x8C16A580)
+# Board, 2026-11-10: the "menu" map has no X/Y, so the view (Y) could not be changed; "wheel" gives
+# START + gas = Y (change view) and START + brake = X (horn).
+GAMES["w18"]["pads"] = "wheel"
 
 # Namco Museum without the emulated VMU (to tell a VMU problem from a maple one on the board).
 GAMES["nmus_novmu"] = dict(GAMES["nmus"], vmu=False)
