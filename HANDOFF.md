@@ -2,6 +2,50 @@
 
 Documento de traspaso entre sesiones (personas o IAs). **Actualízalo en cada sesión.**
 
+## Recetas (para quien continúe, persona o IA): lo que funciona, paso a paso
+
+Leer esto antes de nada. Cada receta se ha hecho de verdad en la sesión del 2026-11-10.
+
+**0. Reglas.** Nada con copyright al repositorio (ni imágenes, ni IP.BIN, ni BIOS). La contraseña de la Raspberry
+no se escribe en ningún fichero: va en la variable `PIPASS`. Un juego sólo cuenta como probado si funciona en la
+placa real (Flycast no tiene caché, ni excepciones de dirección, ni comprueba SB_MDAPRO). No decir "comprobado" sin
+haberlo visto. Cada prueba en placa le cuesta tiempo al usuario: antes de enviar, probar en Flycast.
+
+**1. Reconstruir el loader tras tocar `resident/` o `loader/`:** `bash app/make_loader.sh` → `app/loader.bin`.
+Direcciones de las variables del residente: `sh-elf-nm -n resident/resident.elf` (cambian en cada compilación).
+
+**2. Probar en Flycast:** `cd tools/flycast; FCBIN=RUTA/flycast FC_SYSM_RAM=1 FC_PEDALS=1 STEP=10 DUMP=1 bash
+run1.sh IMAGEN.bin 45 NOMBRE` → `NOMBRE.png` (capturas) y `/tmp/ram.bin` (los 32 MB de RAM: la dirección
+`0x8dXXXXXX` está en el desplazamiento `0x01XXXXXX`). Sin `NAOMI2=1`. La imagen va descomprimida.
+
+**3. Hablar con la placa** (scripts en `tools/board/`; la Pi del mueble Crazy Taxi es 192.168.68.60 y su NetDIMM
+10.0.0.4; la del mueble estándar 192.168.68.59 y 10.0.0.3):
+- desde un PC de la red del usuario: `PIHOST=… PIPASS=… python3 pi.py 'ORDEN'` y `piput.py LOCAL REMOTO`;
+- en la Pi: `pk.py IP DIR[:N]` (leer memoria con el juego en marcha) y
+  `nohup python3 dcl.py BASE.bin.gz LOADER.bin IP FLAGS > /tmp/dcl.log 2>&1 &` (imagen de prueba = BASE con otro
+  loader y flags añadidos; mirar `/tmp/dcl.log` hasta `netdimm_send rc 0`).
+- No usar `pkill -f X` en una orden cuyo propio texto contiene X (se mata a sí misma), ni `pgrep -f` sin el truco
+  `[x]`.
+
+**4. Un juego se queda en negro en la placa y en Flycast va:** caja negra. `dcl.py JUEGO LOADER IP 0x20200`
+(BLACKBOX + PCSAMPLE), esperar al cuelgue, cargar OTRA imagen sin `0x20000` y con residente ≥ `d93afaf`
+(p. ej. `dcl.py /boot/roms/ysgw7_dc2naomi.bin.gz LOADER_ANTIGUO IP 0`), y
+`pk.py IP 0x8dda0000:8 0x8dda0020:16 0x8dda0400:32 0x8dda0800:16`. `[1]` > 0 = hubo excepción: EXPEVT, SPC, SSR,
+TEA. Desensamblar el SPC (`sh-elf-objdump -d resident/resident.elf` si es `0x8dc0…`, o el 1ST_READ del juego con
+`-b binary -m sh4 -EL --adjust-vma=0x8c010000`). Sin excepción: mirar los últimos PC y hasta dónde llegaron los
+contadores. No apagar el mueble entre las dos cargas.
+
+**5. Poner la VMU a un juego ya convertido:** `python3 tools/addvmu.py VIEJA.bin.gz NUEVA.bin.gz app/loader.bin`
+(si dice "old header layout": antes `tools/convhdr.py VIEJA TMP "TITULO" PADMAP`). Copiar a `/boot/roms/` y dar al
+usuario las dos filas de CSV (my y csv2) con el nombre nuevo.
+
+**6. VMU en ficheros en una Raspberry nueva:** `wipi/README.md` (dos scripts a `/sbin/piforce/` y un cambio en
+`wipiloader.py`, con copia `.orig`). Comprobar: `tail /var/log/dc2naomi_vmu.log` debe decir `sending … with …`,
+`watching …` y, cuando el juego guarda, `saved … blocks […]`.
+
+**7. Al terminar cualquier cambio:** HANDOFF + README (agradecer todo lo usado), commit, push, y decir al usuario
+con claridad qué se ha probado en placa y qué sólo en Flycast.
+
 ## Objetivo
 
 Arrancar juegos de **Dreamcast** en una **NAOMI / NAOMI 2** por netboot (NetDIMM), sustituyendo la BIOS de
