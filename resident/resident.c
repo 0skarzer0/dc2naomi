@@ -871,6 +871,7 @@ static u32 lever_prev_fwd, lever_hop, hop_window;
    analog throttle on the L trigger (released = [4], floored = full) and START + gas = L released. Low 16 bits =
    Dreamcast buttons, 0x10000 = R trigger full, 0x20000 = L trigger full, 0x40000 = L trigger released. In RAM so
    that it can be tried live over the NetDIMM (pokes). */
+extern u32 jvs_lamp[4];
 u32 plane_cfg[8] = { DC_A_, DC_B_, 0, 0, 0, 0, 0, 255 };   /* [7] = how far the R trigger goes for 0x10000 */
 #define PLANE_PADS (H.pad_map == DIMM_PAD_PLANE || H.pad_map == DIMM_PAD_AB2)
 static u32 plane_cfg_set, autofire_off, brk_prev;
@@ -918,6 +919,10 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                START + gas = slow down, START + brake = autofire off/on (START + lever not used any more). */
             plane_cfg[0] = 0; plane_cfg[1] = DC_A_; plane_cfg[2] = 0; plane_cfg[3] = 0;
             plane_cfg[4] = 0x80; plane_cfg[5] = 0x10000; plane_cfg[6] = 2;
+            /* the arcade's lamps on the START button: the game is the arcade program on a 68000 emulator
+               (BURNER/AB2.BIN), whose I/O chip at 0x140000 is plain memory at 0x8ca40000; output port D
+               (0x140007) is the byte at 0x8ca40006 */
+            jvs_lamp[0] = 1; jvs_lamp[2] = 0x8ca40006; jvs_lamp[3] = 0x70;
         }
         plane_cfg_set = 1;
         u32 trig = 0, gas = acc;
@@ -1091,6 +1096,10 @@ static void devinfo(u32 *w) {
 #define MIE_EMPTY 0x32
 #define MIE_RESP_IO 0x87
 
+/* The cabinet's lamps. [0] != 0: send [1] to the JVS board's outputs with every poll (0x80 = the START button's
+   lamp on the Crazy Taxi cabinet, as Cannonball's output 0). [2] != 0: [1] follows a byte of the game's memory:
+   0x80 while (byte at [2]) & [3] is not zero. In RAM: can be tried over the NetDIMM. */
+u32 jvs_lamp[4];
 static int mie_state; /* 0 idle (send a request), 1 request sent, 2 fetch sent */
 static u32 *const my_list = (u32 *)RES_MAPLE;
 static u32 *const my_recv = (u32 *)(RES_MAPLE + 0x400);
@@ -1140,8 +1149,16 @@ static u32 mie_build(void) {
         /* SWINP 2 players x 2 bytes, COININP 2 slots, ANLINP 8 channels */
         static const u8 req[15] = {MIE_REQ, 0x77, 0, 0, 0, 0, 1, 7, 0x20, 2, 2, 0x21, 2, 0x22, 8};
         len = 4;
-        mset(data, 0, 16);
+        mset(data, 0, 20);
         mcpy(data, req, sizeof req);
+        if (jvs_lamp[0] && jvs_lamp[2]) jvs_lamp[1] = (*(volatile u8 *)jvs_lamp[2] & jvs_lamp[3]) ? 0x80 : 0;
+        if (jvs_lamp[0]) {
+            /* the cabinet's lamps: JVS general purpose output (OUTPUT1, 1 byte) after the inputs; its report byte
+               comes after theirs, so nothing moves in the answer */
+            data[7] = 10;
+            data[15] = 0x32; data[16] = 1; data[17] = (u8)jvs_lamp[1];
+            len = 5;
+        }
         mie_state = 1;
     }
     w[0] = 0x80000000u | len;                         /* last, port A */
