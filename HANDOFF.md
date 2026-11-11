@@ -1096,8 +1096,9 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
 ## Yu Suzuki Game Works separado: una imagen por juego (2026-11-11) — perfiles `outrun`, `hangon`, `powerdrift`, `afterburner2`, `spaceharrier`
 
 Hecho a petición del usuario, para el mueble Crazy Taxi. `python3 tools/mkgz.py PERFIL DISCO.chd SALIDA.bin.gz`
-(el programa de Windows sigue sacando la imagen única `ysgw`). Imágenes en la Pi .60 (`/boot/roms/*_dc2naomict.bin.gz`,
-md5 comprobado). **Sin probar en placa.** Sin VMU (el juego no la usa). Mismo disco entero (184 MB comprimida): quitar
+(el programa de Windows sigue sacando la imagen única `ysgw`). Imágenes en la Pi .60 como `/boot/roms/dc-*_dc2naomict.bin.gz` (md5 comprobado; prefijo `dc-` como las demás del
+usuario: `romname` con `dc-`, `audit_name` sin él), filas añadidas a `/boot/config/romsinfo.csv` (copia en
+`romsinfo.csv.bak_ysgw_split`) e importadas a `/var/www/html/csv/romsinfo.csv` con `importcsv.py`. **Sin probar en placa.** Sin VMU (el juego no la usa). Mismo disco entero (184 MB comprimida): quitar
 los ficheros de los otros juegos ahorraría poco (~30 MB de 213) y el menú carga sprites de todos.
 
 Cómo funciona el menú (YSC, dentro de `1ST_READ.BIN`):
