@@ -28,14 +28,19 @@ class ImageDisc(Gdi):
         assert struct.unpack_from("<I", hdr, 0)[0] == 0x47434459
         n = struct.unpack_from("<I", hdr, 36)[0]
         self.ranges = [struct.unpack_from("<3I", hdr, 40 + 12 * i) for i in range(n)]
-        self.base = base
+        self.arc = base                                      # where the archive starts in the file
+        self.base = struct.unpack_from("<I", hdr, 32)[0] - 150   # the LBA of IP.BIN (header ip_fad)
+        self.boot_fad, self.boot_size = struct.unpack_from("<2I", hdr, 24)
+        o = 40 + 12 * 32                                     # after DIMM_RANGES ranges
+        self.first_track, ntr, self.leadout_fad = struct.unpack_from("<3I", hdr, o)
+        self.toc = list(struct.unpack_from("<%dI" % ntr, hdr, o + 12))
         self.tracks = []
 
     def sector(self, lba):
         fad = lba + 150
         for f0, n, off in self.ranges:
             if f0 <= fad < f0 + n:
-                self.f.seek(self.base + off + (fad - f0) * 2048)
+                self.f.seek(self.arc + off + (fad - f0) * 2048)
                 return self.f.read(2048)
         return bytes(2048)
 
@@ -47,7 +52,7 @@ def main():
         d = ImageDisc(src) if ".bin" in os.path.basename(src) else open_disc(src)
         out = []
         for grp in [x for x in g["groups"] if x["file"] != "IP.BIN"]:   # (IP.BIN: the standard bootstrap, checked word by word)
-            data = d.sectors(45000, 16) if grp["file"] == "IP.BIN" else d.read_file(grp["file"])
+            data = d.sectors(d.base, 16) if grp["file"] == "IP.BIN" else d.read_file(grp["file"])
             out.append((grp["file"], hashlib.sha1(data).hexdigest()))
         print(f'    "{prof}": {out!r},')
 
