@@ -1,6 +1,6 @@
 # dc2naomi — juegos de Dreamcast en Sega NAOMI
 
-Convierte un juego de **Dreamcast** (tu propio volcado en `.chd` o `.gdi`) en una imagen para arrancarlo en una
+Convierte un juego de **Dreamcast** (tu propio volcado en `.chd` o `.gdi`, o un CD de autoarranque en `.cdi`) en una imagen para arrancarlo en una
 placa **Sega NAOMI / NAOMI 2** por **netboot (NetDIMM)**, sin modificar el hardware.
 
 La NAOMI es casi una Dreamcast (mismo SH-4, PowerVR2 y AICA, pero con más memoria). Lo que le falta para ejecutar
@@ -16,7 +16,7 @@ Hay dos ejecutables, uno por tipo de mueble. Los dos aceptan cualquier juego:
 | **`dc2naomi.exe`** | NAOMI estándar: 2 palancas, 6 botones por jugador y 2 START |
 | **`dc2naomict.exe`** | NAOMI Crazy Taxi: volante, acelerador, freno, palanca de 2 posiciones y START |
 
-**Uso:** arrastra el `.chd` del juego **encima del icono** del programa (o abre el programa y arrastra el archivo a
+**Uso:** arrastra el `.chd` (o `.gdi`, o `.cdi`) del juego **encima del icono** del programa (o abre el programa y arrastra el archivo a
 su ventana, y pulsa Enter). Al terminar tendrás `JUEGO_dc2naomi.bin.gz` (o `JUEGO_dc2naomict.bin.gz`) junto al
 `.chd`, listo para tu netbooter.
 
@@ -29,7 +29,14 @@ El programa te dice:
 - si la imagen **no cabe** en la NetDIMM de 512 MB. Se genera igualmente: recorta tú el juego (vídeos, datos que
   no uses) y vuelve a convertirlo. Las pistas de audio de CD se descartan siempre (ver limitaciones).
 
-Formatos de entrada: `.chd` (versión 5, la de cualquier `chdman` reciente) y `.gdi`. No hace falta `chdman`.
+Formatos de entrada: `.chd` (versión 5, la de cualquier `chdman` reciente), `.gdi` y `.cdi` (DiscJuggler 2, 3 y
+3.5: los CD de autoarranque, la forma habitual de las traducciones). No hace falta `chdman`.
+
+**CD de autoarranque (`.cdi`).** El juego está en la última sesión del CD, en su propia dirección (11700, 45000…),
+y así se sirve; el `1ST_READ.BIN` se descifra como hace la BIOS si viene cifrado (MIL-CD), y el relleno que llevan
+muchos de estos discos para colocar los datos al borde del CD (un archivo de un solo byte repetido, p. ej. 448 MB
+en Cannon Spike) no se copia a la imagen. La música en pistas de audio de CD no suena (ver limitaciones).
+Comprobado contra el disco original archivo por archivo (`tools/cmpimage.py`); **ninguno probado aún en placa**.
 
 **La memoria (VMU).** Salvo en los juegos que ya iban bien sin ella (Crazy Taxi 2, Ikaruga, Yu Suzuki GW), el
 programa activa la VMU emulada y deja junto al `.bin.gz` un `JUEGO_dc2naomi.vmu` vacío (128 KB). Para que las partidas
@@ -89,7 +96,8 @@ con partidas con todo desbloqueado de cientos de juegos):
 
 ### Limitaciones
 
-- **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella.
+- **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella (también los `.cdi` con
+  pistas de audio, como Unreal Tournament o Millennium Racer).
 - **Memorias (VMU):** emulada, y probada en placa real solo con Namco Museum y Daytona USA 2001 (con los scripts de
   `wipi/` las partidas se conservan entre cargas de otros juegos: comprobado en placa con Daytona y Namco). Vive en la memoria
   de la placa y se pierde al apagarla, salvo que uses los scripts de [`wipi/`](wipi/README.md) (WiPi Netbooter), que
@@ -148,6 +156,10 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - **[Flycast](https://github.com/flyinghead/flycast)** (flyinghead y colaboradores): el emulador con el que se ha
   probado todo antes de llevarlo a la placa, y su HLE de la BIOS de Dreamcast (reios) fue la referencia para las
   llamadas al sistema que imita el residente.
+- **cdirip** (DeXT) y los emuladores que leen imágenes de DiscJuggler (Flycast, Redream, Demul): el formato `.cdi`
+  (de DiscJuggler, de Padus) que lee `tools/cdi.py` sigue la descripción de cdirip; no se ha copiado código.
+- **Marcus Comstedt** y su `scramble` (en los `utils` de KallistiOS): el algoritmo del cifrado MIL-CD del
+  `1ST_READ.BIN` de los CD, que `tools/cdi.py` deshace como la BIOS de Dreamcast.
 - **[MAME](https://github.com/mamedev/mame)** y su equipo: el formato CHD y `chdman`. El lector de CHD de este
   proyecto (`tools/chd.py`) está escrito siguiendo su código (`chd.cpp`, `chdcodec.cpp`, `cdrom.cpp`, BSD-3-Clause).
 - **[DreamShell](https://github.com/DC-SWAT/DreamShell)** y **SWAT** ([DC-SWAT](http://www.dc-swat.ru)): DreamShell

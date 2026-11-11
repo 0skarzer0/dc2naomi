@@ -4,7 +4,8 @@ https://github.com/0skarzer0/dc2naomi
   dc2naomi.exe     mueble NAOMI estandar (2 palancas, 6 botones por jugador, 2 START)
   dc2naomict.exe   mueble NAOMI Crazy Taxi (volante, pedales, palanca, START)
 
-USO: arrastra el .chd (o .gdi) de tu juego encima del icono del programa que
+USO: arrastra el .chd (o .gdi, o un .cdi de autoarranque) de tu juego encima del
+icono del programa que
 corresponda a tu mueble. Al terminar tendras JUEGO_dc2naomi.bin.gz (o
 JUEGO_dc2naomict.bin.gz) junto al .chd, listo para tu netbooter, y casi siempre
 tambien JUEGO_dc2naomi.vmu: la memoria (VMU) del juego, vacia.

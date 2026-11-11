@@ -1380,3 +1380,36 @@ desbloqueado, subirlos a la Pi del mueble estándar y actualizar el CSV.
   (autoarranque en CD: segunda sesión, `1ST_READ.BIN` posiblemente cifrado para MIL-CD). Haría falta un lector de CDI,
   descifrar el `1ST_READ` y una TOC de CD en el residente. Aqua GT desapareció de la carpeta antes de convertirlo.
 - Ojo: un argumento con corchetes funciona (`[pitito]`); `dc2naomi.py` no expande comodines.
+
+## ⭐ Soporte de `.cdi` (CD de autoarranque, 2026-11-11, mañana) — `tools/cdi.py`
+
+Pedido por el usuario para los 6 CDI de `isosdream` (traducciones al español). Sin cambios en el residente ni en el
+loader: solo Python.
+- **`tools/cdi.py`**: lee DiscJuggler 2.0/3.0/3.5 (descriptor al final del archivo, como lo describe cdirip de DeXT;
+  sectores de 2048/2336/2352 bytes, modo 1 y 2) con la interfaz de `gdi.Gdi`. `base` = LBA del IP.BIN (la última
+  pista de datos). **El LBA del descriptor ya es el de la pista (índice 1)**; el pregap va guardado delante.
+- **`Gdi.base`** (45000 por defecto) sustituye las LBA fijas 45000/45016 en `gdi.py`, `build_image.py` (IP.BIN,
+  PVD, `ip_fad` de la cabecera), `dc2naomi.py` y `gensig.py` (`ImageDisc.base` era el desplazamiento del archivo:
+  ahora `arc`, y `base` sale del `ip_fad` de la cabecera).
+- **TOC:** el residente contesta como lector GD-ROM, así que el área de alta densidad del CDI es solo la pista del
+  IP.BIN, numerada 3 (`Cdi.hd_tracks`). Los sectores de las demás pistas de datos se sirven igual (Toy Story 2 tiene
+  los archivos en la sesión 1 y el IP.BIN en una sesión 2 de 302 sectores).
+- **Cifrado MIL-CD:** `cdi.descramble` (algoritmo de `scramble` de Marcus Comstedt, KallistiOS utils) y
+  `Cdi.boot_is_scrambled`: texto de 48+ bytes seguidos solo sobrevive sin cifrar (las cadenas cortas sobreviven al
+  barajado de bloques de 32 bytes y engañaban a la primera versión); un 1ST_READ que empieza por `nop` es plano.
+  Los 6 discos lo llevan **sin cifrar** (binhack). El descifrado está probado solo con datos propios (ida y vuelta).
+- **Relleno:** `Gdi.filler_files()` (archivos ≥ 4 MB de un solo byte repetido); `dc2naomi.py` los mete en `blank`
+  solo para `.cdi`. Cannon Spike: `0A.DAT`, 448 MB de `0x37` → imagen de 614 a 166 MB.
+- **`tools/cmpimage.py DISCO IMAGEN`**: relee la imagen como el residente (cabecera, TOC, rangos) y compara IP.BIN,
+  volumen ISO, programa de arranque y todos los archivos. Pasa en los 6 CDI. Regresión: SPF2X (CHD) convertido con el
+  código nuevo da la misma imagen descomprimida (md5 `8f22c293…`) que con el anterior.
+- **Conversión** (mandos `joy`, VMU de bucanero/dreamcast-saves, nombres cortos, filas en
+  `isosdream/filas_romsinfo.csv`; gzip nivel 1 para caber en los 3 min por orden del PC):
+  `cspike_es` 166 MB (VMU `v62540`, todo), `ut_es` 200 MB (`UNREALT`, arenas USA; sin música: 18 pistas CDDA),
+  `ssf2x_es` 332 MB (`SSF2X`), `millennium_es` 83 MB (sin partida publicada; sin música: 8 pistas CDDA; el resto del
+  CD era relleno a cero), `buzz_es` **559 MB, no cabe** (`v18060`), `toystory2_es` **674 MB, no cabe** (`v38204`).
+  Los 6 con arranque estándar, cable y gancho de mandos encontrados por `findpatch`. **Nada probado en Flycast ni en
+  placa** (no había Flycast ni BIOS de NAOMI en esta sesión).
+- **Riesgos a mirar si no arrancan:** (1) el residente dice "GD-ROM" (`GET_DRV_STAT` = `0x80`) y un juego parcheado
+  para CD-R puede esperar CD (`0x20`) o pedir la TOC del área 0 (hoy fija, de GD); (2) el IP.BIN de estos discos
+  puede llevar un cargador propio (binhack) que el residente ejecuta como bootstrap; probar con `DIMM_NOIPBOOT`.
