@@ -31,7 +31,9 @@ def main(src, image):
 
     check(f"IP.BIN en la LBA {img.base} (disco: {disc.base})", img.base == disc.base)
     check("IP.BIN igual", img.sectors(img.base, 16) == disc.sectors(disc.base, 16))
-    check("volumen ISO9660 igual", img.sectors(img.base + 16, 32) == disc.sectors(disc.base + 16, 32))
+    first = min((lba for _, lba, _ in disc.walk() if lba > disc.base + 16), default=disc.base + 48)
+    k = max(1, min(32, first - (disc.base + 16)))          # the volume descriptors and tables, up to the first file
+    check(f"volumen ISO9660 igual ({k} sectores)", img.sectors(img.base + 16, k) == disc.sectors(disc.base + 16, k))
     boot = disc.boot_file() if hasattr(disc, "boot_file") else "1ST_READ.BIN"
     blba, bsize = disc.find(boot)
     check(f"{boot}: FAD {img.boot_fad} y {img.boot_size} bytes", img.boot_fad == blba + 150 and img.boot_size == bsize)
