@@ -872,7 +872,11 @@ static u32 lever_prev_fwd, lever_hop, hop_window;
    Dreamcast buttons, 0x10000 = R trigger full, 0x20000 = L trigger full, 0x40000 = L trigger released. In RAM so
    that it can be tried live over the NetDIMM (pokes). */
 extern u32 jvs_lamp[4];
-u32 plane_cfg[8] = { DC_A_, DC_B_, 0, 0, 0, 0, 0, 255 };   /* [7] = how far the R trigger goes for 0x10000 */
+u32 plane_cfg[9] = { DC_A_, DC_B_, 0, 0, 0, 0, 0, 255, 3 };   /* [7] = how far the R trigger goes for 0x10000;
+   [8] = rapid fire on the gas pedal: [0] on for [8] polls and off for [8] (one poll per frame: 2 = 15 shots a
+   second, 3 = 10, chosen by the user for Space Harrier on the board, 2026-11-12; 0 = held, the game's own slow
+   autofire). */
+static u32 rapid_count;
 #define PLANE_PADS (H.pad_map == DIMM_PAD_PLANE || H.pad_map == DIMM_PAD_AB2)
 static u32 plane_cfg_set, autofire_off, brk_prev;
 static u32 plane_mode;                                  /* DIMM_PAD_YSGW: 0 driving, 1 plane */       /* DIMM_PAD_CT: double tap forward = Crazy Hop */
@@ -972,7 +976,11 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                    the analog stick; gas = A (fire), brake = B (missile); no triggers */
                 if (fwd) { b |= DC_UP; y = 0; }
                 if (back) { b |= DC_DOWN; y = 255; }
-                if (acc > 64) trig |= plane_cfg[0];
+                if (acc > 64) {
+                    u32 r = plane_cfg[8];
+                    if (!r || rapid_count < r) trig |= plane_cfg[0];
+                    if (r && ++rapid_count >= 2 * r) rapid_count = 0;
+                } else rapid_count = 0;
                 if (brk > 64) trig |= plane_cfg[1];
                 acc = brk = 0;
             } else {

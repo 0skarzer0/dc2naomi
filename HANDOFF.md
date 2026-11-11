@@ -1162,7 +1162,10 @@ Dónde lee el mando: el menú copia el periférico Katana (`0x8c1f5060`) en `0x8
 con los bytes cambiados) con `0x8c0fec80`; After Burner II es `BURNER/AB2.BIN` (código SH4, cargado en `0x8cb80000`,
 más `PROG.BIN` 68000 del arcade) y recibe las funciones del menú por una tabla copiada en `0x8c400000`. (`0x8c2e71ac`,
 la otra tabla de mandos, es la de OutRun/el menú.)
-Space Harrier sigue con `plane` (acelerador A, freno B): **sin probar en placa**.
+**Space Harrier: probado en placa (usuario, 2026-11-12: "funciona todo genial", "así está perfecto").** Mapa `plane`:
+volante = izquierda/derecha, palanca = arriba/abajo, acelerador y freno disparan (A y B). El autodisparo del juego
+(botón mantenido) es lento: **el acelerador lleva disparo rápido** (`plane_cfg[8]` = 3: A pulsado 3 sondeos y suelto 3,
+10 disparos por segundo; probados en directo 15 y 30, el usuario eligió 10). El freno, botón mantenido como siempre.
 
 **Resultado en placa (usuario, 2026-11-11 03:59):** OutRun y Hang-On perfectos. Power Drift: **el sonido petardea y no va
 del todo fluido, solo con música** (la demo sin música va bien); en su Dreamcast va perfecto. After Burner II y Space
