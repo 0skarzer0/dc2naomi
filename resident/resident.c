@@ -850,6 +850,8 @@ static u32 wheel(u32 v) {
     return r > 255 ? 255 : r;
 }
 
+#define DC_A_ 0x0004
+#define DC_B_ 0x0002
 #define DC_C 0x0001
 #define DC_B 0x0002
 #define DC_A 0x0004
@@ -864,6 +866,12 @@ static u32 wheel(u32 v) {
 static u32 start_frames, start_used, start_pulse;
 #define HOP_WINDOW 60                                    /* polls (one per frame: ~1 s) */
 static u32 lever_prev_fwd, lever_hop, hop_window;
+/* plane controls (DIMM_PAD_PLANE, and DIMM_PAD_YSGW in plane mode): what gas, brake, START + lever forward and START
+   + lever back send, and [4] the L trigger otherwise. Low 16 bits = Dreamcast buttons, 0x10000 = R trigger full,
+   0x20000 = L trigger full, 0x40000 = L trigger released. In RAM so that it can be tried live over the NetDIMM. */
+u32 plane_cfg[5] = { DC_A_, DC_B_, 0, 0, 0 };
+#define PLANE_PADS (H.pad_map == DIMM_PAD_PLANE || H.pad_map == DIMM_PAD_AB2)
+static u32 plane_cfg_set;
 static u32 plane_mode;                                  /* DIMM_PAD_YSGW: 0 driving, 1 plane */       /* DIMM_PAD_CT: double tap forward = Crazy Hop */
 
 static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
@@ -888,7 +896,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         x = (p & 0x0800) ? 0 : (p & 0x0400) ? 255 : 128;
         y = (p & 0x2000) ? 0 : (p & 0x1000) ? 255 : 128;
     } else if (jvs.valid && (H.pad_map == DIMM_PAD_WHEEL || H.pad_map == DIMM_PAD_CT || H.pad_map == DIMM_PAD_YSGW ||
-                             H.pad_map == DIMM_PAD_PLANE)) {
+                             PLANE_PADS)) {
         /* Crazy Taxi cabinet default for games not tuned yet (2026-11-09). START is sent on release, and only if
            nothing else was used while it was held; while held it shifts the controls: lever = up/down, brake = X,
            gas = Y. Otherwise lever forward = B, back = A, gas = R trigger, brake = L trigger. The wheel is the
@@ -899,8 +907,23 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
         u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
-        if (H.pad_map == DIMM_PAD_PLANE) plane_mode = 1;     /* After Burner II / Space Harrier on their own */
-        if (start) {
+        if (PLANE_PADS) plane_mode = 1;     /* After Burner II / Space Harrier on their own */
+        if (H.pad_map == DIMM_PAD_AB2 && !plane_cfg_set) {
+            /* After Burner II (tried live on the board with the user, 2026-11-11): R = vulcan, A = missile, and the
+               L trigger is the arcade's analog throttle: released = slowest, full = afterburner, half = cruise (as
+               MAME's default). Gas = vulcan, brake = missile, START + lever forward / back = throttle full / off. */
+            plane_cfg[0] = 0x10000; plane_cfg[1] = DC_A_; plane_cfg[2] = 0x20000; plane_cfg[3] = 0x40000;
+            plane_cfg[4] = 0x80;
+        }
+        plane_cfg_set = 1;
+        u32 trig = 0;
+        if (start && PLANE_PADS) {
+            if (fwd) trig |= plane_cfg[2];
+            if (back) trig |= plane_cfg[3];
+            if (fwd || back) start_used = 1;
+            start_frames = 1;
+            acc = brk = 0;
+        } else if (start) {
             if (fwd) b |= DC_UP;
             if (back) b |= DC_DOWN;
             if (brk > 64) b |= DC_X;
@@ -930,13 +953,13 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                 if (fwd) b |= lever_hop ? DC_Y : DC_B;
                 if (back) { b |= DC_A; hop_window = 0; }
                 if (hop_window) hop_window--;
-            } else if ((H.pad_map == DIMM_PAD_YSGW || H.pad_map == DIMM_PAD_PLANE) && plane_mode) {
+            } else if ((H.pad_map == DIMM_PAD_YSGW || PLANE_PADS) && plane_mode) {
                 /* plane: lever forward = up (as the arcade stick pushed forward), back = down, on the d-pad and
                    the analog stick; gas = A (fire), brake = B (missile); no triggers */
                 if (fwd) { b |= DC_UP; y = 0; }
                 if (back) { b |= DC_DOWN; y = 255; }
-                if (acc > 64) b |= DC_A;
-                if (brk > 64) b |= DC_B;
+                if (acc > 64) trig |= plane_cfg[0];
+                if (brk > 64) trig |= plane_cfg[1];
                 acc = brk = 0;
             } else {
                 if (fwd) b |= DC_B;
@@ -944,10 +967,15 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             }
         }
         lever_prev_fwd = fwd;
+        b |= trig & 0xffff;
+        if (trig & 0x10000) acc = 255;
+        if (PLANE_PADS) brk = plane_cfg[4];
+        if (trig & 0x20000) brk = 255;
+        if (trig & 0x40000) brk = 0;
         if (start_pulse) { start_pulse--; b |= DC_START; }
         if (H.pad_map == DIMM_PAD_YSGW && start) {
             /* (START + wheel at the end = change of controls: no d-pad) */
-        } else if ((H.pad_map == DIMM_PAD_YSGW || H.pad_map == DIMM_PAD_PLANE) && plane_mode) {
+        } else if ((H.pad_map == DIMM_PAD_YSGW || PLANE_PADS) && plane_mode) {
             if (x < 64) b |= DC_LEFT;                /* plane: the d-pad from half the wheel's travel */
             if (x > 191) b |= DC_RIGHT;
         } else {

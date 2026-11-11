@@ -624,5 +624,5 @@ GAMES["ysgw"]["disc_patches"] = [("PD.SHX", 0x7a4, bytes.fromhex("c402"), bytes.
 GAMES["outrun"] = _ysgw_one("OUTRUN", "wheel", 2, 8)
 GAMES["hangon"] = _ysgw_one("HANG-ON", "wheel", 0, 10)
 GAMES["powerdrift"] = _ysgw_one("POWER DRIFT", "wheel", 4, "pd")
-GAMES["afterburner2"] = _ysgw_one("AFTER BURNER II", "plane", 3, 0)
+GAMES["afterburner2"] = _ysgw_one("AFTER BURNER II", "ab2", 3, 0)
 GAMES["spaceharrier"] = _ysgw_one("SPACE HARRIER", "plane", 1, 0)

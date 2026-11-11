@@ -1126,7 +1126,20 @@ Flycast: OutRun, Hang-On y Power Drift llegan a la partida; After Burner II y Sp
 Mandos: OutRun, Hang-On y Power Drift `wheel` (el mueble por defecto). After Burner II y Space Harrier `plane`
 (`DIMM_PAD_PLANE` = 6, nuevo): el modo avión de `ysgw` siempre (volante = izquierda/derecha y stick X, cruceta desde
 media vuelta; palanca adelante = arriba, atrás = abajo; acelerador = A disparo, freno = B misil), START como `wheel`.
-**Pendiente de confirmar en placa** qué botón es disparo y cuál misil, y el sentido de la palanca (ya lo estaba en `ysgw6`).
+**After Burner II: mandos confirmados en placa (usuario, 2026-11-11, "así está perfecto")**, mapa propio `ab2`
+(`DIMM_PAD_AB2` = 7). Probado en directo, cambiando `plane_cfg[]` del residente con pokes por la NetDIMM (script
+`pc.py`: `plane_cfg` = {acelerador, freno, START+palanca adelante, START+palanca atrás, gatillo L en reposo}; bits bajos =
+botones de Dreamcast, 0x10000 = gatillo R a tope, 0x20000 = L a tope, 0x40000 = L suelto). En este juego: **R = vulcan,
+A = misil, el gatillo L es la palanca de gases analógica del arcade** (suelto = lo más lento, a tope = postcombustión;
+la velocidad de crucero de MAME, "casi 2", sale con L a media, 0x80); B, X, Y, C y Z no hacen nada. Queda: volante =
+izquierda/derecha, palanca = arriba/abajo, acelerador = vulcan, freno = misil, START + palanca adelante = acelerar, START
++ palanca atrás = frenar, START solo = START. Antes (mapa `plane`: acelerador A, freno B, L suelto) volaba siempre
+"frenado" y el acelerador lanzaba misiles.
+Dónde lee el mando: el menú copia el periférico Katana (`0x8c1f5060`) en `0x8c2e6f3c` (16 bytes por puerto, +2 botones
+con los bytes cambiados) con `0x8c0fec80`; After Burner II es `BURNER/AB2.BIN` (código SH4, cargado en `0x8cb80000`,
+más `PROG.BIN` 68000 del arcade) y recibe las funciones del menú por una tabla copiada en `0x8c400000`. (`0x8c2e71ac`,
+la otra tabla de mandos, es la de OutRun/el menú.)
+Space Harrier sigue con `plane` (acelerador A, freno B): **sin probar en placa**.
 
 **Resultado en placa (usuario, 2026-11-11 03:59):** OutRun y Hang-On perfectos. Power Drift: **el sonido petardea y no va
 del todo fluido, solo con música** (la demo sin música va bien); en su Dreamcast va perfecto. After Burner II y Space
