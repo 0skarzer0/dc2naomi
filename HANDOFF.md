@@ -1226,9 +1226,8 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      comprimir `135fbf4cc009f343ad8ec418b44b9792`; solo cambian esos bytes, en el offset 432170556 de la imagen).
      Hecha en el PC con **`tools/patch_gz.py IN OUT OFFSET VIEJOS NUEVOS`** (parchea un `.bin.gz` sin cargarlo en
      RAM, vale en la Pi) a partir de la limpia. Está en la carpeta del PC `dc2naomi/sr2_30fps/` junto con el `.vmu`.
-     **Falta subirla a la Pi .60** (`/boot/roms`, sustituyendo la anterior; el CSV no cambia): la contraseña de la
-     Pi no se guarda en ningún sitio y esta sesión ya no la tiene; con `PIPASS` puesta, `upr.py` y listo, o que la
-     copie el usuario.
+     **Subida a la Pi .60** (`/boot/roms`, md5 comprobado allí; sustituye a la anterior, el `.vmu` no se ha tocado y
+     el CSV no cambia). Pendiente: que el usuario la pruebe en placa.
    - Descartado: no hay instrucción `sleep` en el núcleo (no es STBCR/standby); las esperas del FIFO G2 no se
      atascan en placa (tabla de variantes).
    - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del
