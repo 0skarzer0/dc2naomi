@@ -1328,3 +1328,19 @@ desbloqueado, subirlos a la Pi del mueble estándar y actualizar el CSV.
   0,15 MB/s (ping al router 70-250 ms). La Pi no tiene `rsync`; su `/boot` queda al 93 % (2,0 GB libres).
 - **Estado:** nada de este lote probado en placa ni en Flycast con VMU. `sf3di` sigue roto según el catálogo (dos
   programas lanzados por un menú; los mandos no llegan); se subió porque el usuario lo pidió.
+
+## Segundo lote para el mueble estándar: `isosdream` (2026-11-11, 06:00) — sin subir a la Pi (lo hace el usuario)
+
+`app/dc2naomi.py --cab joy --batch` en el PC del usuario; nombres cortos; filas en `isosdream/filas_romsinfo.csv`.
+- `dcop_es` (Dynamite Cop PAL, traducción al español de pitito, Detonator Pack integrado): 198 MB. VMU `v18467`
+  (`D_COP_PL.REC`, la única partida PAL publicada: misiones 4-6 abiertas, no todo). El IP.BIN no es el estándar.
+- `shutokou2_en` (Shutokou Battle 2 JP, traducción de SGGG): 365 MB. VMU `shoudu2` ("Jap Perfect Save! All Open!").
+- `soulcal` (Soulcalibur USA): **683 MB, no cabe** en la NetDIMM de 512 MB. VMU `00000031` (todo abierto, USA).
+- `rcotton_en` (Rainbow Cotton JP, traducción de Derek Pascarella): **873 MB, no cabe**; comprimido con nivel 1 para
+  caber en los 3 min de una orden (154 s). VMU `RAINCOT` (selección de voces).
+- Los cuatro son juegos desconocidos para el catálogo (parches de `findpatch`). Nada probado en Flycast ni en placa.
+- **CDI (6, sin convertir):** el programa solo lee `.chd`/`.gdi`. Buzz Lightyear of Star Command, Cannon Spike,
+  Millennium Y2K Fighters, SSF2X, Toy Story 2 y Unreal Tournament, todos traducciones al español en CDI
+  (autoarranque en CD: segunda sesión, `1ST_READ.BIN` posiblemente cifrado para MIL-CD). Haría falta un lector de CDI,
+  descifrar el `1ST_READ` y una TOC de CD en el residente. Aqua GT desapareció de la carpeta antes de convertirlo.
+- Ojo: un argumento con corchetes funciona (`[pitito]`); `dc2naomi.py` no expande comodines.
