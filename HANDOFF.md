@@ -19,7 +19,7 @@ run1.sh IMAGEN.bin 45 NOMBRE` → `NOMBRE.png` (capturas) y `/tmp/ram.bin` (los 
 `0x8dXXXXXX` está en el desplazamiento `0x01XXXXXX`). Sin `NAOMI2=1`. La imagen va descomprimida.
 
 **3. Hablar con la placa** (scripts en `tools/board/`; la Pi del mueble Crazy Taxi es 192.168.68.60 y su NetDIMM
-10.0.0.4; la del mueble estándar 192.168.68.59 y 10.0.0.3):
+10.0.0.4; la del mueble estándar **192.168.68.250** (antes .59, cambiada el 2026-11-11 por un choque de IP) y 10.0.0.3):
 - desde un PC de la red del usuario: `PIHOST=… PIPASS=… python3 pi.py 'ORDEN'` y `piput.py LOCAL REMOTO`;
 - en la Pi: `pk.py IP DIR[:N]` (leer memoria con el juego en marcha) y
   `nohup python3 dcl.py BASE.bin.gz LOADER.bin IP FLAGS > /tmp/dcl.log 2>&1 &` (imagen de prueba = BASE con otro
@@ -1044,7 +1044,7 @@ que con los mapas `wheel`/`ct` START cuenta como "usado" (pedal > 64) y no se en
 ## Depuración en la placa real por la red (2026-11-09 noche)
 
 El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenciales solo en el chat, no aquí):
-`192.168.68.59` ("virtua") → NetDIMM `10.0.0.3` (NAOMI 2, mueble estándar) y `192.168.68.60` ("Netbooter") → NetDIMM
+`192.168.68.59` ("virtua"; desde el 2026-11-11 **`192.168.68.250`**) → NetDIMM `10.0.0.3` (NAOMI 2, mueble estándar) y `192.168.68.60` ("Netbooter") → NetDIMM
 `10.0.0.4` (NAOMI 2, mueble Crazy Taxi). Firmware 3.17, 512 MB. El WiPi lleva las herramientas de DragonMinded en
 `/sbin/piforce/dm_netboot` (`netdimm.NetDimm(ip).info()/peek()/poke()`), que se usan desde la Raspberry.
 - `peek` con un juego de NAOMI normal: contesta al momento. **Con nuestro residente: 17-30 s y basura** (nadie
@@ -1304,3 +1304,27 @@ Módulos de la ROM de SR2: nk, coredll, device, gwes, filesys, sysstart, platuti
 wsegacd (`0x8c093000`, virtual `0x01df1000`), ddraw, d3dim, ddhal, sndcore, dinputx, ole32, cemm...
 **Regresión:** CT2 (`ct2h8`) con el loader nuevo llega igual a la pantalla de la VMU en Flycast (los cambios de CE
 solo actúan con la MMU encendida).
+
+## Lote de lucha + YSGW con VMU para el mueble estándar (2026-11-11, madrugada)
+
+Pedido por el usuario: convertir los 7 CHD de su carpeta `dreamcastisos` con mandos normales (`joy`) y VMU con todo
+desbloqueado, subirlos a la Pi del mueble estándar y actualizar el CSV.
+- **Red:** la Pi `virtua` tenía la `192.168.68.59` estática y otro aparato (MAC `80:c5:f2:1c:4c:3d`, TTL 255) tenía la
+  misma IP: el móvil llegaba a la Pi y el PC al otro aparato ("Connection refused"). El usuario la pasó a la
+  **`192.168.68.250`** (fuera del DHCP). NetDIMM sigue en `10.0.0.3`.
+- **Conversión** en el PC del usuario (terminal de la app de escritorio): `app/dc2naomi.py --cab joy --batch CHD`,
+  29-94 s por juego. Ojo: un proceso lanzado en segundo plano muere al acabar la orden (límite de 3 min por orden):
+  hay que convertir en primer plano, uno o dos por orden.
+- **VMU** (`tools/vmutool.py import`, partidas de bucanero/dreamcast-saves): Garou `garou1` (galería al 100 %), KOF
+  2002 `KOF_2002` (todo), SSF2X `SSF2X` (todo y menú DIP; versión japonesa), 3rd Strike `v37955` (todos los
+  secretos, partida USA), Double Impact `v50554` (todo). Super Puzzle Fighter II X: no hay partida publicada, tarjeta
+  vacía. YSGW: sin VMU (`catalog.NO_VMU`).
+- **Pi** (`/boot/roms/`, md5 comprobado de los 13 ficheros): `kof02`, `motw`, `sf3ts`, `spf2x`, `ssf2x` sustituidos
+  (eran las imágenes del 2026-11-09 sin hueco de VMU; mismos nombres, así que sus filas siguen valiendo) y nuevos
+  `sf3di`, `ysgw` (`*_dc2naomi.bin.gz`) con fila en `/boot/config/romsinfo.csv` (copia en
+  `romsinfo.csv.bak_dc2naomi_vmu`) importada a `/var/www/html/csv/romsinfo.csv` con `importcsv.py`. Cada juego con
+  VMU tiene su `*_dc2naomi.vmu` al lado; `wipiloader.py` de esa Pi ya envía con `dc2naomi_send.py`.
+- Subida reanudable desde el PC (`tail -c +N | ssh "cat >> X.part"`, md5 y `mv`): el Wi-Fi del portátil iba de 3 MB/s a
+  0,15 MB/s (ping al router 70-250 ms). La Pi no tiene `rsync`; su `/boot` queda al 93 % (2,0 GB libres).
+- **Estado:** nada de este lote probado en placa ni en Flycast con VMU. `sf3di` sigue roto según el catálogo (dos
+  programas lanzados por un menú; los mandos no llegan); se subió porque el usuario lo pidió.
