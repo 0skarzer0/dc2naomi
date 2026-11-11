@@ -24,8 +24,8 @@ class CdiError(Exception):
 
 
 def parse(path):
-    """[(session, number, mode, lba, sectors, sector_size, file_offset)] for every track; lba and file_offset are
-    those of index 1 (after the pregap). mode: 0 audio, 1 mode 1, 2 mode 2."""
+    """[(session, number, mode, lba, sectors, sector_size, file_offset)] for every track; lba (FAD - 150) and
+    file_offset are those of index 1 (after the pregap). mode: 0 audio, 1 mode 1, 2 mode 2."""
     size = os.path.getsize(path)
     f = open(path, "rb")
     f.seek(size - 8)
@@ -79,7 +79,8 @@ def parse(path):
                 raise CdiError("tamaño de sector CDI desconocido (%d)" % ss_code)
             ss = SECTOR_SIZES[ss_code]
             number += 1
-            tracks.append((session, number, mode, lba + pregap, length, ss, pos + pregap * ss))
+            # the descriptor's LBA is already the track's own (index 1); its pregap is stored before it
+            tracks.append((session, number, mode, lba, length, ss, pos + pregap * ss))
             pos += total * ss
         f.seek(4 + 8 + (1 if version != CDI_V2 else 0), 1)   # the session's trailer
     if pos > size:
