@@ -1192,7 +1192,7 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
    - **✅ CONFIRMADO (usuario, 00:31): con la pila propia en los ganchos "funciona perfectamente"** en la placa
      (diagnóstico 3). Era eso: fallo de TLB con SR.BL = 1 al apilar en la pila del hilo interrumpido.
      Falta la música de las carreras (pistas CDDA 4-20, no se reproducen).
-   - **Imagen limpia definitiva:** `sega_rally2_dc2naomi.bin.gz` md5 `b61bf3b07d478e1f1ea7f2acfe77f37e` (sin comprimir
+   - **Imagen limpia (variable, sin el parche de 30 FPS; sustituida el 2026-11-11, ver más abajo):** `sega_rally2_dc2naomi.bin.gz` md5 `b61bf3b07d478e1f1ea7f2acfe77f37e` (sin comprimir
      `8aed51a83f3f21dc7335a20164160f99`), perfil `sr2` (flags `0x48004`, mandos `wheel`), en `/boot/roms` de la Pi .60
      y en el PC. Lleva también el gancho del tick (peek por red con CE en marcha). `.vmu` con «US - ALL UNLOCKED».
    - El vigilante viejo de CT2 no tocó su tarjeta (el usuario tiene los ficheros renombrados con prefijo `dc-`:
@@ -1203,6 +1203,32 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      tiene trucos en la pantalla de título: 30 FPS = Arriba, A, Abajo, Abajo, Izq, Der, B, B, Arriba; 60 FPS (con menos
      detalle) = lo mismo acabando en Abajo. Quiere los 30 FPS por defecto: buscar la tabla de la secuencia en
      `RALLY2.EXE` y dejar el modo activado de serie, o que el residente teclee la secuencia solo.
+   - **✅ 30 FPS de serie (2026-11-11), hecho; falta probarlo en placa.** La tabla no está en `RALLY2.EXE` sino en
+     **`TITLE.DLL`** (pantalla de título). Cómo se encontró: el `.gdi` original en Flycast modo Dreamcast, el truco
+     tecleado con `xdotool` (`scr/run_seq.sh`: A = tecla `x`, B = `c`, cruceta = flechas, 0,15 s por tecla, a los
+     24 s) y volcados de RAM comparados (30 FPS / 60 FPS / secuencia mala, 2 pasadas de cada). Sale la tabla en
+     `.data` de TITLE.DLL (ImageBase 0x10000000): botones del juego Arriba 0x200, Abajo 0x400, Izq 0x800, Der
+     0x1000, A 1, B 2; cuatro códigos, cada uno 9 (o 14) palabras + contador de progreso: 0x1000e0e8 (14 botones,
+     contador 0x1000e120), 0x1000e124, 0x1000e14c, 0x1000e174 (60 FPS) y **0x1000e19c (30 FPS)**. La función que
+     los comprueba cada fotograma está en 0x10001094. Al completar: 60 FPS → `**(*0x1000ebf0) |= 1`; **30 FPS →
+     `**(*0x1000ebf0) |= 0x80000000`** (palabra de opciones del juego; en modo DC queda en la RAM física 0xd8ace0)
+     y suena el aviso (método 8 del objeto de `*0x1000e4bc`, r5 = 3, r6 = 2).
+     **Parche:** en TITLE.DLL offset de fichero 0x63C (VA 0x1000123c, 18 bytes), la comprobación del cuarto código
+     se cambia por `mov.l lit,r1; mov.l @r1,r1; mov.l lit(0x80000000),r3; mov.l @r1,r5; mov.l @r5,r2; or r3,r2;
+     mov.l r2,@r5; bra 0x10001280; nop` (usa los literales que ya había: sin tocar relocalizaciones): el bit se pone
+     en cada fotograma del título, sin sonido. Los otros trucos siguen funcionando (el de 60 FPS también).
+     Como CE carga la DLL más tarde en memoria virtual, los parches de RAM del residente no llegan: opción nueva del
+     builder **`disc_patches = [(fichero, offset, bytes viejos, bytes nuevos)]`** (`build_image.py`, cambia los
+     sectores del disco dentro de la imagen; comprueba los bytes viejos). Perfil `sr2` (y `sr2_diag`).
+     Comprobado en Flycast: modo DC con el disco parcheado → palabra = 0x80000000 sin tocar nada; imagen NAOMI →
+     arranca, título y demo normales.
+     **Imagen nueva (mismo nombre):** `sega_rally2_dc2naomi.bin.gz` md5 `2e2b65554234b059ddb50d8e61f736e9` (sin
+     comprimir `135fbf4cc009f343ad8ec418b44b9792`; solo cambian esos bytes, en el offset 432170556 de la imagen).
+     Hecha en el PC con **`tools/patch_gz.py IN OUT OFFSET VIEJOS NUEVOS`** (parchea un `.bin.gz` sin cargarlo en
+     RAM, vale en la Pi) a partir de la limpia. Está en la carpeta del PC `dc2naomi/sr2_30fps/` junto con el `.vmu`.
+     **Falta subirla a la Pi .60** (`/boot/roms`, sustituyendo la anterior; el CSV no cambia): la contraseña de la
+     Pi no se guarda en ningún sitio y esta sesión ya no la tiene; con `PIPASS` puesta, `upr.py` y listo, o que la
+     copie el usuario.
    - Descartado: no hay instrucción `sleep` en el núcleo (no es STBCR/standby); las esperas del FIFO G2 no se
      atascan en placa (tabla de variantes).
    - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del

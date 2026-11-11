@@ -81,7 +81,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
-| Sega Rally 2 (USA; arranca con Windows CE) | experimental | ✅ probado con VMU en fichero (sin la música de las carreras: son pistas de audio CD) |
+| Sega Rally 2 (USA; arranca con Windows CE) | experimental | ✅ probado con VMU en fichero (sin la música de las carreras: son pistas de audio CD; la imagen activa de serie el modo oculto de 30 FPS del juego, pendiente de probar en placa) |
 | SF III Double Impact | ❌ no funciona todavía | ❌ |
 | Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
 | Cualquier otro juego de Dreamcast | experimental | experimental |

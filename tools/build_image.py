@@ -55,7 +55,7 @@ def nonzero_runs(gdi, gap=256, skip=()):
 
 
 class GdiDisc:
-    def __init__(self, path, boot_name="1ST_READ.BIN", blank=(), alias=None):
+    def __init__(self, path, boot_name="1ST_READ.BIN", blank=(), alias=None, disc_patches=()):
         self.gdi = open_disc(path)
         self.boot_name = boot_name          # the boot file IP.BIN names (Windows CE discs: 0WINCEOS.BIN)
         self.override = {}                  # lba -> sector data (patched directory sectors)
@@ -101,6 +101,20 @@ class GdiDisc:
                 if any(fnmatch.fnmatch(p.upper(), b.upper()) for b in blank):
                     skip.append((lba, (size + 2047) // 2048))
             print(f"  left out: {len(skip)} files, {sum(n for _, n in skip) * 2048 / 1048576:.1f} MB")
+        # disc_patches = [(file, offset, old bytes, new bytes)]: bytes changed in a file on the disc itself, for
+        # code the game loads later (Windows CE DLLs), which the resident's RAM patches cannot reach
+        for name, off, old, new in disc_patches:
+            flba, fsize = self.gdi.find(name)
+            assert len(old) == len(new) and off + len(new) <= fsize
+            for k in range(off // 2048, (off + len(new) - 1) // 2048 + 1):
+                sl = flba + k
+                sec = bytearray(self.override.get(sl, self.gdi.sector(sl)))
+                for j in range(len(new)):
+                    if (off + j) // 2048 == k:
+                        assert sec[(off + j) % 2048] == old[j], f"{name}+{off + j:#x}: not the expected byte"
+                        sec[(off + j) % 2048] = new[j]
+                self.override[sl] = bytes(sec)
+            print(f"  {name}+{off:#x}: {len(new)} bytes patched on the disc")
         self.runs = nonzero_runs(self.gdi, skip=skip)
         if len(self.runs) > DIMM_RANGES:
             # merge the closest runs until they fit
@@ -370,7 +384,7 @@ def build(name, game, source, work, image, out, log=print):
     print = log  # noqa: A001
     if work:
         os.makedirs(work, exist_ok=True)
-    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN"), game.get("blank", ()), game.get("alias")) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
+    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN"), game.get("blank", ()), game.get("alias"), game.get("disc_patches", ())) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
 
     boot_fad, boot_size = disc.boot()
     first_track, tracks, leadout = disc.toc()

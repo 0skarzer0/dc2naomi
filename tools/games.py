@@ -567,4 +567,11 @@ GAMES["sr2"] = dict(GAMES["mw2"], title="SEGA RALLY 2 DC", pads="wheel", vmu=Tru
         (0x8C02E22C, 2, 0x412B),    # mov.w @(16,r1),r0 -> jmp @r1 (delay slot: and #255,r0)
     ]},
 ])
+# 30 FPS mode on by default. TITLE.DLL (title screen) checks four button codes every frame; the last one
+# (Up, A, Down, Down, Left, Right, B, B, Up) sets bit 31 of the game's option word (**0x1000ebf0), the hidden
+# "30 FPS" mode (steadier than the default variable rate). Its check (0x1000123c) is replaced by code that
+# sets the bit every frame, with no sound. Bit 0 = the "60 FPS" code (…, B, B, Down), left as it is.
+GAMES["sr2"]["disc_patches"] = [("TITLE.DLL", 0x63C,
+    bytes.fromhex("42655367" "08477e06" "a8261689" "01755224" "09e2"),
+    bytes.fromhex("48d11261" "3ed31265" "52623b22" "222519a0" "0900"))]
 GAMES["sr2_diag"] = dict(GAMES["sr2"], flags=GAMES["sr2"]["flags"] | 0x0008)   # rows of bits on screen (DIMM_DIAG)
