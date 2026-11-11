@@ -1452,3 +1452,13 @@ loader: solo Python.
 - **Riesgos a mirar si no arrancan:** (1) el residente dice "GD-ROM" (`GET_DRV_STAT` = `0x80`) y un juego parcheado
   para CD-R puede esperar CD (`0x20`) o pedir la TOC del área 0 (hoy fija, de GD); (2) el IP.BIN de estos discos
   puede llevar un cargador propio (binhack) que el residente ejecuta como bootstrap; probar con `DIMM_NOIPBOOT`.
+
+## Soulcalibur (USA) con música en mono (2026-11-12) — `isosdream/soulcal_dc2naomi.bin.gz`
+
+683 MB → **469 MB** (cabe). Elegido por el usuario entre las opciones: la música son 34 temas en PCM de 16 bits sin
+cabecera, cada canal en su archivo (`*L.P16` / `*R.P16`, mismo tamaño, 442 MB); los 34 `*R.P16` apuntan con `alias`
+a su `*L.P16` (221 MB fuera). Finales, galería y todo lo demás intactos. Hecho con un envoltorio de una vez que añade
+`game["alias"] = [([R], L), …]` al perfil automático (y gzip nivel 1); el conversor no recorta por su cuenta.
+Comprobado releyendo la imagen: 88 archivos correctos (los 34 derechos = su izquierdo), IP.BIN y 1ST_READ iguales.
+VMU `00000031` (todo abierto, USA); fila añadida a `filas_romsinfo.csv`. Sin probar en placa. La versión de 683 MB
+quedó en `isosdream/_to_delete/`.
