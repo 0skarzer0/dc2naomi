@@ -144,6 +144,7 @@ class Cdi(Gdi):
         self.path = path
         self.dir = os.path.dirname(os.path.abspath(path))
         self._f = open(path, "rb")
+        self._boot = None
         self.cdi = parse(path)
         data = [t for t in self.cdi if t[2] != 0]
         if not data:
@@ -154,9 +155,23 @@ class Cdi(Gdi):
         self.tracks = [(t[1], t[3], 4 if t[2] else 0, t[5], None, t[4]) for t in self.cdi]
         self._where = {t[1]: t for t in self.cdi}
         self.files = {}
+        self._boot = None                          # (first lba, last lba, plain bytes) of a scrambled boot file
         head = self.sector(self.base)
         if head[:16] != b"SEGA SEGAKATANA ":
             raise CdiError("la pista de datos no empieza por el IP.BIN de Dreamcast")
+        # the boot file, descrambled as the BIOS would: every reader (identification, patch search, the image's
+        # sectors) then sees the program the console runs
+        self.scrambled = False
+        try:
+            lba, size = self.find(self.boot_file())
+        except (KeyError, AssertionError):
+            return
+        data = self.sectors(lba, (size + 2047) // 2048)[:size]
+        if self.boot_is_scrambled(data):
+            plain = descramble(data)
+            plain += bytes(-len(plain) % 2048)
+            self._boot = (lba, lba + len(plain) // 2048, plain)
+            self.scrambled = True
 
     def hd_tracks(self):
         """The tracks the game sees: all of them (a CD has a single area)."""
@@ -166,6 +181,12 @@ class Cdi(Gdi):
         return [t for t in self.tracks if t[2] == 4]
 
     def sector(self, lba):
+        if self._boot and self._boot[0] <= lba < self._boot[1]:
+            o = (lba - self._boot[0]) * 2048
+            return self._boot[2][o:o + 2048]
+        return self._raw_sector(lba)
+
+    def _raw_sector(self, lba):
         for num, start, ctrl, ss, fn, n in reversed(self.tracks):
             if start <= lba < start + n:
                 if ctrl != 4:

@@ -5,6 +5,8 @@ import struct
 
 
 class Gdi:
+    base = 45000   # LBA of IP.BIN and the ISO9660 volume (a CD image sets its own: tools/cdi.py)
+
     def __init__(self, path):
         self.dir = os.path.dirname(os.path.abspath(path))
         self.tracks = []  # (number, lba, ctrl, sector_size, path, sectors)
@@ -59,8 +61,8 @@ class Gdi:
 
     def walk(self):
         """(path, lba, size) for every file, path like 'OUTRUN/OUTRUN.BIN'."""
-        pvd = self.sector(45016)
-        assert pvd[1:6] == b"CD001", "no ISO9660 volume at LBA 45016"
+        pvd = self.sector(self.base + 16)
+        assert pvd[1:6] == b"CD001", "no ISO9660 volume at LBA %d" % (self.base + 16)
         root = pvd[156:190]
         todo = [("", struct.unpack_from("<I", root, 2)[0], struct.unpack_from("<I", root, 10)[0])]
         while todo:
@@ -85,9 +87,9 @@ class Gdi:
     def used_ranges(self, gap=64):
         """Sector runs (lba, count) of the data tracks that hold anything:
         the system area and directories, and every file."""
-        runs = [(45000, 45000 + 150)]  # IP.BIN, PVD, path tables, root (and some slack)
-        pvd = self.sector(45016)
-        runs.append((45016, 45016 + 64))
+        runs = [(self.base, self.base + 150)]  # IP.BIN, PVD, path tables, root (and some slack)
+        pvd = self.sector(self.base + 16)
+        runs.append((self.base + 16, self.base + 16 + 64))
         for p, lba, size in self.walk():
             runs.append((lba, lba + (size + 2047) // 2048))
         # directories
@@ -155,5 +157,9 @@ class ChdGdi(Gdi):
 
 
 def open_disc(path):
-    """A .gdi or a .chd."""
-    return ChdGdi(path) if path.lower().endswith(".chd") else Gdi(path)
+    """A .gdi, a .chd or a .cdi (a self-booting CD: tools/cdi.py)."""
+    low = path.lower()
+    if low.endswith(".cdi"):
+        from cdi import Cdi
+        return Cdi(path)
+    return ChdGdi(path) if low.endswith(".chd") else Gdi(path)

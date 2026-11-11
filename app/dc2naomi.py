@@ -1,4 +1,4 @@
-"""dc2naomi: converts a Dreamcast GD-ROM (.chd or .gdi) into a NetDIMM image (.bin.gz) for a NAOMI / NAOMI 2.
+"""dc2naomi: converts a Dreamcast GD-ROM (.chd or .gdi) or self-booting CD (.cdi) into a NetDIMM image (.bin.gz) for a NAOMI / NAOMI 2.
 
     dc2naomi.exe   JUEGO.chd     standard NAOMI cabinet (2 sticks, 6 buttons per player, 2 STARTs)
     dc2naomict.exe JUEGO.chd     Crazy Taxi cabinet (wheel, pedals, 2-position lever, START)
@@ -160,7 +160,7 @@ def convert(path, cab, interactive, vmu=None):
     say(f"Disco: {os.path.basename(path)}")
     try:
         disc = open_disc(path)
-        ip = disc.sectors(45000, 16)
+        ip = disc.sectors(disc.base, 16)
     except Exception as e:  # noqa: BLE001
         say(f"No se puede leer el disco: {e}")
         return 1
@@ -193,6 +193,11 @@ def convert(path, cab, interactive, vmu=None):
             return 1
         game, notes = auto_profile(ip, first, info, pads)
         notes.insert(0, "Juego no probado (o versión distinta de la probada): parches localizados automáticamente.")
+    if path.lower().endswith(".cdi"):
+        notes.append("CD de autoarranque (.cdi): datos en la LBA %d%s." % (
+            disc.base, "; 1ST_READ.BIN descifrado como hace la BIOS" if getattr(disc, "scrambled", False) else ""))
+        if sum(1 for t in disc.tracks if t[2] != 4) > 1:
+            notes.append("La música en pistas de audio de CD no suena (el residente no reproduce CD-DA).")
     if vmu is None:  # the default: every game but the ones tested (and left) without it
         vmu = prof not in catalog.NO_VMU
     game["vmu"] = vmu
@@ -264,7 +269,7 @@ def main(default_cab):
     args = [a for a in args if a not in ("--batch", "--vmu", "--sin-vmu")]
     if not args:
         say(f"dc2naomi {VERSION} - {CABS[cab]}\n")
-        say("Arrastra aquí el archivo .chd del juego y pulsa Enter:")
+        say("Arrastra aquí el archivo .chd, .gdi o .cdi del juego y pulsa Enter:")
         try:
             args = [input("> ").strip().strip('"').strip("'")]
         except EOFError:
