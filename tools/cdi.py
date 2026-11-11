@@ -175,8 +175,16 @@ class Cdi(Gdi):
             self.scrambled = True
 
     def hd_tracks(self):
-        """The tracks the game sees: all of them (a CD has a single area)."""
-        return list(self.tracks)
+        """The high-density TOC the game is given. The resident answers as a GD-ROM drive, so Katana's file system
+        takes the first track of that area as the one with the ISO9660 volume: here only the boot data track,
+        numbered 3 as on a GD-ROM. (The other tracks' sectors are still served: a multisession disc's files can
+        be in session 1; CD audio tracks are not played.)"""
+        t = [x for x in self.tracks if x[2] == 4 and x[1] <= self.base < x[1] + x[5]][0]
+        return [(3,) + t[1:]]
+
+    def leadout(self):
+        t = self.hd_tracks()[0]
+        return t[1] + t[5]
 
     def data_tracks(self):
         return [t for t in self.tracks if t[2] == 4]
