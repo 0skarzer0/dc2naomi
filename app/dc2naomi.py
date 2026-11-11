@@ -196,6 +196,10 @@ def convert(path, cab, interactive, vmu=None):
     if path.lower().endswith(".cdi"):
         notes.append("CD de autoarranque (.cdi): datos en la LBA %d%s." % (
             disc.base, "; 1ST_READ.BIN descifrado como hace la BIOS" if getattr(disc, "scrambled", False) else ""))
+        filler = disc.filler_files()
+        if filler:   # padding that places the data on the disc's edge: left out, it reads as zeros
+            game["blank"] = list(game.get("blank", ())) + filler
+            notes.append("Relleno del CD que no se copia: " + ", ".join(filler) + ".")
         if sum(1 for t in disc.tracks if t[2] != 4) > 1:
             notes.append("La música en pistas de audio de CD no suena (el residente no reproduce CD-DA).")
     if vmu is None:  # the default: every game but the ones tested (and left) without it

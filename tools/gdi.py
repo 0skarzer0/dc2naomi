@@ -84,6 +84,20 @@ class Gdi:
         lba, size = self.find(path)
         return self.sectors(lba, (size + 2047) // 2048)[:size]
 
+    def filler_files(self, min_size=4 << 20):
+        """Files that are only padding: one byte value repeated (self-booting CDs carry one, e.g. 448 MB of 0x37
+        in front of the game's files, to place them on the outer edge of the disc). No game reads them."""
+        out = []
+        for p, lba, size in self.walk():
+            n = (size + 2047) // 2048
+            if size < min_size:
+                continue
+            probes = [self.sector(lba + k) for k in sorted({0, 1, n // 4, n // 2, 3 * n // 4, n - 2})]
+            first = probes[0][:1]
+            if all(b == first * 2048 for b in probes):
+                out.append(p)
+        return out
+
     def used_ranges(self, gap=64):
         """Sector runs (lba, count) of the data tracks that hold anything:
         the system area and directories, and every file."""
