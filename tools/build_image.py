@@ -67,7 +67,7 @@ class GdiDisc:
         for pats, target in aliases:
             import fnmatch
             tlba, tsize = self.gdi.find(target)
-            pvd = self.gdi.sector(45016)
+            pvd = self.gdi.sector(self.gdi.base + 16)
             root = pvd[156:190]
             todo = [("", struct.unpack_from("<I", root, 2)[0], struct.unpack_from("<I", root, 10)[0])]
             moved = 0
@@ -126,8 +126,12 @@ class GdiDisc:
 
     def file(self, name):
         if name == "IP.BIN":
-            return self.gdi.sectors(BASE_LBA, 16)
+            return self.gdi.sectors(self.gdi.base, 16)
         return self.gdi.read_file(name)
+
+    @property
+    def ip_lba(self):
+        return self.gdi.base
 
     def boot(self):
         lba, size = self.gdi.find(self.boot_name)
@@ -410,7 +414,7 @@ def build(name, game, source, work, image, out, log=print):
 
     flags = game["flags"] | (0x40000 if getattr(disc, "wince", False) else 0)   # DIMM_WINCE
     hdr = struct.pack("<10I", 0x47434459, 0x32474d49, 2, 0, flags, FLASH_OFFSET,
-                      boot_fad, boot_size, BASE_LBA + 150, len(rtab))
+                      boot_fad, boot_size, getattr(disc, "ip_lba", BASE_LBA) + 150, len(rtab))
     for i in range(DIMM_RANGES):
         hdr += struct.pack("<3I", *(rtab[i] if i < len(rtab) else (0, 0, 0)))
     hdr += struct.pack("<3I", first_track, len(tracks), leadout)
