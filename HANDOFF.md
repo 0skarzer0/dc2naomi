@@ -1128,6 +1128,25 @@ Mandos: OutRun, Hang-On y Power Drift `wheel` (el mueble por defecto). After Bur
 media vuelta; palanca adelante = arriba, atrás = abajo; acelerador = A disparo, freno = B misil), START como `wheel`.
 **Pendiente de confirmar en placa** qué botón es disparo y cuál misil, y el sentido de la palanca (ya lo estaba en `ysgw6`).
 
+**Resultado en placa (usuario, 2026-11-11 03:59):** OutRun y Hang-On perfectos. Power Drift: **el sonido petardea y no va
+del todo fluido, solo con música** (la demo sin música va bien); en su Dreamcast va perfecto. After Burner II y Space
+Harrier: sin resultado todavía.
+
+**Power Drift, lo investigado en placa (sin resolver):**
+- 59,9 sondeos de mando por segundo (el bucle del juego va a 60), ninguna lectura de disco durante la partida, DMA G2
+  parada (canales 0-3 sin usar en ese momento), sin errores de Holly. El residente no es el cuello de botella.
+- `DIMM_PCSAMPLE` (0x0200) **cuelga Power Drift**: arma TMU2 en la tabla de Katana (VBR `0x8c00f400`) al arrancar el
+  monitor, y PD.BIN cambia de VBR sin manejador para TMU2. No usarlo con programas que no son Katana.
+- El driver de sonido de PD (`0x8c013038(drv, modo)`) escribe su modo en AICA `0x2800` (bit 9 = MEM8MB): 0 = 2 MB
+  como en Dreamcast; KallistiOS en NAOMI pone el bit 9. Parcheado a 0x200 (`0x8C01306E` → `0x9332`, en el perfil
+  `ysgw` y por tanto en todos): **no cambió nada** (el bit no se lee de vuelta: `0x2800` siempre da `0x10`). Se
+  deja (es lo correcto en NAOMI según KallistiOS), pero no es la causa.
+- PD no usa interrupciones externas (IML*EXT = 0). La música corre en el ARM del AICA (driver propio subido a
+  `0xa0800000`, buzón en `0xa0800060`). BSC de la NAOMI (leído con la ventana `0xff800000`): BCR1 `0xa3020008`,
+  WCR1 `0x01110111`, WCR2 `0x018060d8` (Dreamcast `0x618066d8`, de memoria: difieren áreas 2 y 6), WCR3 `0x07777777`,
+  MCR `0x80121214`; CCR `0x105`. Siguiente idea: el ARM no da abasto o lee mal (tiempos de la RAM de sonido en NAOMI);
+  mirar el driver ARM y comparar con la Dreamcast.
+
 ## Sega Rally 2 (USA) — Windows CE. ✅ FUNCIONA EN PLACA (2026-11-11 00:31, mueble Crazy Taxi)
 Perfil `sr2` (como `mw2`). Probado solo en Flycast (NAOMI, `FC_SYSM_RAM=1`); en placa no se ha enviado.
 Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Programa: `RALLY2.EXE`.
