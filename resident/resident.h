@@ -51,6 +51,9 @@
                                          drives the analog stick to its ends (games that only read it) */
 #define DIMM_PAD_YSGW   5             /* Yu Suzuki GW: DIMM_PAD_WHEEL, and START + wheel full right = plane controls (lever =
                                          up/down, gas = A fire, brake = B missile), START + wheel full left = back */
+#define DIMM_PAD_PLANE  6             /* After Burner II / Space Harrier on their own (Yu Suzuki GW split, 2026-11-11): the
+                                         DIMM_PAD_YSGW plane controls always (wheel = left/right, lever = up/down, gas = A
+                                         fire, brake = B missile), START as DIMM_PAD_WHEEL */
 #define DIMM_PAD_WHEEL  4             /* Crazy Taxi cabinet default (games not tuned yet): START sent on release, only
                                          if nothing else was used while held; held START: lever = up/down, brake = X,
                                          gas = Y; otherwise lever = B/A, gas/brake = R/L triggers; wheel = analog

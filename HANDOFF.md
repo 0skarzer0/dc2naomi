@@ -1093,6 +1093,40 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
 - `18wheeler2` con mandos `wheel`: **usuario: perfecto, no tocar**.
 - Ojo: `/boot/config/romsinfo.csv` no acababa en salto de línea; al añadir con `>>` la fila se pegaba a la anterior.
 
+## Yu Suzuki Game Works separado: una imagen por juego (2026-11-11) — perfiles `outrun`, `hangon`, `powerdrift`, `afterburner2`, `spaceharrier`
+
+Hecho a petición del usuario, para el mueble Crazy Taxi. `python3 tools/mkgz.py PERFIL DISCO.chd SALIDA.bin.gz`
+(el programa de Windows sigue sacando la imagen única `ysgw`). Imágenes en la Pi .60 (`/boot/roms/*_dc2naomict.bin.gz`,
+md5 comprobado). **Sin probar en placa.** Sin VMU (el juego no la usa). Mismo disco entero (184 MB comprimida): quitar
+los ficheros de los otros juegos ahorraría poco (~30 MB de 213) y el menú carga sprites de todos.
+
+Cómo funciona el menú (YSC, dentro de `1ST_READ.BIN`):
+- "Escenas" en una tabla en `0x8c2505c4` (12 bytes cada una: función, 0, pila), arrancadas por
+  `0x8c0dc7e0(escena, arg)`. 1 = arranque, 4 = logos + título + menú, 8 = OutRun, 9 = After Burner II,
+  10 = Hang-On, 11 = Space Harrier. Power Drift es otro programa: `0x8c05e000(0)` carga `LOADER.BIN` y `PD.BIN`.
+- La tarea de arranque `0x8c0ca060` hace `start_scene(1, 0)` (`mov #1,r4` en `0x8c0ca068`, literal en `0x8c0ca080`).
+- Título: `0x8c17bd20` espera START (`bt.s` en `0x8c17bd32`). Menú: estados en `0x8c25cc20` (rejilla `0x8c17cca0`,
+  ficha del juego `0x8c17d400`); juego elegido en `0x8c25cc10` (0 Hang-On, 1 Space Harrier, 2 OutRun, 3 After
+  Burner II, 4 Power Drift; `0x8c17cbe0` lo pone a 4 con `mov #4,r1` en `0x8c17cbe8`). La rejilla pasa a la ficha con
+  START/A (`bt.s` en `0x8c17cd74`) y la ficha lanza con START (`bf.s` en `0x8c17d42a`) mediante
+  `0x8c17b720(escena, 1)`.
+
+Parches de cada perfil (`_ysgw_one` en `tools/games.py`, sobre los del perfil `ysgw`): título, rejilla y ficha sin
+esperar a START, y el juego elegido; así, al salir de un juego o acabar la partida se vuelve a entrar en él.
+OutRun, Hang-On y Power Drift además arrancan directos (la tarea de arranque lanza su escena, o el cargador de Power
+Drift): sin logos. After Burner II y Space Harrier pasan por logos, título y menú solos (~45 s): lanzados como
+escena desde el arranque, en Flycast se quedaban en gris/negro; pero en Flycast **tampoco funcionan desde el menú
+original** (After Burner II en negro, Space Harrier con basura en rojo), así que no se sabe si en placa arrancarían
+directos. After Burner II sí funciona en placa desde el menú (usuario, 2026-11-09).
+
+Flycast: OutRun, Hang-On y Power Drift llegan a la partida; After Burner II y Space Harrier llegan a sus escenas
+(9 y 11, leído en RAM) sin imagen, como con la imagen original.
+
+Mandos: OutRun, Hang-On y Power Drift `wheel` (el mueble por defecto). After Burner II y Space Harrier `plane`
+(`DIMM_PAD_PLANE` = 6, nuevo): el modo avión de `ysgw` siempre (volante = izquierda/derecha y stick X, cruceta desde
+media vuelta; palanca adelante = arriba, atrás = abajo; acelerador = A disparo, freno = B misil), START como `wheel`.
+**Pendiente de confirmar en placa** qué botón es disparo y cuál misil, y el sentido de la palanca (ya lo estaba en `ysgw6`).
+
 ## Sega Rally 2 (USA) — Windows CE. ✅ FUNCIONA EN PLACA (2026-11-11 00:31, mueble Crazy Taxi)
 Perfil `sr2` (como `mw2`). Probado solo en Flycast (NAOMI, `FC_SYSM_RAM=1`); en placa no se ha enviado.
 Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Programa: `RALLY2.EXE`.

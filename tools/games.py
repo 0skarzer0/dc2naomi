@@ -575,3 +575,42 @@ GAMES["sr2"]["disc_patches"] = [("TITLE.DLL", 0x63C,
     bytes.fromhex("42655367" "08477e06" "a8261689" "01755224" "09e2"),
     bytes.fromhex("48d11261" "3ed31265" "52623b22" "222519a0" "0900"))]
 GAMES["sr2_diag"] = dict(GAMES["sr2"], flags=GAMES["sr2"]["flags"] | 0x0008)   # rows of bits on screen (DIMM_DIAG)
+
+
+# Yu Suzuki Game Works split into one image per game (2026-11-11). The menu program (YSC, in 1ST_READ.BIN) runs
+# "scenes" from a table (0x8c2505c4, 12 bytes each, started by 0x8c0dc7e0(scene, arg)): 1 = boot, 4 = logos + title +
+# game menu, 8 = OutRun, 9 = After Burner II, 10 = Hang-On, 11 = Space Harrier; Power Drift is a separate program
+# (0x8c05e000 loads LOADER.BIN at 0x8c800000 and PD.BIN at 0x8c010000). The menu picks the game in 0x8c25cc10
+# (0 Hang-On, 1 Space Harrier, 2 OutRun, 3 After Burner II, 4 Power Drift; reset to 4 by 0x8c17cbe0) and launches it
+# from its info screen (0x8c17d400) through 0x8c17b720(scene, 1).
+# Each image: the title takes START by itself, the menu takes its game at once, and its info screen launches it, so
+# leaving a game (or its game over back to the menu) comes straight back into it. OutRun, Hang-On and Power Drift also
+# boot straight into the game (the boot task 0x8c0ca060 starts its scene, or the Power Drift launcher, instead of
+# scene 1: no logos). After Burner II and Space Harrier go through logos, title and menu (~45 s): started as a scene at
+# boot they stayed on a grey / black screen in Flycast (in Flycast they do not run through the menu either; After
+# Burner II does on the real board).
+def _ysgw_one(title, pads, game, boot):
+    g = _copy.deepcopy(GAMES["ysgw"])
+    g["title"] = title
+    g["pads"] = pads
+    p = g["groups"][1]["patches"]
+    p += [
+        (0x8C17BD32, 2, 0x0009),                   # title: bt.s (START not pressed) -> nop: START by itself
+        (0x8C17CD74, 2, 0x0009),                   # menu grid: bt.s (no START/A) -> nop: to the info screen at once
+        (0x8C17D42A, 2, 0x0009),                   # info screen: bf.s (no START) -> nop: launch at once
+    ]
+    if game != 4:
+        p += [(0x8C17CBE8, 2, 0xE100 | game)]      # menu reset: mov #4,r1 -> mov #game,r1 (the game chosen)
+    if boot == "pd":
+        p += [(0x8C0CA068, 2, 0xE400),             # boot task: mov #1,r4 -> mov #0,r4
+              (0x8C0CA080, 4, 0x8C05E000)]         # boot task: start_scene literal -> the Power Drift launcher
+    elif boot:
+        p += [(0x8C0CA068, 2, 0xE400 | boot)]      # boot task: start_scene(1, 0) -> start_scene(boot, 0)
+    return g
+
+
+GAMES["outrun"] = _ysgw_one("OUTRUN", "wheel", 2, 8)
+GAMES["hangon"] = _ysgw_one("HANG-ON", "wheel", 0, 10)
+GAMES["powerdrift"] = _ysgw_one("POWER DRIFT", "wheel", 4, "pd")
+GAMES["afterburner2"] = _ysgw_one("AFTER BURNER II", "plane", 3, 0)
+GAMES["spaceharrier"] = _ysgw_one("SPACE HARRIER", "plane", 1, 0)
