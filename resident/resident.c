@@ -867,11 +867,13 @@ static u32 start_frames, start_used, start_pulse;
 #define HOP_WINDOW 60                                    /* polls (one per frame: ~1 s) */
 static u32 lever_prev_fwd, lever_hop, hop_window;
 /* plane controls (DIMM_PAD_PLANE, and DIMM_PAD_YSGW in plane mode): what gas, brake, START + lever forward and START
-   + lever back send, and [4] the L trigger otherwise. Low 16 bits = Dreamcast buttons, 0x10000 = R trigger full,
-   0x20000 = L trigger full, 0x40000 = L trigger released. In RAM so that it can be tried live over the NetDIMM. */
-u32 plane_cfg[5] = { DC_A_, DC_B_, 0, 0, 0 };
+   + lever back send, [4] the L trigger otherwise, [5] what is sent always (autofire), [6] 1 = the gas pedal is an
+   analog throttle on the L trigger (released = [4], floored = full) and START + gas = L released. Low 16 bits =
+   Dreamcast buttons, 0x10000 = R trigger full, 0x20000 = L trigger full, 0x40000 = L trigger released. In RAM so
+   that it can be tried live over the NetDIMM (pokes). */
+u32 plane_cfg[8] = { DC_A_, DC_B_, 0, 0, 0, 0, 0, 255 };   /* [7] = how far the R trigger goes for 0x10000 */
 #define PLANE_PADS (H.pad_map == DIMM_PAD_PLANE || H.pad_map == DIMM_PAD_AB2)
-static u32 plane_cfg_set;
+static u32 plane_cfg_set, autofire_off, brk_prev;
 static u32 plane_mode;                                  /* DIMM_PAD_YSGW: 0 driving, 1 plane */       /* DIMM_PAD_CT: double tap forward = Crazy Hop */
 
 static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8 *joyy) {
@@ -906,21 +908,28 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         brk = scale(2, jvs.analog[2], 255);
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
-        u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
+        u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000, brk_raw = brk;
         if (PLANE_PADS) plane_mode = 1;     /* After Burner II / Space Harrier on their own */
         if (H.pad_map == DIMM_PAD_AB2 && !plane_cfg_set) {
             /* After Burner II (tried live on the board with the user, 2026-11-11): R = vulcan, A = missile, and the
                L trigger is the arcade's analog throttle: released = slowest, full = afterburner, half = cruise (as
-               MAME's default). Gas = vulcan, brake = missile, START + lever forward / back = throttle full / off. */
-            plane_cfg[0] = 0x10000; plane_cfg[1] = DC_A_; plane_cfg[2] = 0x20000; plane_cfg[3] = 0x40000;
-            plane_cfg[4] = 0x80;
+               MAME's default). First "gas = vulcan, brake = missile, START + lever = throttle"; the user then chose:
+               vulcan always on, gas pedal = throttle (released = cruise, floored = afterburner), brake = missile,
+               START + gas = slow down, START + brake = autofire off/on (START + lever not used any more). */
+            plane_cfg[0] = 0; plane_cfg[1] = DC_A_; plane_cfg[2] = 0; plane_cfg[3] = 0;
+            plane_cfg[4] = 0x80; plane_cfg[5] = 0x10000; plane_cfg[6] = 2;
         }
         plane_cfg_set = 1;
-        u32 trig = 0;
+        u32 trig = 0, gas = acc;
+        if (PLANE_PADS && !autofire_off) trig = plane_cfg[5];
         if (start && PLANE_PADS) {
             if (fwd) trig |= plane_cfg[2];
             if (back) trig |= plane_cfg[3];
-            if (fwd || back) start_used = 1;
+            if (plane_cfg[6] && acc > 64) trig |= 0x40000;
+            /* START + brake = autofire off / on (held, it skipped After Burner II's continue countdown) */
+            if (plane_cfg[5] && brk > 64 && !brk_prev) { autofire_off ^= 1; trig &= ~plane_cfg[5]; }
+            if (fwd || back || (plane_cfg[6] && acc > 64) || brk > 64) start_used = 1;
+            gas = 0;
             start_frames = 1;
             acc = brk = 0;
         } else if (start) {
@@ -967,9 +976,16 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             }
         }
         lever_prev_fwd = fwd;
+        brk_prev = brk_raw > 64;
         b |= trig & 0xffff;
-        if (trig & 0x10000) acc = 255;
-        if (PLANE_PADS) brk = plane_cfg[4];
+        if (trig & 0x10000) acc = plane_cfg[7];
+        if (PLANE_PADS) {
+            brk = plane_cfg[4];
+            /* [6] = 1: the pedal moves the throttle; 2: all or nothing, as START + lever did (with the pedal the
+               afterburner did not always come on, on the board; with START + lever it did) */
+            if (plane_cfg[6] == 1) brk += (255 - brk) * (gas >= 192 ? 256 : gas + (gas >> 2) + (gas >> 4) + (gas >> 6)) >> 8;
+            if (plane_cfg[6] == 2 && gas > 64) brk = 255;
+        }
         if (trig & 0x20000) brk = 255;
         if (trig & 0x40000) brk = 0;
         if (start_pulse) { start_pulse--; b |= DC_START; }

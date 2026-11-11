@@ -1131,10 +1131,17 @@ media vuelta; palanca adelante = arriba, atrás = abajo; acelerador = A disparo,
 `pc.py`: `plane_cfg` = {acelerador, freno, START+palanca adelante, START+palanca atrás, gatillo L en reposo}; bits bajos =
 botones de Dreamcast, 0x10000 = gatillo R a tope, 0x20000 = L a tope, 0x40000 = L suelto). En este juego: **R = vulcan,
 A = misil, el gatillo L es la palanca de gases analógica del arcade** (suelto = lo más lento, a tope = postcombustión;
-la velocidad de crucero de MAME, "casi 2", sale con L a media, 0x80); B, X, Y, C y Z no hacen nada. Queda: volante =
-izquierda/derecha, palanca = arriba/abajo, acelerador = vulcan, freno = misil, START + palanca adelante = acelerar, START
-+ palanca atrás = frenar, START solo = START. Antes (mapa `plane`: acelerador A, freno B, L suelto) volaba siempre
-"frenado" y el acelerador lanzaba misiles.
+la velocidad de crucero de MAME, "casi 2", sale con L a media, 0x80); B, X, Y, C y Z no hacen nada. Antes (mapa
+`plane`: acelerador A, freno B, L suelto) volaba siempre "frenado" y el acelerador lanzaba misiles.
+**Mandos definitivos (elegidos por el usuario, 23:20: "así funciona estupendamente, lo dejamos así"):** volante =
+izquierda/derecha, palanca = arriba/abajo, **vulcan automático** (R siempre a tope), **acelerador = gases todo o nada**
+(suelto = crucero, L 0x80; pisado más de un cuarto = L 255 de golpe), **freno = misil**, **START + acelerador = frenar**
+(L suelto), **START + freno = quitar/poner el disparo automático**, START solo = START. `plane_cfg` tiene ya 8 valores
+([5] lo que se envía siempre, [6] 1 = gases proporcionales al pedal / 2 = todo o nada, [7] recorrido de R).
+Lo aprendido: (1) con R siempre pulsado **la cuenta atrás de "continue" se salta sola** al morir (sale "insert coin"):
+por eso START + freno lo quita; (2) con los gases proporcionales al pedal (L subiendo 0x80 → 0xff en una décima) la
+postcombustión (velocidad > 3) solo entraba a veces, aunque al juego le llegaba L = 255 fijo (leído en `0x8c2e6f44`,
+byte alto = L, siguiente = R); con el salto directo a 255 entra siempre. No se sabe por qué.
 Dónde lee el mando: el menú copia el periférico Katana (`0x8c1f5060`) en `0x8c2e6f3c` (16 bytes por puerto, +2 botones
 con los bytes cambiados) con `0x8c0fec80`; After Burner II es `BURNER/AB2.BIN` (código SH4, cargado en `0x8cb80000`,
 más `PROG.BIN` 68000 del arcade) y recibe las funciones del menú por una tabla copiada en `0x8c400000`. (`0x8c2e71ac`,

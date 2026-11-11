@@ -85,7 +85,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Ikaruga (Japón) | ✅ probado | experimental |
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: salir con B deja negro) |
-| Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (acelerador = disparo, freno = misil, START + palanca = gases); Space Harrier sin probar; se crean con `tools/mkgz.py` |
+| Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (disparo automático, acelerador = gases, freno = misil, START + acelerador = frenar, START + freno = quitar/poner el disparo automático); Space Harrier sin probar; se crean con `tools/mkgz.py` |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
