@@ -1372,6 +1372,50 @@ extern void ce_maple_isr(void);
 /* Windows CE's timer tick (every 25 ms), from ce_tick_isr (head.S, PATCH_CETICK): the NetDIMM is served from here
    too, so the board can be read over the network (peek) while CE runs, whatever the game is doing. */
 extern void ce_tick_isr(void);
+/* (debug) Power Drift's sound tick (TMU2, 125 Hz, handler 0x8c010540) with measurements, read over the NetDIMM:
+   [0] ticks, [1] ticks in which the mixer wrote nothing, [2] worst lateness of a tick, [3] worst duration (TCNT2
+   units: 12500 = 1 ms), [4] last position, [5] last write offset, [8..23] play position advance between two ticks
+   in steps of 64 samples (353 = on time), [24..39] lateness in steps of 0.5 ms, [40..47] bytes written per tick /128 */
+u32 pdmon[48];
+/* Power Drift's music (2026-11-11). Its mixer (module PD.SHX at 0x8ca9c1e0, run from the 125 Hz TMU2 handler) asks
+   this function (the game's 0x8c013f3c, through a pointer the game gives the module) for the play position of its
+   stream on the AICA, a ring of 0x4000 bytes per channel, and writes up to 0x38c bytes so that its write offset
+   stays between the target (position * 2 + the constant at 0x8ca9c984) and target + 0x38c. If a tick comes more than
+   ~2.3 ms late the target is already past the write offset; the mixer takes that for "a whole turn ahead" and writes
+   NOTHING until the play position comes round again: 170 ms of old sound. On the NAOMI every read of the music from
+   the "disc" (32 KB pieces, interrupts off while we copy from the NetDIMM) delays a tick like that, several times
+   a second. Here, when the write offset is behind the target, the mixer gets the position that makes its target
+   equal to the write offset: it writes its maximum and catches up in a few ticks, with no gap. */
+u32 pd_resync;
+u32 pd_pos(u32 stream) {
+    u32 pos = ((u32 (*)(u32))0x8c013f3cu)(stream);
+    u32 lead = *(volatile u16 *)0x8ca9c984u;
+    if (stream != 0 || *(volatile u16 *)0x8ca9c988u != 0x038c || lead >= 0x1000) return pos;
+    u32 wr = *(volatile u32 *)0x8cd45c28u;
+    if (((wr - ((pos << 1) + lead)) & 0x3ffeu) < 0x2000u) return pos;
+    pd_resync++;
+    return ((wr - lead) & 0x3ffeu) >> 1;
+}
+int pd_mon(void) {
+    static u32 lastpos, lastwr;
+    u32 t0 = REG32(0xffd80024);
+    ((int (*)(void))0x8c010540)();
+    u32 t1 = REG32(0xffd80024);
+    if (*(volatile u32 *)0x8cd45c20u != 0xa09e7f80u) return 0;
+    u32 late = 100000 - t0, dur = t0 >= t1 ? t0 - t1 : t0 + 100000 - t1;
+    u32 pos = REG32(0xa0800114) & 0x1fff, wr = *(volatile u32 *)0x8cd45c28u & 0x3ffc;
+    u32 d = (pos - lastpos) & 0x1fff, w = (wr - lastwr) & 0x3ffc;
+    pdmon[0]++;
+    if (!w) pdmon[1]++;
+    if (late > pdmon[2]) pdmon[2] = late;
+    if (dur > pdmon[3]) pdmon[3] = dur;
+    pdmon[4] = pos; pdmon[5] = wr;
+    pdmon[8 + (d >> 6 > 15 ? 15 : d >> 6)]++;
+    pdmon[24 + (late / 6250 > 15 ? 15 : late / 6250)]++;
+    pdmon[40 + (w >> 7 > 7 ? 7 : w >> 7)]++;
+    lastpos = pos; lastwr = wr;
+    return 0;
+}
 u32 ce_ticks;
 static int ce_tick_busy;
 void ce_tick(void) {
@@ -1607,6 +1651,8 @@ static void apply_patches(void) {
               : p->value == PATCH_G2CHK4 ? (u32)g2chk4
               : p->value == PATCH_G2CPU ? (u32)g2cpu
               : p->value == PATCH_HOOKST ? (u32)maple_hook_mdstar
+              : p->value == PATCH_PDMON ? (u32)pd_mon
+              : p->value == PATCH_PDPOS ? (u32)pd_pos
               : p->value == PATCH_CEMAPLE ? (u32)ce_maple_isr
               : p->value == PATCH_CETICK ? (u32)ce_tick_isr : p->value;
         if (kind == PATCH_R4FIX) {

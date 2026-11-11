@@ -66,7 +66,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Crazy Taxi 2 (US) | ✅ **Terminado** (`ct2h7`, salto con doble toque); `ct2h8` = `ct2h7` + VMU en fichero (Flycast OK, placa pendiente) | Crazy Taxi |
 | Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
 | Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
-| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: sonido petardea, salir con B = negro | Crazy Taxi |
+| Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: el petardeo del sonido está resuelto (2026-11-11), salir con B = negro | Crazy Taxi |
 | Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ **VMU en fichero (`daytona5`) confirmada**: guarda, se carga otro juego, se vuelve a cargar y recupera la partida | Crazy Taxi |
 | F355, 18 Wheeler | ✅ terminados: funcionan en placa con VMU (`f355b`, `18wheeler2`) | Crazy Taxi |
 | KOF99, Last Blade 2, SF3 3rd Strike, SPF2X, SSF2X, KOF 2002, MotW | sin probar en placa (título en Flycast) | estándar |
@@ -1132,20 +1132,56 @@ media vuelta; palanca adelante = arriba, atrás = abajo; acelerador = A disparo,
 del todo fluido, solo con música** (la demo sin música va bien); en su Dreamcast va perfecto. After Burner II y Space
 Harrier: sin resultado todavía.
 
-**Power Drift, lo investigado en placa (sin resolver):**
-- 59,9 sondeos de mando por segundo (el bucle del juego va a 60), ninguna lectura de disco durante la partida, DMA G2
-  parada (canales 0-3 sin usar en ese momento), sin errores de Holly. El residente no es el cuello de botella.
-- `DIMM_PCSAMPLE` (0x0200) **cuelga Power Drift**: arma TMU2 en la tabla de Katana (VBR `0x8c00f400`) al arrancar el
-  monitor, y PD.BIN cambia de VBR sin manejador para TMU2. No usarlo con programas que no son Katana.
-- El driver de sonido de PD (`0x8c013038(drv, modo)`) escribe su modo en AICA `0x2800` (bit 9 = MEM8MB): 0 = 2 MB
-  como en Dreamcast; KallistiOS en NAOMI pone el bit 9. Parcheado a 0x200 (`0x8C01306E` → `0x9332`, en el perfil
-  `ysgw` y por tanto en todos): **no cambió nada** (el bit no se lee de vuelta: `0x2800` siempre da `0x10`). Se
-  deja (es lo correcto en NAOMI según KallistiOS), pero no es la causa.
-- PD no usa interrupciones externas (IML*EXT = 0). La música corre en el ARM del AICA (driver propio subido a
-  `0xa0800000`, buzón en `0xa0800060`). BSC de la NAOMI (leído con la ventana `0xff800000`): BCR1 `0xa3020008`,
-  WCR1 `0x01110111`, WCR2 `0x018060d8` (Dreamcast `0x618066d8`, de memoria: difieren áreas 2 y 6), WCR3 `0x07777777`,
-  MCR `0x80121214`; CCR `0x105`. Siguiente idea: el ARM no da abasto o lee mal (tiempos de la RAM de sonido en NAOMI);
-  mirar el driver ARM y comparar con la Dreamcast.
+**⭐ Power Drift: el petardeo de la música, RESUELTO EN PLACA (usuario, 2026-11-11 06:28: "ya no petardea").**
+
+*Cómo suena Power Drift (PD.BIN en `0x8c010000` + módulo `PD.SHX` cargado en `0x8ca9c1e0`; el offset X del fichero
+está en `0x8ca9c1e0 + X`, y sus literales se recolocan con base `0x0ca9c220`):*
+- TMU2 a 125 Hz (TCOR 100000, P/4, prioridad 8). Manejador `0x8c010540` (se registra desde el literal de `0x8c010598`):
+  pone TCR2 = 0, llama al mezclador del módulo (`0x0ca9c7b4` → `0x0ca9c890`) y deja TCR2 = 0x20.
+- El mezclador escribe PCM de 16 bits, 44,1 kHz, en dos anillos de 0x4000 bytes en la RAM del AICA (`0xa09e7f80` y
+  `0xa09ebfc0`, canales 0 y 1 en bucle). Su estado está en `0x8cd45c20`: {destino izq., destino der., offset de escritura}.
+- En cada tic pide la posición de reproducción (función del juego `0x8c013f3c(0)`, que lee el buzón del driver ARM,
+  `0xa0800114`; el juego se la pasa al módulo por la tabla de `0x8ca9c320`: +0x10c posición, +0x120 proveedor de PCM
+  `0x8c011f14`) y calcula `objetivo = (posición*2 + 0x2c4) & 0x3ffe`, `adelanto = (escritura - objetivo)` (si sale negativo
+  le suma 0x4000) y escribe `0x38c - adelanto` bytes si es positivo. Máximo 0x38c bytes por tic (sus búferes no dan más).
+- **La música viene del disco**: ficheros PCM de 44,1 kHz estéreo (176 KB/s) leídos en trozos de 32 KB (16 sectores)
+  a 8 búferes encadenados (`0x8c089610`, 36 bytes cada uno: estado, ..., sector, nº sectores, búfer, puntero, quedan,
+  pista, siguiente). Pista actual en `0x8c0895fc`, posición de lectura en `0x8c089600`, tabla de pistas `0x8c089730`
+  (24 bytes: ..., tamaño, ..., bucle). (Lo de "ninguna lectura de disco durante la partida" de antes era falso.)
+
+*La causa:* si un tic llega más de ~2,3 ms tarde (101 muestras), el objetivo ya ha pasado al offset de escritura, el
+"adelanto" sale negativo, el mezclador lo toma por "una vuelta entera por delante" y **no escribe NADA hasta que la
+posición da la vuelta al anillo: 170 ms de sonido viejo**. En la NAOMI cada lectura de un trozo de música (varias por
+segundo; `cart_read` corta las interrupciones mientras copia de la NetDIMM, y el juego llama con ellas ya cortadas)
+retrasa un tic así. Medido en placa con `pd_mon`: 124 tics/s, **45,7 % de los tics sin escribir nada**, música consumida
+~90 KB/s en vez de 176. Por eso a mitad de tono (pitch `0x7800` a mano) sonaba limpio pero lento, y sin música iba bien.
+
+*El arreglo (perfil `ysgw`, lo heredan los cinco juegos sueltos; solo Power Drift lo usa):*
+1. `(0x8C011CA4, 4, PDPOS)`: el literal con el que el juego da al módulo su función de posición apunta a `pd_pos` del
+   residente. Llama a la original y, si el offset de escritura está por detrás del objetivo, devuelve la posición que
+   hace objetivo = escritura: el mezclador escribe su máximo (0x38c) y recupera 202 bytes por tic, sin parón.
+2. `disc_patches`: `PD.SHX+0x7a4` `c4 02` → `c4 0a` (la constante 0x2c4 → 0xac4: escribe 23 ms más adelantado, para que
+   un tic tardío no se oiga antes de recuperar). **Sola no arregla nada** (el parón no depende de esa constante): probado.
+Medido en placa con el arreglo: 0 % de tics sin escribir, ~7,8 recuperaciones por segundo, música a 174 KB/s. El usuario:
+"ya no petardea; no sé si es perfecto, pero es más que suficiente". (La imagen que oyó llevaba además el medidor
+`PDMON`; la que queda en la Pi y sale del repo no lo lleva: pendiente de que el usuario la confirme.)
+
+*Herramienta de medida:* `(0x8C010598, 4, PDMON)` en el grupo de PD.BIN pone `pd_mon` (resident.c) delante del tic:
+`pdmon[]` (dirección con `sh-elf-nm resident/resident.elf`) = tics, tics sin escritura, peor retraso, peor duración,
+histogramas de avance de posición, retraso y bytes escritos. Se lee con dos tandas de peeks separadas unos segundos.
+
+*Descartado por el camino (todo probado en placa, sin efecto; quitado del código):* modo de memoria MEM8MB del AICA (solo
+el registro `0x8C01306E` → `0x9332`; persistente con el driver ARM `AICADRV.BIN+0x3394` `7f0000e2` → `020080e3`; la
+función entera en modo 8 MB cuelga la placa al arrancar, y cambiar el bit en caliente congela el juego); leer la posición
+del registro `0x2814` en vez del buzón; escribir en el AICA a través de una copia en RAM con esperas de la FIFO de G2;
+releer del AICA lo escrito (ni un dato erróneo en 7 millones, pero **las lecturas de la RAM del AICA por G2 son lentas**:
+354 por tic bastaban para alargar el tic más de 8 ms). `DIMM_PCSAMPLE` (0x0200) **cuelga Power Drift** (usa TMU2).
+Datos de la NAOMI leídos entonces: BCR1 `0xa3020008`, WCR1 `0x01110111`, WCR2 `0x018060d8`, WCR3 `0x07777777`, MCR
+`0x80121214`, CCR `0x105`, IPRA `0x0080` con PD en marcha; P = 50 MHz.
+
+*Lección:* un contador "muestras/s entregadas al chip" medido una sola vez dio 44.097 (parecía sano) y desvió horas; lo
+que lo aclaró fue medir **por tic** (escribe / no escribe) y comparar los bytes de música consumidos con los 176 KB/s
+debidos. *Mejora posible:* que las lecturas de la NetDIMM no retrasen los tics (trozos más pequeños por llamada, o DMA G1).
 
 ## Sega Rally 2 (USA) — Windows CE. ✅ FUNCIONA EN PLACA (2026-11-11 00:31, mueble Crazy Taxi)
 Perfil `sr2` (como `mw2`). Probado solo en Flycast (NAOMI, `FC_SYSM_RAM=1`); en placa no se ha enviado.

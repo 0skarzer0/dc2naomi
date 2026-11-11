@@ -23,6 +23,8 @@ G2CHK0 = 0xFFFFFFFE  # resident G2 FIFO check with a timeout (SB_FFST bit 0)
 G2CPU = 0xFFFFFFFC   # resident g2cpu: G2 DMA start done by the CPU
 G2CHK4 = 0xFFFFFFFD  # the same for bit 4
 HOOKST = 0xFFFFFFFB  # KallistiOS maple_dma_addr(): the maple hook, and its result written to SB_MDSTAR
+PDPOS = 0xFFFFFFF7   # resident pd_pos: Power Drift's stream position for its mixer
+PDMON = 0xFFFFFFF8   # (debug) resident pd_mon: Power Drift's sound tick with measurements
 TRAMP = "tramp"  # value for a jump literal: through the resident (patches the next program first)
 # The channel 2 DMA to the direct texture path at 0x11000000 (LMMODE0 = 0) writes nothing to VRAM on a
 # NAOMI 2 (measured on the board, CH2TEST); its mirror at 0x13000000 (LMMODE1 = 0) works, and is the
@@ -109,11 +111,10 @@ GAMES = {
                 (0x8C01B766, 2, mov_imm0(4)),          # Power Drift cable: mov.w @r3,r4 -> mov #0,r4
                 (0x8C032D44, 4, HOOK),                 # Power Drift maple
                 (0x8C02A404, 4, TEXPATH),              # Power Drift texture DMA
-                # Power Drift sound init (0x8c013038(drv, mode)) writes its mode to AICA 0x2800 (MEM8MB = bit 9):
-                # 0 = 2 MB of sound RAM, as on the Dreamcast. The NAOMI has 8 MB chips and needs bit 9 (KallistiOS
-                # spu_init does the same: spu_ram_mode()); with 0 the music crackled (2026-11-11). mov.l @(8,r15),r3
-                # -> mov.w @(0x8c0130d6),r3 (= 0x0200) for that store only; the driver keeps its 2 MB layout.
-                (0x8C01306E, 2, 0x9332),
+                # Power Drift's music: the stream position its mixer asks for, through the resident (pd_pos in
+                # resident.c has the whole story). For measurements: (0x8C010598, 4, PDMON) puts the resident's pd_mon
+                # in front of the game's 125 Hz sound tick (read pdmon[] over the NetDIMM, wipi-side script in HANDOFF).
+                (0x8C011CA4, 4, PDPOS),
             ]},
             {"file": "LOADER.BIN", "base": 0x8C800000, "patches": [
                 (0x8C80BCA6, 2, mov_imm0(2)),          # loader cable (runs at 0x0c80bca6)
@@ -613,6 +614,12 @@ def _ysgw_one(title, pads, game, boot):
         p += [(0x8C0CA068, 2, 0xE400 | boot)]      # boot task: start_scene(1, 0) -> start_scene(boot, 0)
     return g
 
+
+# Power Drift's music crackled on the board (2026-11-11; fixed by PDPOS above, see pd_pos in resident.c). With it
+# goes this: the mixer's constant at PD.SHX+0x7a4 (mov.w literal of 0x0ca9c8a0), how far ahead of the AICA's play
+# position it writes, 0x02c4 (354 samples, 8 ms) -> 0x0ac4 (23 ms more), so that a late tick is not heard before the
+# mixer has caught up. (Alone it changes nothing: tested.) Only Power Drift loads this file.
+GAMES["ysgw"]["disc_patches"] = [("PD.SHX", 0x7a4, bytes.fromhex("c402"), bytes.fromhex("c40a"))]
 
 GAMES["outrun"] = _ysgw_one("OUTRUN", "wheel", 2, 8)
 GAMES["hangon"] = _ysgw_one("HANG-ON", "wheel", 0, 10)
