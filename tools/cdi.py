@@ -216,7 +216,7 @@ class Cdi(Gdi):
         import re
 
         def long_text(b):
-            return len(re.findall(rb"[ -~]{48,}", b[:0x100000]))
+            return sum(len(m) for m in re.findall(rb"[ -~]{48,}", b[:0x100000]))
         if data[:8] == bytes.fromhex("0900090009000900"):
             return False
-        return long_text(descramble(data)) > 2 * long_text(data) + 2
+        return long_text(descramble(data)) > 2 * long_text(data) + 256
