@@ -210,11 +210,13 @@ class Cdi(Gdi):
         return name or "1ST_READ.BIN"
 
     def boot_is_scrambled(self, data):
-        """True when the boot file looks scrambled: the plain one has Katana or KallistiOS strings near its start
-        and its first instructions are not random. A game "binhacked" for CD-R may carry it plain (its IP.BIN
-        then loads it itself)."""
-        def plain_score(b):
-            head = b[:0x40000]
-            score = sum(head.count(s) for s in (b"SEGA", b"KATANA", b"Shinobi", b"GD-ROM", b"KallistiOS", b"Copyright"))
-            return score
-        return plain_score(descramble(data)) > plain_score(data)
+        """True when the boot file is scrambled. The scrambling moves 32-byte blocks, so text runs much longer than
+        a block (48 bytes and up) only survive in the plain file; a plain Katana program also starts with nops
+        (0x0009). A game "binhacked" for CD-R usually carries it plain (its IP.BIN loads it itself)."""
+        import re
+
+        def long_text(b):
+            return len(re.findall(rb"[ -~]{48,}", b[:0x100000]))
+        if data[:8] == bytes.fromhex("0900090009000900"):
+            return False
+        return long_text(descramble(data)) > 2 * long_text(data) + 2
