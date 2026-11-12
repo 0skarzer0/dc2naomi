@@ -64,6 +64,11 @@ muere al acabar la orden**: convertir en primer plano, uno o dos juegos por orde
 permitted"): mover lo sobrante a `_to_delete/` y decírselo. Clonar el repo en `~/dc2naomi-src` (fuera de `mnt`).
 El usuario renombra lo entregado con el prefijo `dc-` (`dc-buzz_es_dc2naomi.bin.gz`): entregar ya así.
 
+**8b. Regla del usuario (2026-11-12): los juegos con la música en pistas de audio de CD no le interesan por ahora**
+(suenan sin música): **antes de convertir**, mirar las pistas (`disc.tracks`: varias de audio en la zona de
+alta densidad de un GD, o pistas de audio en un `.cdi`); si las hay, avisarle y **no convertirlo**. El conversor
+lo avisa ahora en sus notas. Reproducir CD-DA queda para el futuro (Bangai-O es el candidato: sobra sitio).
+
 **9. Lote de juegos para un mueble:** `python3 app/dc2naomi.py --cab joy|ct --batch JUEGO.chd|.gdi|.cdi` → al lado
 `JUEGO_dc2naomi.bin.gz` y `.vmu`. Nombres cortos y sin comas (una coma rompe la fila del CSV): `mv`. Partida
 desbloqueada en cada `.vmu` (receta 10). Filas de CSV (receta 12).

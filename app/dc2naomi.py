@@ -202,6 +202,12 @@ def convert(path, cab, interactive, vmu=None):
             notes.append("Relleno del CD que no se copia: " + ", ".join(filler) + ".")
         if sum(1 for t in disc.tracks if t[2] != 4) > 1:
             notes.append("La música en pistas de audio de CD no suena (el residente no reproduce CD-DA).")
+    else:
+        # a GD-ROM's music as CD audio tracks in the high-density area (Bangai-O: 33 tracks): it will be silent
+        cdda = [t for t in disc.tracks if t[1] >= 45000 and t[2] != 4]
+        if len(cdda) >= 2:
+            notes.append("AVISO: la música va en %d pistas de audio de CD (%d MB) y NO SONARÁ (el residente no "
+                         "reproduce CD-DA); efectos y voces sí." % (len(cdda), sum(t[5] for t in cdda) * 2352 >> 20))
     if vmu is None:  # the default: every game but the ones tested (and left) without it
         vmu = prof not in catalog.NO_VMU
     game["vmu"] = vmu
