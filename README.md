@@ -37,6 +37,10 @@ python3 tools/sfdre.py ORIGINAL.SFD NUEVO/MOVIES/INTRO.SFD 2500      # kbit/s de
 python3 tools/withfiles.py NUEVO --cab joy --batch JUEGO.chd          # convierte con esos archivos sustituidos
 ```
 
+Para ver cómo es un vídeo: `tools/sfdinfo.py X.SFD`. Para música con un archivo por canal (`*L` / `*R`):
+`tools/withfiles.py - --alias "*R.P16=*L.P16" --cab joy --batch JUEGO.chd` la deja en mono (Soulcalibur, 683 → 469 MB).
+Para buscar una partida con todo desbloqueado de la misma región: `tools/findsave.py` (instrucciones dentro).
+
 `sfdre.py` mantiene el tamaño, la frecuencia, las imágenes y el patrón (GOP) de cada vídeo y el sonido ADX byte a
 byte; `withfiles.py` escribe cada archivo nuevo donde estaba el original. **Probado en placa con Rainbow Cotton**
 (16 vídeos a 0,9 Mbit/s: 873 → 500 MB); Buzz Lightyear de la misma forma (43 vídeos a 2,5 Mbit/s: 559 → 437 MB).

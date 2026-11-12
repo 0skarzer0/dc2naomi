@@ -4,7 +4,7 @@ Documento de traspaso entre sesiones (personas o IAs). **Actualízalo en cada se
 
 ## Recetas (para quien continúe, persona o IA): lo que funciona, paso a paso
 
-Leer esto antes de nada. Cada receta se ha hecho de verdad en la sesión del 2026-11-10.
+Leer esto antes de nada. Cada receta se ha hecho de verdad (1-7 el 2026-11-10; 8-14 el 2026-11-11/12).
 
 **0. Reglas.** Nada con copyright al repositorio (ni imágenes, ni IP.BIN, ni BIOS). La contraseña de la Raspberry
 no se escribe en ningún fichero: va en la variable `PIPASS`. Un juego sólo cuenta como probado si funciona en la
@@ -20,7 +20,8 @@ run1.sh IMAGEN.bin 45 NOMBRE` → `NOMBRE.png` (capturas) y `/tmp/ram.bin` (los 
 
 **3. Hablar con la placa** (scripts en `tools/board/`; la Pi del mueble Crazy Taxi es 192.168.68.60 y su NetDIMM
 10.0.0.4; la del mueble estándar **192.168.68.250** (antes .59, cambiada el 2026-11-11 por un choque de IP) y 10.0.0.3):
-- desde un PC de la red del usuario: `PIHOST=… PIPASS=… python3 pi.py 'ORDEN'` y `piput.py LOCAL REMOTO`;
+- desde un PC de la red del usuario: `PIHOST=… PIPASS=… python3 pi.py 'ORDEN'` y `piput.py LOCAL REMOTO`
+  (paramiko; sin él, `pissh.sh` y `piup.sh`: receta 11);
 - en la Pi: `pk.py IP DIR[:N]` (leer memoria con el juego en marcha) y
   `nohup python3 dcl.py BASE.bin.gz LOADER.bin IP FLAGS > /tmp/dcl.log 2>&1 &` (imagen de prueba = BASE con otro
   loader y flags añadidos; mirar `/tmp/dcl.log` hasta `netdimm_send rc 0`).
@@ -51,7 +52,54 @@ y volver a enviar con `dc2naomi_send.py`. En la Pi del Crazy Taxi la herramienta
 (con las tarjetas anteriores en `*.orig` / `*.bak`).
 
 **7. Al terminar cualquier cambio:** HANDOFF + README (agradecer todo lo usado), commit, push, y decir al usuario
-con claridad qué se ha probado en placa y qué sólo en Flycast.
+con claridad qué se ha probado en placa y qué sólo en Flycast. **Regla del usuario: toda operación queda en GitHub**
+(receta aquí, herramienta en `tools/`), para otras sesiones, otras IAs u otros usuarios.
+
+Recetas añadidas el 2026-11-11/12 (todas hechas de verdad en esa sesión):
+
+**8. Trabajar en el PC del usuario (shell Linux de la app de escritorio, carpeta `~/mnt/dc2naomi` =
+`C:\Users\Usuario\Documents\dc2naomi`).** Cada orden dura como mucho 3 min y **lo que se deje en segundo plano
+muere al acabar la orden**: convertir en primer plano, uno o dos juegos por orden (2 núcleos; 30-160 s por juego;
+`GZIP_LEVEL=1` / nivel 1 si no da tiempo). En la carpeta del usuario **no se puede borrar** (`rm` da "Operation not
+permitted"): mover lo sobrante a `_to_delete/` y decírselo. Clonar el repo en `~/dc2naomi-src` (fuera de `mnt`).
+El usuario renombra lo entregado con el prefijo `dc-` (`dc-buzz_es_dc2naomi.bin.gz`): entregar ya así.
+
+**9. Lote de juegos para un mueble:** `python3 app/dc2naomi.py --cab joy|ct --batch JUEGO.chd|.gdi|.cdi` → al lado
+`JUEGO_dc2naomi.bin.gz` y `.vmu`. Nombres cortos y sin comas (una coma rompe la fila del CSV): `mv`. Partida
+desbloqueada en cada `.vmu` (receta 10). Filas de CSV (receta 12).
+
+**10. Partida con todo desbloqueado:** clon parcial de bucanero/dreamcast-saves y `tools/findsave.py SAVES palabra`
+(lista cada `.VMI` con el **nombre del archivo que escribe el juego, que dice la región**: Soulcalibur `_MBU` USA /
+`_MBE` Europa, Dynamite Cop `D_COP_US` / `D_COP_PL`, títulos en japonés = Japón); luego
+`tools/vmutool.py import JUEGO.vmu PARTIDA.vmi --batch` y `list` para comprobarlo. Sin partida publicada (Super
+Puzzle Fighter II X, Millennium Racer) la tarjeta se queda vacía: decírselo al usuario.
+
+**11. Subir a una Raspberry sin paramiko** (p. ej. desde el PC del usuario): `PIHOST=… PIPASS=…
+tools/board/pissh.sh 'ORDEN'` y `tools/board/piup.sh ARCHIVO...` (a `/boot/roms/`, reanudable: repetir hasta
+`TODO_SUBIDO`; comprueba md5). La Pi no tiene `rsync`. Si ya había una versión, sustituirla con el mismo nombre deja
+válida su fila del CSV.
+
+**12. CSV del WiPi** (`/boot/config/romsinfo.csv`, 18 columnas): copia `romsinfo.csv.bak_*` antes de tocarlo,
+**el archivo no acaba en salto de línea** (añadir uno antes de la fila), sólo ASCII, y luego
+`python3 /sbin/piforce/importcsv.py /boot/config/romsinfo.csv /var/www/html/csv/romsinfo.csv`. Fila tipo:
+`"Sega Naomi",NOMBRE.bin.gz,,,"Título (Dreamcast)","Corto\n(Dreamcast)",Homebrew,AÑO,Fighter,"AAMA - Green (Suitable
+For All Ages)",Horizontal,"Digital (Stick)",Yes,No,generic,none,,NOMBRE.bin.gz` (géneros que usa: Fighter, Driving,
+Shooter, Puzzle, Action, Miscellaneous, `Beat-'Em-Up`…). Si el usuario lo sube él, dejarle `filas_romsinfo.csv`.
+
+**13. CD de autoarranque (`.cdi`):** entra directo en `dc2naomi.py` (`tools/cdi.py`, sección "Soporte de .cdi").
+Comprobar la imagen contra el disco: `tools/cmpimage.py DISCO IMAGEN.bin.gz`.
+
+**14. Un juego no cabe en los 512 MB** (el conversor no recorta solo: proponer opciones al usuario y que decida):
+mirar qué ocupa (`walk()` agrupado por carpeta y extensión) y, de menos a más trabajo:
+- relleno de un solo byte en un CDI: ya lo quita el conversor;
+- música con un archivo por canal (`*L.P16` / `*R.P16`): en mono con
+  `tools/withfiles.py - --alias "*R.P16=*L.P16" --cab joy --batch JUEGO.chd` (Soulcalibur 683 → 469 MB);
+- vídeos Sofdec (`.SFD`): **recodificarlos (probado en placa: Rainbow Cotton)**, `tools/sfdinfo.py` para verlos,
+  `tools/sfdre.py ORIG NUEVO/RUTA/X.SFD KBPS` por cada uno (0,9 Mbit/s si hace falta mucho, 2,5 si basta un poco),
+  comprobar imágenes / avisos / ADX idéntico (sección de Rainbow Cotton) y
+  `GZIP_LEVEL=1 tools/withfiles.py NUEVO --cab joy --batch JUEGO.cdi`;
+- quitar vídeos (`--alias "X.SFD=EL_MAS_CORTO.SFD"`): sólo si el usuario lo prefiere (con Rainbow Cotton no lo quiso).
+Después, releer la imagen y comparar cada archivo (como en las secciones de Soulcalibur, Rainbow Cotton y Buzz).
 
 ## Objetivo
 
