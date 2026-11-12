@@ -1592,6 +1592,12 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   Después también la japonesa (usuario: "la japonesa la quitamos también, dejamos la inglesa"): borrados
   `dc-ssf2x_dc2naomi.{bin.gz,vmu}` de la .250 y su fila (copia `romsinfo.csv.bak_ssf2x_jp`). En la .250 solo queda
   `dc-ssf2x_en`. La copia del PC (`dreamcastisos/ssf2x_dc2naomi.*`) se queda.
+- **Limpieza de la Pi .250 (usuario, 2026-11-12: "quita las líneas huérfanas y las versiones de Dreamcast que ya
+  estén en arcade"):** fuera del CSV (copia `romsinfo.csv.bak_dc_dupes`, reimportado) las filas huérfanas
+  `ikaruga_joy_dc2naomi` e `ikaruga_joy_g2cpu_dc2naomi` (sus ficheros ya no estaban) y `dc-ikaruga` y `dc-cspike_es`
+  (el usuario tiene los originales de NAOMI, `n1-ikaruga_v3` y `n1-cannon_spike`); borrados sus `.bin.gz` y `.vmu`.
+  Las copias del PC se quedan. **Para la receta 4 (leer la caja negra cargando otra imagen) ya no está Ikaruga en esa
+  Pi:** usar la más pequeña que quede (`dc-spf2x`, 110 MB) o subir una.
 - **Ojo con la Pi .250:** se reinició dos veces mientras comprimía una imagen con `pigz` (`vcgencmd get_throttled` =
   `0x50005`: **falta de tensión**). En esa Pi no comprimir imágenes grandes: hacerlo en el contenedor o en el PC y
   subir el `.gz` ya hecho (`piput.py` / `tools/board/piup.sh`).
