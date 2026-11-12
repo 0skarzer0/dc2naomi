@@ -67,9 +67,20 @@ def main(src, dst, kbps):
     while std[j] == 0xFF:
         j += 1
     std = std[j:j + 2]                                     # the original's STD buffer field (0x60 0x2e)
+    # the original's picture pattern: GOP length and whether it uses B pictures (Rainbow Cotton: 15 with B; Buzz
+    # Lightyear: 12, I and P only); its bitrate as the ceiling
+    oes = b"".join(pk[30:] for pk in packs if pk[12:16] == b"\0\0\1\xe0")
+    otypes = ["IPB"[((oes[m.start() + 5] >> 3) & 7) - 1] for m in re.finditer(b"\0\0\1\0", oes[:4 << 20])
+              if m.start() + 5 < len(oes)]
+    istarts = [i for i, t in enumerate(otypes) if t == "I"]
+    gop = max(1, min(30, istarts[1] - istarts[0])) if len(istarts) > 1 else 15
+    bframes = 2 if "B" in otypes else 0
+    vbr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries", "stream=bit_rate",
+                          "-of", "csv=p=0", src], capture_output=True, text=True).stdout.strip()
+    maxrate = max(int(vbr) // 1000 if vbr.isdigit() else 3600, kbps)
     m1v = dst + ".m1v"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-an", "-c:v", "mpeg1video", "-b:v", f"{kbps}k",
-                    "-maxrate", "3600k", "-bufsize", "327680", "-g", "15", "-bf", "2", "-s", f"{w}x{h}",
+                    "-maxrate", f"{maxrate}k", "-bufsize", "327680", "-g", str(gop), "-bf", str(bframes), "-s", f"{w}x{h}",
                     "-vf", f"setpts=N*{den}/({num}*TB)", "-r", rate, "-sc_threshold", "1000000000", "-f", "mpeg1video", m1v], check=True)
     es = open(m1v, "rb").read(); os.unlink(m1v)
     pics = pictures(es); st = stamps(pics, tick)
@@ -135,7 +146,8 @@ def main(src, dst, kbps):
         out += video_packet(last_hdr)
     out += tail
     open(dst, "wb").write(out)
-    print(f"{os.path.basename(src)}: {len(raw)/1048576:.1f} -> {len(out)/1048576:.1f} MB, pictures {len(pics)} (original {orig_pics})")
+    print(f"{os.path.basename(src)}: {len(raw)/1048576:.1f} -> {len(out)/1048576:.1f} MB, pictures {len(pics)} "
+          f"(original {orig_pics}), {w}x{h} {rate} GOP {gop}{' B' if bframes else ''}")
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], int(sys.argv[3]))
