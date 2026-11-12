@@ -1745,3 +1745,27 @@ analógico, acelerador = R, freno = L, **START apretado + acelerador = Y, START 
   las filas en `dreamcastisos/filas_romsinfo_ct.csv`. Sin probar en placa.
 - Error mío a evitar: al derivar `convct.sh` de `conv.sh` con `sed` quedaron en la lista los juegos del lote anterior y se
   convirtieron 4 con `ct` por error (movidos a `_to_delete/`); revisar siempre la lista antes de lanzar el script.
+
+## Coches con vídeos recodificados + motos y Star Wars Racer al mueble Crazy Taxi (2026-11-12, tarde)
+
+El usuario eligió para los 5 que no cabían: recodificar (Demolition Racer, TNN, TXR2), audio a mono (MSR) e investigar
+Rush 2049; todos con mandos `ct`, VMU desbloqueada y CSV. Además, Jeremy McGrath Supercross 2000 y Star Wars Racer
+pasan al mueble Crazy Taxi y salen del de palancas.
+- **Herramientas del PC** (fuera del repo, en `~` del shell del PC; la lógica ya está en el repo): `~/extract.py CHD DIR
+  "*SFD"` (saca archivos del disco), `~/reall.py ORIG NUEVO FRAC MIN MAX` (sfdre.py a cada SFD, kbps = FRAC × bitrate de
+  la cabecera entre MIN y MAX), `~/chk.py ORIG NUEVO` (mismas imágenes y mismos paquetes C0 de audio con sfdinfo, y
+  ffmpeg sin errores de vídeo).
+- **Ojo:** el tamaño final depende poco del kbps pedido: estos vídeos eran sobre todo relleno de bitrate (TNN 583 → 157
+  MB pidiendo 0,9 × su bitrate). Se usó FRAC 0,9 (2500-5500 kbps), la mejor calidad que cabe.
+- **Demolition Racer:** `MISC/CREDITS.SFD` 38,1 → 18,2 MB y `MISC/INTRO.SFD` 27,1 → 13,0 MB (1600 kbps, 640x240): imagen
+  **497,3 MB**. VMU `demolitionrace/v21403` ("100 % all complete"). `dc-demolition_dc2naomict`.
+- **TNN Hardcore Heat:** 26 de 28 SFD recodificados; `EU_ROLL.SFD` (640x448, sin paquete BF, audio MPEG en C0) y
+  `USA/ASC_240.SFD` se dejan como estaban por ser de otro tipo: imagen **310,2 MB**. VMU `hardcore/v49295`
+  (`HARDCORE.SYS`, "opening all secrets"). `dc-tnnhh_dc2naomict`.
+- **Tokyo Xtreme Racer 2:** los 6 SFD 312,7 → 137,2 MB: imagen **493,8 MB**. VMU `tokyo2/v15947` (`TXRACER02GF0`,
+  versión USA, "everything done"). `dc-txr2_dc2naomict`.
+- **Jeremy McGrath (`dc-jmsx2000_dc2naomict`) y SW Racer (`dc-swracer_dc2naomict`)** con `--cab ct` y las mismas partidas
+  que en la .250. Quitados de la .250 (ficheros y filas; copia `romsinfo.csv.bak_quita_motos_swracer`, reimportado; las
+  versiones `joy` del PC a `_to_delete/`).
+- Pi .60: los 10 ficheros con md5 comprobado, 5 filas nuevas (copias `romsinfo.csv.bak_dc_ct_motos`,
+  `.bak_dc_ct_videos`), todas en `dreamcastisos/filas_romsinfo_ct.csv`. Nada probado en placa.
