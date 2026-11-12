@@ -64,7 +64,7 @@ Museum, Midway…) y ports (Wipeout, Mario Kart 64).
 | Juego | Placa real | Mueble |
 |---|---|---|
 | Crazy Taxi 2 (US) | ✅ **Terminado** (`ct2h7`, salto con doble toque); `ct2h8` = `ct2h7` + VMU en fichero (Flycast OK, placa pendiente) | Crazy Taxi |
-| Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`) | estándar |
+| Ikaruga (JP) | ✅ **Terminado** (`ikaruga_joy`, mandos `joy`); ✅ **con VMU desbloqueada** (`dc-ikaruga`, 2026-11-12) | estándar |
 | Namco Museum (US) | ✅ **Terminado** (`nmus6` sin VMU; `nmus7` con VMU en fichero; mandos `pole`) | Crazy Taxi |
 | Yu Suzuki Game Works Vol. 1 (JP) | ✅ Funciona (mandos `menu`); Power Drift: el petardeo del sonido está resuelto (2026-11-11), salir con B = negro | Crazy Taxi |
 | Daytona USA 2001 (US) | ✅ Funciona (`daytona3`); ✅ **VMU en fichero (`daytona5`) confirmada**: guarda, se carga otro juego, se vuelve a cargar y recupera la partida | Crazy Taxi |
@@ -1497,7 +1497,6 @@ Pedido por el usuario. No había disco de Ikaruga en el PC: se partió de la ima
   `/boot/config/romsinfo.csv` (copia `romsinfo.csv.bak_ikaruga_vmu`) importada con `importcsv.py`. **Se dejan las
   entradas viejas** (`ikaruga_joy`, `ikaruga_joy_g2cpu`) por si la nueva falla. Copia en el PC: `dc2naomi/ikaruga/`.
   Ojo: `/boot` de esa Pi está al 100 % (≈190 MB libres tras esto).
-- **Sin probar en placa.** En Flycast la imagen nueva hace lo mismo que la vieja (licencia SEGA → logo 斑鳩 y ahí se
-  queda en el emulador, también con la vieja), así que Flycast no dice nada sobre la VMU. Riesgo: es el residente
-  actual con Ikaruga (antes iba con el del 2026-11-09). Si falla, probar la misma conversión sin VMU (`conv.bin.gz`)
-  para separar residente de VMU. `catalog.NO_VMU` sigue incluyendo `ikaruga` hasta que se confirme.
+- **✅ Probado en placa (usuario, 2026-11-12 11:12: "funciona estupendamente").** Ikaruga va con el residente actual y
+  con la VMU en fichero. (En Flycast se queda en el logo 斑鳩, también la imagen vieja: Flycast no sirve para Ikaruga.)
+  Quitado `ikaruga` de `catalog.NO_VMU`: el programa ya le pone VMU.

@@ -38,7 +38,7 @@ muchos de estos discos para colocar los datos al borde del CD (un archivo de un 
 en Cannon Spike) no se copia a la imagen. La música en pistas de audio de CD no suena (ver limitaciones).
 Comprobado contra el disco original archivo por archivo (`tools/cmpimage.py`); **ninguno probado aún en placa**.
 
-**La memoria (VMU).** Salvo en los juegos que ya iban bien sin ella (Crazy Taxi 2, Ikaruga, Yu Suzuki GW), el
+**La memoria (VMU).** Salvo en los juegos que ya iban bien sin ella (Crazy Taxi 2, Yu Suzuki GW), el
 programa activa la VMU emulada y deja junto al `.bin.gz` un `JUEGO_dc2naomi.vmu` vacío (128 KB). Para que las partidas
 no se pierdan al apagar la placa hacen falta los scripts de la carpeta [`wipi/`](wipi/README.md) en tu WiPi Netbooter
 (vienen también dentro del zip de Windows, con sus instrucciones en `LEEME_WIPI.txt`): copiar los dos `.py` a
@@ -82,7 +82,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Juego | Mueble estándar | Mueble Crazy Taxi |
 |---|---|---|
 | Crazy Taxi 2 (USA) | experimental | ✅ probado (también con VMU en fichero) |
-| Ikaruga (Japón) | ✅ probado | experimental |
+| Ikaruga (Japón) | ✅ probado (también con VMU en fichero y partida desbloqueada) | experimental |
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: salir con B deja negro) |
 | Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (disparo automático, acelerador = gases, freno = misil, START + acelerador = frenar, START + freno = quitar/poner el disparo automático; las luces del arcade, en el botón START); Space Harrier (acelerador = disparo rápido); se crean con `tools/mkgz.py` |
