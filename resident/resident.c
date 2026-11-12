@@ -2166,6 +2166,16 @@ void boot(const struct dimm_header *h) {
         REG32(0xa0702c00) = REG32(0xa0702c00) & ~0x300u;
     }
 
+    /* The game's RAM cleared, as Flycast starts it. On the board it holds what the loader and earlier games left,
+       and a game that reads its work RAM before writing it takes that for data: Super Street Fighter II X (the
+       English translation) read a table index of 0xbbbb from 0x8c600380 and stopped on an address error right
+       after the SEGA logo (black box, 2026-11-12). Up to the resident part, line by line through the cache, each
+       line then purged (written back and dropped) so that no line the loader left dirty is written over it later. */
+    for (u32 *p = (u32 *)0x8c008000u; p < (u32 *)RES_BASE; p += 8) {
+        p[0] = 0; p[1] = 0; p[2] = 0; p[3] = 0; p[4] = 0; p[5] = 0; p[6] = 0; p[7] = 0;
+        __asm__ volatile("ocbp @%0" : : "r"(p) : "memory");
+    }
+
     /* IP.BIN and 1ST_READ.BIN */
     read_sectors(0x8c008000, H.ip_fad, 16, 0);
     boot_sectors = (H.boot_size + 2047) >> 11;

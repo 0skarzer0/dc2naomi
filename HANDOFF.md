@@ -1558,7 +1558,27 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   las cuatro partidas de esa carpeta se llaman igual (`SSF2X___.SYS`) y `vmutool import` sustituye: importar solo esa.
 - Pi .250: `/boot/roms/dc-ssf2x_en_dc2naomi.{bin.gz,vmu}` (md5 comprobado), fila en `/boot/config/romsinfo.csv`
   (copia `romsinfo.csv.bak_ssf2x_en`) importada con `importcsv.py`. Copia en el PC: `dc2naomi/ssf2x_en/`.
-  `/boot` de esa Pi: 2,5 GB libres (el usuario liberó espacio). **Sin probar en placa ni en Flycast.**
+  `/boot` de esa Pi: 2,5 GB libres (el usuario liberó espacio).
+- **2026-11-12: en la placa, negro tras el logo de SEGA (en Flycast va: llega a "Save file loaded", CAPCOM y el
+  título). RESUELTO, usuario 12:37: "ya funciona estupendamente".** Cómo se encontró (receta 4, con el VMU puesto):
+  `dclb.py` (= `dcl.py` sin enviar) + `dc2naomi_send.py` de la imagen con flags `0x20200`; tras el cuelgue (el vigilante
+  de VMU dice "no answer"; los peeks ya no contestan porque el gancho de maple no corre), cargar Ikaruga (14 MB) y leer
+  la caja negra: 1 excepción, **EXPEVT `0xe0`** (error de dirección en lectura), **SPC `0x8c197bd2`** (`mov.w @r3,r1`),
+  **TEA `0x8c0224b3`**. El código (`0x8c197b92`): `índice = *(u16 *)(*0x8c2d55b4 + 0x380)`, si 0 → byte `+0x462`, si no
+  → 12; luego lee la tabla `0x8c0268f8 + índice`. TEA − tabla = −0x4445 → la palabra era **`0xbbbb`**: `*0x8c2d55b4` =
+  `0x8c600000`, memoria de trabajo del juego que **lee antes de escribirla**. En Flycast la RAM empieza a cero (0 →
+  índice válido); en la placa tiene lo que dejaron el loader y los juegos anteriores.
+  **Arreglo general (residente, `boot()`):** pone a cero la RAM del juego (`0x8c008000` → `RES_BASE`) antes de leer
+  IP.BIN, línea a línea por la caché y con `ocbp` en cada línea (para que ninguna línea sucia del loader se escriba
+  encima después). Lo llevan todas las imágenes nuevas; las viejas siguen igual (cambiar su loader con `dcl.py`/
+  `withfiles.py` si fallan así). En Flycast la imagen con el arreglo sigue llegando al título.
+  Imagen nueva (solo cambia el loader): md5 de la `.gz` `b76d824ebd649d4072042434d215b55b`, en la Pi .250 y en el PC
+  (`dc2naomi/ssf2x_en/`); su `.vmu` en la Pi es el de la partida de prueba (el anterior: `_test/en_vmu_before.bak`).
+  Las versiones japonesa (`dc-ssf2x`) y española (`dc-ssf2x_es`) de la Pi llevan el loader viejo: **sin probar**; si se
+  quedan en negro igual, cambiarles el loader.
+- **Ojo con la Pi .250:** se reinició dos veces mientras comprimía una imagen con `pigz` (`vcgencmd get_throttled` =
+  `0x50005`: **falta de tensión**). En esa Pi no comprimir imágenes grandes: hacerlo en el contenedor o en el PC y
+  subir el `.gz` ya hecho (`piput.py` / `tools/board/piup.sh`).
 
 ## ⭐ Rainbow Cotton **funciona perfecto en la placa** (2026-11-12, el usuario) → vídeos recodificados validados; Buzz Lightyear igual
 

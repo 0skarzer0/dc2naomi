@@ -99,6 +99,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 |---|---|---|
 | Crazy Taxi 2 (USA) | experimental | ✅ probado (también con VMU en fichero) |
 | Ikaruga (Japón) | ✅ probado (también con VMU en fichero y partida desbloqueada) | experimental |
+| Super Street Fighter II X, traducción al inglés de ComradeSnarky | ✅ probado (con VMU y partida desbloqueada de bucanero/dreamcast-saves) | experimental |
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: salir con B deja negro) |
 | Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (disparo automático, acelerador = gases, freno = misil, START + acelerador = frenar, START + freno = quitar/poner el disparo automático; las luces del arcade, en el botón START); Space Harrier (acelerador = disparo rápido); se crean con `tools/mkgz.py` |
