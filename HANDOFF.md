@@ -1500,3 +1500,14 @@ Pedido por el usuario. No había disco de Ikaruga en el PC: se partió de la ima
 - **✅ Probado en placa (usuario, 2026-11-12 11:12: "funciona estupendamente").** Ikaruga va con el residente actual y
   con la VMU en fichero. (En Flycast se queda en el logo 斑鳩, también la imagen vieja: Flycast no sirve para Ikaruga.)
   Quitado `ikaruga` de `catalog.NO_VMU`: el programa ya le pone VMU.
+
+## Super Street Fighter II X, traducción al inglés de ComradeSnarky (2026-11-12) — `dc-ssf2x_en_dc2naomi.bin.gz`
+
+Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japan) [T-En by ComradeSnarky]`).
+`app/dc2naomi.py --cab joy --batch` (11 s): 159,5 MB, 124,5 MB comprimida; juego desconocido para el catálogo
+(parches de `findpatch`), mandos `joy`. md5 `f908f639dd77766bf580b0df00f33035`.
+- VMU: `SSF2X.VMI` de bucanero/dreamcast-saves (`r/ssf2x`, "Everything unlocked, including DIP Switch Menu!"). Ojo:
+  las cuatro partidas de esa carpeta se llaman igual (`SSF2X___.SYS`) y `vmutool import` sustituye: importar solo esa.
+- Pi .250: `/boot/roms/dc-ssf2x_en_dc2naomi.{bin.gz,vmu}` (md5 comprobado), fila en `/boot/config/romsinfo.csv`
+  (copia `romsinfo.csv.bak_ssf2x_en`) importada con `importcsv.py`. Copia en el PC: `dc2naomi/ssf2x_en/`.
+  `/boot` de esa Pi: 2,5 GB libres (el usuario liberó espacio). **Sin probar en placa ni en Flycast.**
