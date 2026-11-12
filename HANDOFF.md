@@ -1644,3 +1644,15 @@ VMU `bangaio/v95185` ("all stages completed"; la otra publicada solo llega a la 
 **Sin música:** el disco lleva 34 pistas de audio de CD (≈ 680 MB, toda la banda sonora); efectos y voces van en
 archivos y sí suenan. Es el mejor candidato para la idea pendiente de reproducir CD-DA (recodificada para caber: con
 98 MB de imagen quedan ~400 MB libres en la NetDIMM).
+
+## The Last Blade 2: el CHD del usuario es un ripeo sin vídeos (2026-11-12)
+
+Revisado a petición del usuario ("¿qué le pasaba?"): no fallaba; está aparcado sin probar en placa (en Flycast llega
+al título). **Los 29 `ZSFD/*.SFD` (630 MB) del CHD del usuario (`otros/Last Blade 2 … (USA).chd`, 240 MB) son
+relleno**: la secuencia 00 01 02 … FF repetida, ningún MPEG ni `SofdecStream` (`sfdinfo.py` y ffprobe no ven nada).
+El `alias` del perfil `lb2` (vídeos de personaje → el más corto) no quitaba nada real; sin vídeos el juego son unos
+280 MB. Una pista de audio de CD (17,7 MB); la música va en `.AFS`: la regla de "sin música" no le afecta.
+Opciones dadas al usuario: probarlo tal cual (sin intro ni escenas), o un volcado completo y recodificar sus vídeos
+(~1,2 Mbit/s → unos 500 MB). KOF Dream Match 1999 (42 pistas de CD-DA) queda fuera por la regla 8b.
+**Para cualquier juego:** si un archivo de vídeo es esa secuencia, el volcado es un ripeo (comprobar antes de
+proponer recortes).
