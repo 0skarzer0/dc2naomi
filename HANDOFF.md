@@ -1725,3 +1725,23 @@ actualiza el CSV". De los 39 CHD que quedaban (sin CD-DA, ver arriba):
   filas añadidas a `/boot/config/romsinfo.csv` (copia `romsinfo.csv.bak_dc_lote3`, importado con `importcsv.py`; copia
   de las filas en `dreamcastisos/filas_romsinfo_lote3.csv`). **`/boot` queda al 99 % (474 MB libres):** para más
   juegos hay que borrar alguno de la Pi. Nada de este lote probado en placa.
+
+## Juegos de coches para el mueble Crazy Taxi (Pi .60), 2026-11-12
+
+Pedido del usuario: convertir los de coches con `--cab ct`, subirlos a la Pi .60 y actualizar su CSV; **no** convertir los
+que tengan música en CD, arranquen con Windows CE o superen los 512 MB. Mandos `ct` (los de siempre): volante = stick
+analógico, acelerador = R, freno = L, **START apretado + acelerador = Y, START + freno = X**, START actúa al soltarlo
+(README, "Mueble Crazy Taxi"); el conversor `--cab ct` los pone solo.
+- **Convertidos** (`~/convct.sh`, como `conv.sh` pero `--cab ct`; 51-96 s): Test Drive 6 (493,7 MB), Test Drive Le Mans
+  (246,2 MB), Wacky Races (475,4 MB). Ficheros `dc-td6|tdlemans|wackyraces_dc2naomict.{bin.gz,vmu}`.
+- **VMU con todo desbloqueado** (bucanero): TD6 `v26596` (`TESTDRIV6_00`, todos los torneos); Le Mans `v6000`
+  (`TDLEMANS.OPT`, todo abierto) + `v40738` (`TDLEMANS.001`, todos los modos y coches; nombres de la versión USA);
+  Wacky Races `v7471` (`WACKYRUS.001`, todas las estrellas y pistas) + `v41658` (`WACKYRUS.SYS`, niveles y habilidades).
+- **No convertidos (superan 512 MB, suma de archivos):** Demolition Racer 530, MSR 758, SF Rush 2049 958, TNN Hardcore
+  Heat 733, Tokyo Xtreme Racer 2 669. Ninguno tiene CD-DA (criba anterior) ni arranca con Windows CE.
+- **Pi .60:** los 6 ficheros en `/boot/roms/` (md5 comprobado con `piup.sh`, `/boot` con 21 GB libres), 3 filas al final de
+  `/boot/config/romsinfo.csv` (copia `romsinfo.csv.bak_dc_ct_cars`; imagen `crzytaxi.png`, "Analog (Driving)",
+  `crazy-taxi` / `generic-driving-no-ffb-support`, como las demás `*_dc2naomict`; importado con `importcsv.py`); copia de
+  las filas en `dreamcastisos/filas_romsinfo_ct.csv`. Sin probar en placa.
+- Error mío a evitar: al derivar `convct.sh` de `conv.sh` con `sed` quedaron en la lista los juegos del lote anterior y se
+  convirtieron 4 con `ct` por error (movidos a `_to_delete/`); revisar siempre la lista antes de lanzar el script.
