@@ -1598,3 +1598,17 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   resto = el CDI), IP.BIN y 1ST_READ iguales. Entregada como **`isosdream/dc-buzz_es_dc2naomi.bin.gz`** (el usuario
   ya usa el prefijo `dc-` en los nombres) con su VMU `v18060` (completo) y su fila en `filas_romsinfo.csv`. Sin
   probar en placa.
+
+## Toy Story 2 (traducción al español de pitito, CDI) con los vídeos recodificados (2026-11-12) — 674 → 477 MB
+
+Opción elegida por el usuario de las que se le dieron (receta 14): recodificar a 1,2 Mbit/s (la otra, 1,0).
+- Disco: 402 MB de vídeo (23 `GEM_MOVIES/*.SFD`, casi todos 320×416 a 29,97 fps, ~2,6 Mbit/s; I y P en GOP de 12,
+  algunos con B), 170 MB de música ADX (`GEM_MUSIC`, sin tocar), 67 MB de gráficos (`GEM_WADS`).
+- **`sfdre.py` ya no toma como techo el bitrate de la cabecera si es la marca de "variable" (104,86 Mbit/s,
+  `0x3FFFF` × 400)**; comprobado que Rainbow Cotton (STF, STV5) y Buzz (INTRO, TTALES) salen idénticos.
+- Recodificados a 1200 kbit/s: 401,9 → 204,5 MB en 22 s; los 23 con las mismas imágenes, 0 avisos y ADX idéntico;
+  fotograma de L003 a 40 s comparado: casi igual. `GZIP_LEVEL=1 tools/withfiles.py ~/ts/new --cab joy --batch
+  Toy_Story_2…cdi` → **476,9 MB** (378 MB comprimido). Comprobada: 389 archivos (23 vídeos = recodificados, el resto =
+  el CDI; los datos están en la sesión 1 y el IP.BIN en la LBA 359984), IP.BIN y 1ST_READ iguales.
+- Entregada como **`isosdream/dc-toystory2_es_dc2naomi.bin.gz`** con su VMU `v38204` ("100% complete") y su fila en
+  `filas_romsinfo.csv` (género `Platform`). Sin probar en placa.
