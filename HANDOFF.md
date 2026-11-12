@@ -1581,6 +1581,9 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   son **piezas largas** de 3,5-4,5 minutos (por ejemplo `S_RYU_02.ADX`: 11,5 MB, 242 s) en vez de los bucles de
   ~1 minuto del original (2,6 MB, 56 s). Mismo formato (ADX tipo 3, estéreo, 44,1 kHz): el ADX apenas se comprime, así
   que se nota entero en la imagen. Medido con `gdi.open_disc(...).walk()` y la cabecera ADX de cada archivo.
+  **El usuario la descarta (2026-11-12: "no merece la pena la española"):** borrados de la Pi .250
+  `dc-ssf2x_es_dc2naomi.{bin.gz,vmu}` y su fila (copia `romsinfo.csv.bak_ssf2x_es`; reimportado con `importcsv.py`).
+  La copia del PC (`isosdream/`) se queda.
 - **Ojo con la Pi .250:** se reinició dos veces mientras comprimía una imagen con `pigz` (`vcgencmd get_throttled` =
   `0x50005`: **falta de tensión**). En esa Pi no comprimir imágenes grandes: hacerlo en el contenedor o en el PC y
   subir el `.gz` ya hecho (`piput.py` / `tools/board/piup.sh`).
