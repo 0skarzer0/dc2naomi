@@ -1697,3 +1697,31 @@ pasan de 512 MB (Sonic Adventure 1 y 2, Vampire Chronicle, Tech Romancer, SF Rus
 convertir (receta 14).
 **Borradas por petición del usuario** las 39 descartadas (`dreamcastisos`, con su permiso de borrado): quedan 39 CHD,
 ninguno con CD-DA. Los `dc-bangaio_dc2naomi.*` convertidos antes siguen ahí.
+
+## Lote de 17 juegos sin coches ni ripeos, subido a la Pi .250 (2026-11-12)
+
+Pedido del usuario: "convierte todos los que no sean de coches y no necesites ripear nada, súbelos a la Pi .250 y
+actualiza el CSV". De los 39 CHD que quedaban (sin CD-DA, ver arriba):
+- **Convertidos** (`--cab joy`, 5-104 s cada uno, en el PC del usuario con `~/conv.sh` = bucle sobre la lista que
+  salta lo ya hecho y para a los ~100 s para caber en los 3 min): Gunbird 2, Jeremy McGrath Supercross 2000 (moto, no
+  coche), JoJo, Karous, The Last Blade 2 (417 MB: el conversor ya quita el relleno de los `ZSFD`; sin vídeos reales),
+  Neo Golden Logres, Net de Tennis, Psyvariar 2, Radirgy, Shikigami no Shiro II, Sonic Shuffle, Star Wars Racer
+  (pods, no coches), Triggerheart Exelica, Trizeal, Twinkle Star Sprites, Under Defeat, WWF Royal Rumble.
+  Nombres `dc-<corto>_dc2naomi.{bin.gz,vmu}` en `dreamcastisos/`.
+- **VMU con partida desbloqueada** (bucanero, receta 10; región USA donde la hay): Gunbird 2 `v33167`, JM Supercross
+  `v85569` (opciones, todo abierto) + `v52330`, JoJo `v11766` ("Everything unlocked"), Last Blade 2 `v35892` (versión
+  USA), Sonic Shuffle `v20598`, SW Racer `v25373` ("Everything open"), WWF Royal Rumble `v39825` (todos los
+  secretos). Sin partida publicada (tarjeta vacía): Karous, Neo Golden Logres, Net de Tennis, Psyvariar 2, Radirgy,
+  Shikigami II, Triggerheart, Trizeal, Twinkle Star Sprites, Under Defeat.
+- **Coches, no convertidos por la petición:** Demolition Racer, MSR, SF Rush 2049, Test Drive 6, Test Drive Le Mans,
+  TNN Hardcore Heat, Tokyo Xtreme Racer 2, Wacky Races (siguen como CHD en la carpeta).
+- **Pasan de 512 MB (necesitarían ripeo/recorte), sin convertir:** Evil Dead (977 MB), Fur Fighters (828), Jet Grind
+  Radio (899), Rayman 2 (921), Sonic Adventure (973) y 2 (968), Tech Romancer (966), Vampire Chronicle (953), Pro
+  Pinball Trilogy (664), Psychic Force 2012 (749). Virtua Fighter 3tb (643 MB) se convirtió y no cabe: sus ficheros
+  están en `_to_delete/`. (Tamaño = suma de archivos del disco: `~/sz.py` con `gdi.open_disc(...).walk()`.)
+- **No soportados** (arrancan con un `.BIN` de Windows CE: "0.BIN", `00MMXDC.BIN`, `1WWFTUDE.BIN`): Mars Matrix,
+  Marvel vs. Capcom (Clash of Super Heroes) y WWF Attitude. Quedan como CHD.
+- **Pi .250:** los 34 ficheros (17 `.bin.gz` + 17 `.vmu`) en `/boot/roms/`, md5 comprobado con `piup.sh` (5 tandas), 17
+  filas añadidas a `/boot/config/romsinfo.csv` (copia `romsinfo.csv.bak_dc_lote3`, importado con `importcsv.py`; copia
+  de las filas en `dreamcastisos/filas_romsinfo_lote3.csv`). **`/boot` queda al 99 % (474 MB libres):** para más
+  juegos hay que borrar alguno de la Pi. Nada de este lote probado en placa.
