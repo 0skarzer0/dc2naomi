@@ -1598,6 +1598,12 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   (el usuario tiene los originales de NAOMI, `n1-ikaruga_v3` y `n1-cannon_spike`); borrados sus `.bin.gz` y `.vmu`.
   Las copias del PC se quedan. **Para la receta 4 (leer la caja negra cargando otra imagen) ya no está Ikaruga en esa
   Pi:** usar la más pequeña que quede (`dc-spf2x`, 110 MB) o subir una.
+  **Corrección (13:40): Ikaruga de Dreamcast vuelve a la .250.** El original de NAOMI (`n1-ikaruga_v3`, y también
+  `n1-shikigami_no_shiro_2`) es **vertical** (monitor girado); la versión de Dreamcast se juega en un monitor
+  horizontal, así que **no es un duplicado**: no quitar versiones de Dreamcast de juegos verticales aunque esté el arcade.
+  Subidos desde el PC `dc-ikaruga_dc2naomi.{bin.gz,vmu}` (md5 de la `.gz` `87f68248de681d7cde707b90737c66a4`; el `.vmu`
+  es el desbloqueado del PC: lo guardado en la placa desde el día 11 se perdió al borrarlo) y su fila de nuevo en el CSV
+  (copia `romsinfo.csv.bak_ikaruga_back`). Vuelve a servir para la receta 4 (14 MB).
 - **Ojo con la Pi .250:** se reinició dos veces mientras comprimía una imagen con `pigz` (`vcgencmd get_throttled` =
   `0x50005`: **falta de tensión**). En esa Pi no comprimir imágenes grandes: hacerlo en el contenedor o en el PC y
   subir el `.gz` ya hecho (`piput.py` / `tools/board/piup.sh`).
