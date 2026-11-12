@@ -186,7 +186,9 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
   NetDIMM) y los desarrolladores de los **netbooters** para NAOMI.
 - **[DejaVu Fonts](https://dejavu-fonts.github.io)**: la letra de los mensajes en pantalla sale de DejaVu Sans Mono.
 - **[PyInstaller](https://pyinstaller.org)** y **GitHub Actions**, con los que se compilan los ejecutables de Windows.
-- Herramientas usadas durante el desarrollo: GCC para SH-4, Python, ffmpeg y genisoimage.
+- Herramientas usadas durante el desarrollo: GCC para SH-4, Python, ffmpeg y genisoimage. **ffmpeg** recodifica
+  además el vídeo MPEG-1 de las películas Sofdec (de CRI Middleware) que `tools/sfdre.py` vuelve a empaquetar
+  con la misma estructura que las originales (Rainbow Cotton).
 - Proyectos hermanos de los que viene buena parte de lo aprendido:
   [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-games) y
   [mame4all-naomi](https://github.com/0skarzer0/mame4all-naomi) (incluido su parche MIE para Flycast).

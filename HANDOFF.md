@@ -1462,3 +1462,24 @@ a su `*L.P16` (221 MB fuera). Finales, galería y todo lo demás intactos. Hecho
 Comprobado releyendo la imagen: 88 archivos correctos (los 34 derechos = su izquierdo), IP.BIN y 1ST_READ iguales.
 VMU `00000031` (todo abierto, USA); fila añadida a `filas_romsinfo.csv`. Sin probar en placa. La versión de 683 MB
 quedó en `isosdream/_to_delete/`.
+
+## Rainbow Cotton (traducción de Derek Pascarella) con los vídeos recodificados (2026-11-12) — `tools/sfdre.py`
+
+873 MB → **500,2 MB** (cabe; 424 MB comprimido). Elegido por el usuario (opción A: todo a 640×480… en realidad, cada
+vídeo con **su** tamaño y frecuencia, ~0,9 Mbit/s); no quiso respaldo con vídeos quitados.
+- **Los SFD** (Sofdec): packs de 2048 bytes, un paquete de 2030 por pack; 3 packs de cabecera (2 de sistema +
+  relleno, 1 privado `SofdecStream`); sonido ADX en `C0` con PTS; vídeo MPEG-1 en `E0` con cabecera fija de 12 bytes
+  (STD `602e` + PTS/DTS o `0f`) y 2018 de datos; pack final `000001b9` + `FF`. GOP de 15 con 2 B. **END y STF son
+  640×240, STF a 29,97 fps**: no suponer 640×480/24.
+- **`tools/sfdre.py ORIG OUT KBPS`**: ffmpeg recodifica solo el vídeo (mismo tamaño y frecuencia, `-g 15 -bf 2`,
+  máx. 3,6 Mbit/s, búfer 40 KB; `setpts=N/(FR·TB)` para no añadir ni quitar imágenes: las marcas del original no son
+  monótonas); el empaquetador copia tal cual los packs de cabecera y de sonido (con su SCR) y mete el vídeo nuevo en
+  los huecos del original al mismo ritmo de imágenes; marcas estándar (DTS = orden de decodificación, PTS = orden de
+  presentación + 1 imagen: el vídeo va 42 ms detrás del sonido). Comprobado en los 16: mismas imágenes, 0 avisos al
+  decodificar con ffmpeg, sonido ADX idéntico (md5). Muestra a 60 s de OP: algo más blando, subtítulos legibles.
+- **Imagen:** envoltorio de una vez sobre `open_disc`: cada SFD nuevo en el primer sector del original, tamaño nuevo
+  en su registro de directorio, el resto de su extensión a cero (lo omite `nonzero_runs`). Comprobado releyendo la
+  imagen: 328 archivos (16 vídeos = los recodificados, el resto = el disco), IP.BIN y 1ST_READ iguales.
+- VMU `RAINCOT` (voces desbloqueadas); fila en `isosdream/filas_romsinfo.csv`. **Sin probar en placa ni en Flycast:**
+  si se cuelga al llegar a un vídeo, el sospechoso es el empaquetado (Sofdec de la consola, no ffmpeg); la versión de
+  873 MB quedó en `isosdream/_to_delete/`.
