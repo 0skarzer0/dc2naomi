@@ -1576,6 +1576,11 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   (`dc2naomi/ssf2x_en/`); su `.vmu` en la Pi es el de la partida de prueba (el anterior: `_test/en_vmu_before.bak`).
   Las versiones japonesa (`dc-ssf2x`) y española (`dc-ssf2x_es`) de la Pi llevan el loader viejo: **sin probar**; si se
   quedan en negro igual, cambiarles el loader.
+- **Por qué `ssf2x_es` ocupa el doble que `ssf2x_en` (300 frente a 131 MB comprimidas; 332 frente a 160 MB):** los
+  dos discos tienen los mismos 567 archivos, pero en el CDI español las músicas de escenario (`S_*.ADX`, 15 archivos)
+  son **piezas largas** de 3,5-4,5 minutos (por ejemplo `S_RYU_02.ADX`: 11,5 MB, 242 s) en vez de los bucles de
+  ~1 minuto del original (2,6 MB, 56 s). Mismo formato (ADX tipo 3, estéreo, 44,1 kHz): el ADX apenas se comprime, así
+  que se nota entero en la imagen. Medido con `gdi.open_disc(...).walk()` y la cabecera ADX de cada archivo.
 - **Ojo con la Pi .250:** se reinició dos veces mientras comprimía una imagen con `pigz` (`vcgencmd get_throttled` =
   `0x50005`: **falta de tensión**). En esa Pi no comprimir imágenes grandes: hacerlo en el contenedor o en el PC y
   subir el `.gz` ya hecho (`piput.py` / `tools/board/piup.sh`).
