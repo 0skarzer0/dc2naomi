@@ -188,6 +188,8 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - **[dreamcast-saves](https://github.com/bucanero/dreamcast-saves)** (bucanero, Damian Parrino): la colección de
   partidas `.VMI`/`.VMS` de la que salen las partidas con todo desbloqueado que ponemos en los `.vmu`, y la referencia
   del formato `.VMI` para `tools/vmutool.py`.
+- **ComradeSnarky**: su traducción al inglés de Super Street Fighter II X for Matching Service, que el usuario
+  convierte y juega en la placa (el parche no se incluye: hay que conseguirlo de su autor).
 - **[WiPi Netbooter](https://github.com/chunksin/WiPiNetbooter)** (chunksin y colaboradores): el netbooter con el
   que se carga y prueba todo en las placas, y en el que se apoyan los scripts de la VMU (`wipi/`), hechos a imagen
   de su `timehack.py`.
