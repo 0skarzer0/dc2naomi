@@ -1676,3 +1676,5 @@ Speedzone, Speed Devils, Test Drive V-Rally, Spirit of Speed 1937. **39 sin mús
 1 MB, el aviso de "esto es un GD-ROM"; Last Blade 2 una de 18 MB con la música en `.AFS`). Ojo: varias de las válidas
 pasan de 512 MB (Sonic Adventure 1 y 2, Vampire Chronicle, Tech Romancer, SF Rush 2049, Evil Dead…): se verá al
 convertir (receta 14).
+**Borradas por petición del usuario** las 39 descartadas (`dreamcastisos`, con su permiso de borrado): quedan 39 CHD,
+ninguno con CD-DA. Los `dc-bangaio_dc2naomi.*` convertidos antes siguen ahí.
