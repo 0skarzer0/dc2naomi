@@ -1662,3 +1662,17 @@ Opciones dadas al usuario: probarlo tal cual (sin intro ni escenas), o un volcad
 (~1,2 Mbit/s → unos 500 MB). KOF Dream Match 1999 (42 pistas de CD-DA) queda fuera por la regla 8b.
 **Para cualquier juego:** si un archivo de vídeo es esa secuencia, el volcado es un ripeo (comprobar antes de
 proponer recortes).
+
+## Criba de 78 CHD por música en CD-DA (2026-11-12) — `tools/cddascan.py`
+
+El usuario dejó 78 imágenes en `dreamcastisos` y pidió, sin convertir, cuáles descartar (regla 8b). `cddascan.py`
+(solo lee la tabla de pistas: 32 s). **39 descartadas** (4 a 49 pistas de audio): Mortal Kombat Gold, Bangai-O, Hydro
+Thunder, Mr. Driller, Stunt GP, F1 World Grand Prix II (Europe), F1 World Grand Prix (USA), Monaco Grand Prix, Super
+Runabout, Racing Simulation 2, Tokyo Xtreme Racer, Vigilante 8 2nd Offense, ChuChu Rocket!, Ms. Pac-Man Maze Madness,
+Walt Disney World Quest, 4 Wheel Thunder, Re-Volt, Looney Tunes Space Race, SnoCross, Vanishing Point, Ducati World,
+Sega GT, Soul Fighter, Suzuki Alstare, Toy Racer, The Flintstones Viva Rock Vegas (proto), South Park Rally, Speed
+Devils Online, F1 Racing Championship, GigaWing, Roadsters, Taxi 2, 4x4 Evo, Aqua GT, Exhibition of Speed, POD
+Speedzone, Speed Devils, Test Drive V-Rally, Spirit of Speed 1937. **39 sin música en CD** (0 pistas, o una sola de
+1 MB, el aviso de "esto es un GD-ROM"; Last Blade 2 una de 18 MB con la música en `.AFS`). Ojo: varias de las válidas
+pasan de 512 MB (Sonic Adventure 1 y 2, Vampire Chronicle, Tech Romancer, SF Rush 2049, Evil Dead…): se verá al
+convertir (receta 14).
