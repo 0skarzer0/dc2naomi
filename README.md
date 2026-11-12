@@ -29,6 +29,18 @@ El programa te dice:
 - si la imagen **no cabe** en la NetDIMM de 512 MB. Se genera igualmente: recorta tú el juego (vídeos, datos que
   no uses) y vuelve a convertirlo. Las pistas de audio de CD se descartan siempre (ver limitaciones).
 
+**Si no cabe por los vídeos** (películas Sofdec, `.SFD`), se pueden recodificar a menos calidad sin quitar nada
+(hace falta Python 3 y ffmpeg; no está en los ejecutables):
+
+```
+python3 tools/sfdre.py ORIGINAL.SFD NUEVO/MOVIES/INTRO.SFD 2500      # kbit/s del vídeo; el sonido no se toca
+python3 tools/withfiles.py NUEVO --cab joy --batch JUEGO.chd          # convierte con esos archivos sustituidos
+```
+
+`sfdre.py` mantiene el tamaño, la frecuencia, las imágenes y el patrón (GOP) de cada vídeo y el sonido ADX byte a
+byte; `withfiles.py` escribe cada archivo nuevo donde estaba el original. **Probado en placa con Rainbow Cotton**
+(16 vídeos a 0,9 Mbit/s: 873 → 500 MB); Buzz Lightyear de la misma forma (43 vídeos a 2,5 Mbit/s: 559 → 437 MB).
+
 Formatos de entrada: `.chd` (versión 5, la de cualquier `chdman` reciente), `.gdi` y `.cdi` (DiscJuggler 2, 3 y
 3.5: los CD de autoarranque, la forma habitual de las traducciones). No hace falta `chdman`.
 

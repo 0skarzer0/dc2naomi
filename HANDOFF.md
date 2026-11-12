@@ -1511,3 +1511,22 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
 - Pi .250: `/boot/roms/dc-ssf2x_en_dc2naomi.{bin.gz,vmu}` (md5 comprobado), fila en `/boot/config/romsinfo.csv`
   (copia `romsinfo.csv.bak_ssf2x_en`) importada con `importcsv.py`. Copia en el PC: `dc2naomi/ssf2x_en/`.
   `/boot` de esa Pi: 2,5 GB libres (el usuario liberó espacio). **Sin probar en placa ni en Flycast.**
+
+## ⭐ Rainbow Cotton **funciona perfecto en la placa** (2026-11-12, el usuario) → vídeos recodificados validados; Buzz Lightyear igual
+
+- El reempaquetado Sofdec de `tools/sfdre.py` es bueno en hardware real: el usuario prefiere ya recodificar vídeos a
+  quitarlos para que un juego quepa.
+- **`sfdre.py`** ahora copia del original la longitud de GOP y si usa imágenes B (Rainbow Cotton: 15 con B; Buzz:
+  12 y la intro sin B; algunos 4, 8 o 30) y toma como techo de bitrate el mayor entre el del original y 3,6 Mbit/s.
+  Comprobado: los SFD de Rainbow Cotton salen **byte a byte iguales** a los que funcionan (STV5, STF, END).
+- **`tools/withfiles.py CARPETA [argumentos de dc2naomi.py]`** (generaliza el envoltorio de una vez): sustituye los
+  archivos del disco por los de la carpeta (misma ruta), cada uno en el primer sector del original, con su tamaño
+  nuevo en el directorio y el resto a cero. `GZIP_LEVEL=1` para ir rápido. Reconstruido Rainbow Cotton con ella: la
+  **parte del disco es idéntica** a la imagen que funciona; solo cambia el cargador (`loader.bin` posterior: luces del
+  mueble por JVS, `c6a0300`).
+- **Buzz Lightyear of Star Command** (traducción al español de pitito, CDI): 43 vídeos `MOVIES/*.SFD` de 320×480 a
+  30 fps recodificados a 2,5 Mbit/s (351 → 211,5 MB; los 43 con las mismas imágenes, 0 avisos, ADX idéntico; fotograma
+  de la intro indistinguible) → imagen **437 MB** (antes 559). Comprobada: 194 archivos (43 vídeos = recodificados, el
+  resto = el CDI), IP.BIN y 1ST_READ iguales. Entregada como **`isosdream/dc-buzz_es_dc2naomi.bin.gz`** (el usuario
+  ya usa el prefijo `dc-` en los nombres) con su VMU `v18060` (completo) y su fila en `filas_romsinfo.csv`. Sin
+  probar en placa.
