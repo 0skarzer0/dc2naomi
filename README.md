@@ -107,7 +107,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
 | Sega Rally 2 (USA; arranca con Windows CE) | experimental | ✅ probado con VMU en fichero (sin la música de las carreras: son pistas de audio CD; la imagen activa de serie el modo oculto de 30 FPS del juego, pendiente de probar en placa) |
-| SF III Double Impact | ❌ no funciona todavía | ❌ |
+| SF III Double Impact (USA) | ✅ probado (los dos juegos y el menú; con VMU en fichero y partida desbloqueada) | experimental |
 | Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
 | Cualquier otro juego de Dreamcast | experimental | experimental |
 
@@ -122,7 +122,8 @@ con partidas con todo desbloqueado de cientos de juegos):
   iban bien sin ella) la llevan activada sin haberse probado con ella en placa.
 - **No están soportados los juegos especiales:** los que arrancan con Windows CE solo están resueltos para Sega Rally 2
   (cada juego trae su propio núcleo y hay que localizar sus manejadores de interrupción: ver HANDOFF); los
-  Midway's Greatest Arcade Hits siguen sin funcionar y los que son un menú que carga varios programas (como SF III Double Impact).
+  Midway's Greatest Arcade Hits siguen sin funcionar. Los que son un menú que carga varios programas necesitan los
+  parches de cada programa en su perfil (resuelto para SF III Double Impact y Yu Suzuki Game Works).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
 
 ### Ideas para el futuro

@@ -422,7 +422,7 @@ def build(name, game, source, work, image, out, log=print):
     hook = list(game.get("hook_pc", [])) + [0, 0]
     # the Visual Memory slot (128 KB after the sectors): empty here, filled by the netbooter from JUEGO.vmu
     vmu_offset = offset if game["flags"] & 0x8000 else 0
-    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5, "plane": 6, "ab2": 7}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + b"\0" * 24
+    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5, "plane": 6, "ab2": 7}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + struct.pack("<I", game.get("read_chunk", 0)) + b"\0" * 20
     for p in patches:
         hdr += struct.pack("<4I", *p)
     hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))

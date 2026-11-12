@@ -504,6 +504,29 @@ GAMES["sf3di"] = _katana_joy("SF3 DOUBLE IMPACT DC", 1, 1, [
     (0x8C08210A, 2, mov_imm0(4)),   # cable
     (0x8C091A10, 4, HOOK),          # maple: to-physical 0x8c09305e
 ])
+# 1ST_READ.BIN only loads the menu, GAMESEL/GAMESEL.BIN, linked at 0x8cd00000 (its literals give it away: the
+# to-physical function is at file offset 0x170a1e and its literal says 0x8ce70a1e), and the menu loads one of the
+# two games at 0x8c010000 (over 1ST_READ): SFNG/SF3_1ST.BIN (New Generation) or SFNG2/SF3_2ND.BIN (2nd Impact).
+# Each has its own maple driver and cable read, patched like the first (the resident re-applies the groups on
+# every GD-ROM call, each group gated by its check word). Same patterns as 1ST_READ (findpatch at the right base).
+# Disc reads in pieces of 8 KB (4 sectors) per EXEC_SERVER call instead of 64 KB: the game reads about once a
+# second while playing and each 64 KB piece cost a visible stop on the board (tried live: 32, 4, 16, 8; the user
+# chose 4).
+GAMES["sf3di"]["read_chunk"] = 4
+GAMES["sf3di"]["groups"] += [
+    {"file": "GAMESEL/GAMESEL.BIN", "base": 0x8CD00000, "patches": [
+        (0x8CE5C666, 2, mov_imm0(4)),   # cable
+        (0x8CE6F3D0, 4, HOOK),          # maple: to-physical 0x8ce70a1e
+    ]},
+    {"file": "SFNG/SF3_1ST.BIN", "base": 0x8C010000, "patches": [
+        (0x8C4FBBEA, 2, mov_imm0(4)),   # cable
+        (0x8C50CFEC, 4, HOOK),          # maple: to-physical 0x8c50e63a
+    ]},
+    {"file": "SFNG2/SF3_2ND.BIN", "base": 0x8C010000, "patches": [
+        (0x8C62428A, 2, mov_imm0(4)),   # cable
+        (0x8C636C6C, 4, HOOK),          # maple: to-physical 0x8c6382ba
+    ]},
+]
 # Super Puzzle Fighter II X for Matching Service (Japan).
 GAMES["spf2x"] = _katana_joy("SUPER PUZZLE FIGHTER IIX", 0, 0, [
     (0x8C1AB24E, 2, mov_imm0(4)),   # cable

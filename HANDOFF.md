@@ -433,10 +433,29 @@ de personaje `ZSFD/NN_*.SFD` apuntan a la más corta con la opción `alias` del 
 cable AICA se quedaba en negro), `sf3ts` (1ST_READ de 14 MB), `spf2x`, `ssf2x`, `kof02` y `motw` (motor SNK de
 LB2: mismas direcciones de cable). DIMM_RANGES sube a 32 (los ficheros omitidos parten los tramos) y el builder
 tiene `blank` (ficheros fuera, leen ceros) y `alias` (registros de directorio reescritos).
-**`sf3di` (SF III Double Impact) no funciona:** 1ST_READ es un cargador; el menú es `GAMESEL/GAMESEL.BIN` y los juegos
-`SFNG/SF3_1ST.BIN` y `SFNG2/SF3_2ND.BIN` (programas aparte, como Power Drift): el gancho de 1ST_READ nunca se llama
-(se queda en el aviso de VMU sin responder). Hace falta encontrar dónde se carga cada uno y parchearlos con
-trampolines como YSGW.
+**⭐ `sf3di` (SF III Double Impact): FUNCIONA EN PLACA (usuario, 2026-11-12 15:21: "funciona muy bien, la he estado
+probando y no tiene fallos"; menú y los dos juegos, con VMU en fichero y la partida `v50554` desbloqueada).**
+Antes se quedaba en el aviso de VMU: 1ST_READ solo es un cargador, y el menú y los juegos son programas aparte con su
+propio driver de maple y su propia lectura del cable. Cómo se resolvió:
+1. Sacar los programas del CHD (`gdi.open_disc(chd).read_file("GAMESEL/GAMESEL.BIN")`, etc.; en el PC del usuario).
+2. **La dirección de carga de cada uno, por sus literales:** `findpatch.analyze` no encontraba gancho en GAMESEL a
+   base 0x8c010000; buscando la función "a física" de 1ST_READ (`mov.l 0x0fffffff,r0; rts; and r4,r0`) por sus bytes
+   aparece en GAMESEL en el desplazamiento 0x170a1e, y el código que escribe SB_MDSTAR la llama por un literal que vale
+   `0x8ce70a1e` → **GAMESEL se carga en `0x8cd00000`**. SF3_1ST y SF3_2ND se cargan en `0x8c010000` (encima de
+   1ST_READ: sus literales de gancho caen dentro del fichero a esa base).
+3. Con `findpatch.analyze` a la base buena: cable (`mov.w @r3,r4` → `mov #0,r4`) y gancho de maple de cada programa.
+4. Un grupo por programa en el perfil (`GAMES["sf3di"]["groups"] += [...]`): el residente aplica los grupos en cada
+   llamada al GD-ROM, cada uno con su palabra de control, así que se parchea el programa que esté cargado.
+**Microparadas (resuelto, usuario 15:51):** había una parada corta cada segundo en menús y partida, también con el
+vigilante de VMU parado. Medido en placa (`gd_reads[]` del residente): el juego lee ~1 vez por segundo 32 sectores
+(64 KB, ~44 KB/s) y cada `EXEC_SERVER` copiaba 32 sectores con las interrupciones cortadas. Nuevo campo de cabecera
+**`dimm_header.read_chunk`** (perfil `"read_chunk"`; 0 = 32 de siempre) y variable `read_chunk` del residente
+(probada en caliente con pokes: 32, 4, 16, 8): **`sf3di` usa 4 (8 KB)**. Con 4 "va mejor". (Un efecto de sonido que no
+sonaba era un altavoz del mueble: no era el juego.)
+Imagen en la Pi .250 (`dc-sf3di_dc2naomi.bin.gz`, md5 de la `.gz` `9657e964e17ac7f6c2ffce66a43db3be`; hecha cambiando
+loader y la palabra 177 de la cabecera de la imagen probada) y su `.vmu` = la partida desbloqueada con lo guardado
+en las pruebas (la anterior en `_test/sf3di_vmu_before_20261112.bak`). Copia en el PC: `otros/sf3di_files/`.
+Nota: el CHD ya no está en `dreamcastisos/` del PC (el usuario lo ha movido).
 
 **Namco Museum en placa (2026-11-09):** `nmus5_novmu` funciona bien (con el arreglo de SB_MDAPRO); con la VMU emulada
 (`nmus5`) se queda en negro tras el logo de SEGA: **la VMU emulada falla en placa** (en Flycast va), sin investigar.

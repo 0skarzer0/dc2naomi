@@ -265,6 +265,12 @@ enum {
 };
 
 #define READ_CHUNK 32 /* sectors a DMA read copies each EXEC_SERVER call */
+/* Per game (dimm_header.read_chunk, profile "read_chunk"): each call copies from the NetDIMM with the interrupts
+   off, and the game's frame waits for it. SF3 Double Impact reads 64 KB about once a second while playing (music,
+   stages): a short stop every second on the board; with 4 sectors (8 KB) it plays smoothly (user, 2026-11-12).
+   In RAM, to try other values live over the NetDIMM; gd_reads[]: [0] DMA read calls, [1] sectors, [2] most
+   sectors in one call, for measurements. */
+u32 read_chunk = READ_CHUNK, gd_reads[3];
 
 static struct {
     u32 last_id, next_id;
@@ -378,8 +384,10 @@ static void gd_command(void) {
             gd.result[2] = gd.result[3] = 0;
         }
         {
-            u32 n = (H.flags & DIMM_SYNCREAD) || gd.read_count < READ_CHUNK ? gd.read_count : READ_CHUNK;
+            u32 ch = read_chunk ? read_chunk : 1;
+            u32 n = (H.flags & DIMM_SYNCREAD) || gd.read_count < ch ? gd.read_count : ch;
             read_sectors(gd.read_addr, gd.read_fad, n, 1);
+            gd_reads[0]++; gd_reads[1] += n; if (n > gd_reads[2]) gd_reads[2] = n;
             gd.read_fad += n;
             gd.read_addr += n * 2048;
             gd.read_count -= n;
@@ -2175,6 +2183,8 @@ void boot(const struct dimm_header *h) {
         p[0] = 0; p[1] = 0; p[2] = 0; p[3] = 0; p[4] = 0; p[5] = 0; p[6] = 0; p[7] = 0;
         __asm__ volatile("ocbp @%0" : : "r"(p) : "memory");
     }
+
+    if (H.read_chunk) read_chunk = H.read_chunk;
 
     /* IP.BIN and 1ST_READ.BIN */
     read_sectors(0x8c008000, H.ip_fad, 16, 0);

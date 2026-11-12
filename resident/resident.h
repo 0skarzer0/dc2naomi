@@ -145,7 +145,8 @@ struct dimm_header {
     uint32_t vmu_offset;              /* 128 KB in the archive: the Visual Memory to start with (0 = no slot; a slot
                                          that does not hold a formatted card is ignored). The netbooter fills it
                                          from the game's .vmu file while sending (wipi/dc2naomi_send.py) */
-    uint32_t reserved[6];
+    uint32_t read_chunk;              /* sectors a DMA read copies per GD-ROM EXEC_SERVER call (0 = 32) */
+    uint32_t reserved[5];
     struct dimm_patch patches[DIMM_PATCHES];
 };
 
