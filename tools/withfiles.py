@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-"""withfiles.py FOLDER [dc2naomi.py arguments] : converts a game with some of its disc files replaced by smaller
-ones, e.g. movies re-encoded by tools/sfdre.py so that the image fits in the NetDIMM.
+"""withfiles.py FOLDER [--alias GLOB=TARGET ...] [dc2naomi.py arguments] : converts a game with some of its disc
+files replaced by smaller ones, e.g. movies re-encoded by tools/sfdre.py so that the image fits in the NetDIMM.
+FOLDER "-" replaces nothing (only --alias).
+
+--alias GLOB=TARGET: every file matching GLOB reads TARGET's data instead (its own is left out); a "*" in TARGET
+takes what "*" matched in GLOB. Soulcalibur (USA), music in mono (683 -> 469 MB):
+    python3 tools/withfiles.py - --alias "*R.P16=*L.P16" --cab joy --batch "Soulcalibur (USA).chd"
 
 FOLDER holds the new files at their disc paths (FOLDER/MOVIES/INTRO.SFD replaces MOVIES/INTRO.SFD). Each new file
 is written at the first sector of the one it replaces (it must not be bigger), its directory record gets the new
@@ -97,8 +102,13 @@ def main():
             orig(self, *a, **k)
         gzip.GzipFile.__init__ = init
     folder = sys.argv[1]
-    sys.argv = [sys.argv[0]] + sys.argv[2:]
-    opener = replaced_disc(folder)
+    rest, aliases = sys.argv[2:], []
+    while "--alias" in rest:
+        i = rest.index("--alias")
+        aliases.append(rest[i + 1].split("=", 1))
+        del rest[i:i + 2]
+    sys.argv = [sys.argv[0]] + rest
+    opener = replaced_disc(folder) if folder != "-" else _open_disc
     gdi.open_disc = build_image.open_disc = opener
     sys.path.insert(0, os.path.join(HERE, "..", "app"))
     import importlib.util
@@ -110,7 +120,21 @@ def main():
 
     def auto_profile(*a):
         game, notes = auto(*a)
-        notes.append(f"Archivos del disco sustituidos por los de {folder} (vídeos recodificados con sfdre.py).")
+        if folder != "-":
+            notes.append(f"Archivos del disco sustituidos por los de {folder} (vídeos recodificados con sfdre.py).")
+        if aliases:
+            import fnmatch
+            names = [p for p, _, _ in opener(sys.argv[-1]).walk()]
+            pairs = []
+            for glob, target in aliases:
+                for p in names:
+                    if fnmatch.fnmatch(p.upper(), glob.upper()):
+                        pre, _, post = glob.partition("*")
+                        t = target.replace("*", p[len(pre):len(p) - len(post)] if "*" in glob else "", 1)
+                        if t.upper() in (n.upper() for n in names) and t.upper() != p.upper():
+                            pairs.append(([p], t))
+            game["alias"] = list(game.get("alias", [])) + pairs
+            notes.append(f"{len(pairs)} archivos leen otro ({', '.join(f'{g}={t}' for g, t in aliases)}).")
         return game, notes
     app.auto_profile = auto_profile
     sys.exit(app.main("ct" if "--cab" in sys.argv and sys.argv[sys.argv.index("--cab") + 1] == "ct" else "joy"))
