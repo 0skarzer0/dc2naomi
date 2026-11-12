@@ -36,7 +36,8 @@ static double enc_try(const int *x, int scale, int c1, int c2, int *h1, int *h2,
         int pred = (c1 * a + c2 * b) >> 12;
         int d = x[i] - pred;
         int n = (int)lrint((double)d / scale);
-        if (n > 7) n = 7; if (n < -8) n = -8;
+        if (n > 7) n = 7;
+        if (n < -8) n = -8;
         int y = clamp16(n * scale + pred);
         err += (double)(y - x[i]) * (y - x[i]);
         b = a; a = y;
