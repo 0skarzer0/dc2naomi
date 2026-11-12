@@ -1584,6 +1584,9 @@ Pedido por el usuario (CHD `Super Street Fighter II X for Matching Service (Japa
   **El usuario la descarta (2026-11-12: "no merece la pena la española"):** borrados de la Pi .250
   `dc-ssf2x_es_dc2naomi.{bin.gz,vmu}` y su fila (copia `romsinfo.csv.bak_ssf2x_es`; reimportado con `importcsv.py`).
   La copia del PC (`isosdream/`) se queda.
+  Después también la japonesa (usuario: "la japonesa la quitamos también, dejamos la inglesa"): borrados
+  `dc-ssf2x_dc2naomi.{bin.gz,vmu}` de la .250 y su fila (copia `romsinfo.csv.bak_ssf2x_jp`). En la .250 solo queda
+  `dc-ssf2x_en`. La copia del PC (`dreamcastisos/ssf2x_dc2naomi.*`) se queda.
 - **Ojo con la Pi .250:** se reinició dos veces mientras comprimía una imagen con `pigz` (`vcgencmd get_throttled` =
   `0x50005`: **falta de tensión**). En esa Pi no comprimir imágenes grandes: hacerlo en el contenedor o en el PC y
   subir el `.gz` ya hecho (`piput.py` / `tools/board/piup.sh`).
