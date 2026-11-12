@@ -104,6 +104,8 @@ mirar qué ocupa (`walk()` agrupado por carpeta y extensión) y, de menos a más
   comprobar imágenes / avisos / ADX idéntico (sección de Rainbow Cotton) y
   `GZIP_LEVEL=1 tools/withfiles.py NUEVO --cab joy --batch JUEGO.cdi`;
 - quitar vídeos (`--alias "X.SFD=EL_MAS_CORTO.SFD"`): sólo si el usuario lo prefiere (con Rainbow Cotton no lo quiso).
+- música/voces ADX dentro de `.AFS`: `tools/afsmono.py ORIG.AFS NUEVO/X.AFS [--half-rate]` (MSR, sección de MSR);
+- PCM sin comprimir de Rush 2049: `tools/rushstr.py` (mono) o compartir canciones con `--alias`;
 Después, releer la imagen y comparar cada archivo (como en las secciones de Soulcalibur, Rainbow Cotton y Buzz).
 
 ## Objetivo
@@ -1769,3 +1771,38 @@ pasan al mueble Crazy Taxi y salen del de palancas.
   versiones `joy` del PC a `_to_delete/`).
 - Pi .60: los 10 ficheros con md5 comprobado, 5 filas nuevas (copias `romsinfo.csv.bak_dc_ct_motos`,
   `.bak_dc_ct_videos`), todas en `dreamcastisos/filas_romsinfo_ct.csv`. Nada probado en placa.
+
+## MSR y SF Rush 2049 adelgazados para el mueble Crazy Taxi (2026-11-12, tarde) — sin probar en placa
+
+**Metropolis Street Racer (USA Rev A), 758 → 487,4 MB, `dc-msr_dc2naomict`:**
+- Lo que ocupa: `SOUND/{VOICE,TOKYO,LONDON,SANFRAN}.AFS` (430 MB): AFS sin tabla de nombres, primera entrada en 524288
+  (tabla de 512 KB), entradas alineadas a 2048; dentro, 248 ADX tipo 3, cabecera v3, 44,1 kHz estéreo (uno con bucle,
+  cabecera de 2048 bytes). `MOVIES/MSR.SFD` 60 MB (320x480, 25 fps).
+- **Nuevo `tools/adxmono.c`** (decodifica ADX como vgmstream, mezcla los dos canales y vuelve a codificar mono probando
+  7 escalas por bloque con la historia del decodificador; reescribe canales y, si hay bucle, los bytes del bucle) y
+  **`tools/afsmono.py`** (reempaqueta el AFS con las mismas entradas desde el mismo primer desplazamiento).
+  Comprobado: SNR 32 dB frente a la mezcla mono del original decodificada por ffmpeg, igual que el codificador ADX de
+  ffmpeg (31,7 dB): es lo que da ADX de 4 bits; el bucle (`TOKYO` entrada 10) queda en 0x800 / 0x38e4f0, bien calculado.
+- Solo mono daba 511 MB (sin margen): **las voces (`VOICE.AFS`) además a 22050 Hz** (`--half-rate`; el navegador del
+  propio juego ya trae voces a 22050). Música 112,8+108,9+87,5 → 56,7+54,7+44,0; voces 117,6 → 30,0. Vídeo 59,9 →
+  28,8 MB (`reall.py` 0,9). Comprobados los 4 AFS: mismo número de entradas, cada ADX mono, alineado, con las muestras
+  esperadas; una voz decodificada por ffmpeg sin errores.
+- VMU `metropolisracer/v81430` (`MSRSINGL.SAV`, "Domestic save … EVERYTHING", 68 bloques).
+- **Riesgo:** que el motor de sonido espere estéreo en la música (no debería: ADXT lee los canales de la cabecera).
+
+**San Francisco Rush 2049 (USA), 958 MB → dos versiones:**
+- Los 18 `.STR` (905 MB) son **la banda sonora en PCM de 16 bits sin comprimir**: cabecera de 2048 bytes (palabras LE:
+  versión 1, 44100, 16 bits, 16384 bytes por bloque de canal, nº de bloques, bytes de datos, 2 canales, nº de bloques)
+  y bloques de 16384 bytes alternando canal izquierdo y derecho (`tools/rushstr.py` lo documenta). No es ADX ni vídeo.
+- **`dc-rush2049_dc2naomict` (504,7 MB): las 18 canciones en mono** (`tools/rushstr.py`: cada par de bloques
+  promediado, cabecera con 1 canal y la mitad de bytes). **No se sabe si el juego lee los canales de la cabecera**
+  (los 18 archivos traen los mismos valores): si la música suena rara (doble velocidad, cortes), usar la otra.
+- **`dc-rush2049_9_dc2naomict` (463,8 MB, reserva segura): formato intacto, 9 canciones**: `withfiles.py -` con
+  `--alias` BASSY=HIGH, STARSKY=STUNTED, WARRIOR=SUNSET, MORNING=NIGHT, NOON=FLIER, SPEED=TRANCEY, GARAGE=THEROCK,
+  WINGEY=ROBO, HIDDEN=VICE (se quedan las 9 más cortas; diez ya no caben).
+- VMU `rush2049/v82401` ("Everything unlocked", `RUSH2049.P00`) en las dos.
+- En el PC queda `rush_bassy_prueba.wav` (37 s de BASSY.STR leído como bloques L/R): sirve para confirmar de oído que
+  la disposición de bloques es la correcta.
+
+**Pi .60:** `dc-msr`, `dc-rush2049`, `dc-rush2049_9` (`.bin.gz` + `.vmu`, md5 comprobado), filas añadidas (copia
+`romsinfo.csv.bak_dc_ct_msr_rush`, reimportado); 18 filas `_dc2naomict` en total, todas con su archivo. `/boot` al 37 %.

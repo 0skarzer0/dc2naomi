@@ -40,6 +40,11 @@ python3 tools/withfiles.py NUEVO --cab joy --batch JUEGO.chd          # conviert
 Para ver cómo es un vídeo: `tools/sfdinfo.py X.SFD`. Para música con un archivo por canal (`*L` / `*R`):
 `tools/withfiles.py - --alias "*R.P16=*L.P16" --cab joy --batch JUEGO.chd` la deja en mono (Soulcalibur, 683 → 469 MB).
 Para buscar una partida con todo desbloqueado de la misma región: `tools/findsave.py` (instrucciones dentro).
+Música y voces en archivos ADX empaquetados en `.AFS` (Metropolis Street Racer, 758 → 487 MB):
+`tools/afsmono.py ORIG.AFS NUEVO/SOUND/X.AFS [--half-rate]` pasa cada ADX estéreo a mono (y, con `--half-rate`, a la
+mitad de frecuencia, para voces) con `tools/adxmono.c` (lo compila con gcc). Música en PCM sin comprimir de San
+Francisco Rush 2049 (`.STR`): `tools/rushstr.py` (mono, **sin probar en placa**); si suena mal, que varios circuitos
+compartan canción con `--alias "BASSY.STR=HIGH.STR"`.
 
 `sfdre.py` mantiene el tamaño, la frecuencia, las imágenes y el patrón (GOP) de cada vídeo y el sonido ADX byte a
 byte; `withfiles.py` escribe cada archivo nuevo donde estaba el original. **Probado en placa con Rainbow Cotton**
@@ -209,6 +214,10 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - Herramientas usadas durante el desarrollo: GCC para SH-4, Python, ffmpeg y genisoimage. **ffmpeg** recodifica
   además el vídeo MPEG-1 de las películas Sofdec (de CRI Middleware) que `tools/sfdre.py` vuelve a empaquetar
   con la misma estructura que las originales (Rainbow Cotton).
+- **[vgmstream](https://github.com/vgmstream/vgmstream)**: la descripción del ADX de CRI (cabecera, coeficientes de
+  predicción a partir del filtro, fórmula de decodificación) que siguen `tools/adxmono.c` y `afsmono.py` sale de su
+  código y documentación; no se ha copiado código. El resultado se comprobó decodificándolo con **ffmpeg**
+  (`adpcm_adx`), cuyo propio codificador ADX sirvió de referencia de calidad.
 - Proyectos hermanos de los que viene buena parte de lo aprendido:
   [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-games) y
   [mame4all-naomi](https://github.com/0skarzer0/mame4all-naomi) (incluido su parche MIE para Flycast).
