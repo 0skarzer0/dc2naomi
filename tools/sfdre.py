@@ -77,7 +77,7 @@ def main(src, dst, kbps):
     bframes = 2 if "B" in otypes else 0
     vbr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries", "stream=bit_rate",
                           "-of", "csv=p=0", src], capture_output=True, text=True).stdout.strip()
-    maxrate = max(int(vbr) // 1000 if vbr.isdigit() else 3600, kbps)
+    maxrate = max(int(vbr) // 1000 if vbr.isdigit() else 0, 3600, kbps)   # 3600: what Rainbow Cotton used
     m1v = dst + ".m1v"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-an", "-c:v", "mpeg1video", "-b:v", f"{kbps}k",
                     "-maxrate", f"{maxrate}k", "-bufsize", "327680", "-g", str(gop), "-bf", str(bframes), "-s", f"{w}x{h}",
