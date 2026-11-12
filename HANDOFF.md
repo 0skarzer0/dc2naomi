@@ -1623,3 +1623,13 @@ Opción elegida por el usuario de las que se le dieron (receta 14): recodificar 
   el CDI; los datos están en la sesión 1 y el IP.BIN en la LBA 359984), IP.BIN y 1ST_READ iguales.
 - Entregada como **`isosdream/dc-toystory2_es_dc2naomi.bin.gz`** con su VMU `v38204` ("100% complete") y su fila en
   `filas_romsinfo.csv` (género `Platform`). Sin probar en placa.
+
+## Bangai-O (USA) para el mueble estándar (2026-11-12) — `dreamcastisos/dc-bangaio_dc2naomi.bin.gz`
+
+Juego nuevo para el catálogo (Treasure, `T40217N`): `dc2naomi.py --cab joy` en 19 s, parches localizados por
+`findpatch`, imagen **98 MB** (66 MB comprimida); `cmpimage.py`: 663 archivos iguales, IP.BIN y 1ST_READ iguales.
+VMU `bangaio/v95185` ("all stages completed"; la otra publicada solo llega a la fase 24). Fila en
+`dreamcastisos/filas_romsinfo.csv`; no subido a la Pi (lo hace el usuario). Sin probar en placa.
+**Sin música:** el disco lleva 34 pistas de audio de CD (≈ 680 MB, toda la banda sonora); efectos y voces van en
+archivos y sí suenan. Es el mejor candidato para la idea pendiente de reproducir CD-DA (recodificada para caber: con
+98 MB de imagen quedan ~400 MB libres en la NetDIMM).
