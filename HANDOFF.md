@@ -1483,3 +1483,21 @@ vídeo con **su** tamaño y frecuencia, ~0,9 Mbit/s); no quiso respaldo con víd
 - VMU `RAINCOT` (voces desbloqueadas); fila en `isosdream/filas_romsinfo.csv`. **Sin probar en placa ni en Flycast:**
   si se cuelga al llegar a un vídeo, el sospechoso es el empaquetado (Sofdec de la consola, no ffmpeg); la versión de
   873 MB quedó en `isosdream/_to_delete/`.
+
+## Ikaruga con VMU desbloqueada para el mueble estándar (2026-11-12) — `dc-ikaruga_dc2naomi.bin.gz`
+
+Pedido por el usuario. No había disco de Ikaruga en el PC: se partió de la imagen buena de la Pi .250
+(`ikaruga_joy_dc2naomi.bin.gz`, cabecera antigua, probada en placa el 2026-11-09).
+- `tools/convhdr.py ikaruga_joy_dc2naomi.bin.gz conv.bin.gz "IKARUGA DC"` (cabecera nueva y `app/loader.bin` actual;
+  mismos 8 parches, mandos `joy` = 2) y `tools/addvmu_stream.py conv.bin.gz dc-ikaruga_dc2naomi.bin.gz app/loader.bin 2`
+  (flags `0x8004`). md5 `87f68248de681d7cde707b90737c66a4`.
+- VMU `dc-ikaruga_dc2naomi.vmu` (md5 `6038d6ff…`): `IKARUGA_DATA` de bucanero/dreamcast-saves (`r/ikaruga`,
+  "Credit MAX, All Mode Unlocked!", 34 bloques).
+- En la Pi .250: `/boot/roms/dc-ikaruga_dc2naomi.{bin.gz,vmu}` (md5 comprobado), fila nueva en
+  `/boot/config/romsinfo.csv` (copia `romsinfo.csv.bak_ikaruga_vmu`) importada con `importcsv.py`. **Se dejan las
+  entradas viejas** (`ikaruga_joy`, `ikaruga_joy_g2cpu`) por si la nueva falla. Copia en el PC: `dc2naomi/ikaruga/`.
+  Ojo: `/boot` de esa Pi está al 100 % (≈190 MB libres tras esto).
+- **Sin probar en placa.** En Flycast la imagen nueva hace lo mismo que la vieja (licencia SEGA → logo 斑鳩 y ahí se
+  queda en el emulador, también con la vieja), así que Flycast no dice nada sobre la VMU. Riesgo: es el residente
+  actual con Ikaruga (antes iba con el del 2026-11-09). Si falla, probar la misma conversión sin VMU (`conv.bin.gz`)
+  para separar residente de VMU. `catalog.NO_VMU` sigue incluyendo `ikaruga` hasta que se confirme.
