@@ -103,6 +103,8 @@ mirar qué ocupa (`walk()` agrupado por carpeta y extensión) y, de menos a más
   `tools/sfdre.py ORIG NUEVO/RUTA/X.SFD KBPS` por cada uno (0,9 Mbit/s si hace falta mucho, 2,5 si basta un poco),
   comprobar imágenes / avisos / ADX idéntico (sección de Rainbow Cotton) y
   `GZIP_LEVEL=1 tools/withfiles.py NUEVO --cab joy --batch JUEGO.cdi`;
+- para ver qué ocupa y sacar los archivos: `tools/discfiles.py JUEGO.chd [ORIG .SFD .AFS]`; todos los vídeos de un
+  juego de una vez, comprobados: `tools/sfdbatch.py ORIG NUEVO`;
 - quitar vídeos (`--alias "X.SFD=EL_MAS_CORTO.SFD"`): sólo si el usuario lo prefiere (con Rainbow Cotton no lo quiso).
 - música/voces ADX dentro de `.AFS`: `tools/afsmono.py ORIG.AFS NUEVO/X.AFS [--half-rate]` (MSR, sección de MSR);
 - PCM sin comprimir de Rush 2049: `tools/rushstr.py` (mono) o compartir canciones con `--alias`;
@@ -1781,7 +1783,8 @@ analógico, acelerador = R, freno = L, **START apretado + acelerador = Y, START 
 El usuario eligió para los 5 que no cabían: recodificar (Demolition Racer, TNN, TXR2), audio a mono (MSR) e investigar
 Rush 2049; todos con mandos `ct`, VMU desbloqueada y CSV. Además, Jeremy McGrath Supercross 2000 y Star Wars Racer
 pasan al mueble Crazy Taxi y salen del de palancas.
-- **Herramientas del PC** (fuera del repo, en `~` del shell del PC; la lógica ya está en el repo): `~/extract.py CHD DIR
+- **Herramientas** (ahora en el repo: `tools/discfiles.py` = `extract.py` + `sz.py`/`anal.py`, `tools/sfdbatch.py` =
+  `reall.py` + `chk.py`; los nombres de abajo son los de los scripts sueltos que se usaron en el PC): `~/extract.py CHD DIR
   "*SFD"` (saca archivos del disco), `~/reall.py ORIG NUEVO FRAC MIN MAX` (sfdre.py a cada SFD, kbps = FRAC × bitrate de
   la cabecera entre MIN y MAX), `~/chk.py ORIG NUEVO` (mismas imágenes y mismos paquetes C0 de audio con sfdinfo, y
   ffmpeg sin errores de vídeo).
