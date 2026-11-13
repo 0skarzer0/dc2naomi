@@ -70,6 +70,14 @@ propia Pi con `tools/board/picatalog.py` (lee el CSV y `/boot/roms/`; estados de
 se ha documentado ninguna prueba, por eso salen con "?". Para regenerarla:
 `PIHOST=192.168.68.250 PIPASS=... python3 tools/board/picatalog.py docs/pi250-estado.csv`.
 
+**CSV limpiado el 2026-11-13 (a petición del usuario; copia `romsinfo.csv.bak_limpieza_20261113`, reimportado):**
+quitadas 35 filas cuyo fichero no estaba en la tarjeta (Chihiro, Triforce, Initial D, Club Kart, King of Route 66,
+Wild Riders, Crazy Taxi, Maximum Speed…: juegos del mueble Crazy Taxi o que no hay); la fila de Mushiking 2004 apuntaba
+a `[840-0150]` y el fichero es `[840-0152]` (corregida); añadidas las de los cuatro ficheros que no salían en el menú:
+las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título con "(debug)") y Dragon Treasure 2 y 3
+(filas nuevas sin imagen ni vídeo; son juegos de cartas). Ahora cada fila tiene su fichero y cada fichero su fila
+(196 juegos).
+
 ### Originales de NAOMI
 
 | Fichero | Juego | Mandos | VMU | Estado |
@@ -85,8 +93,10 @@ se ha documentado ninguna prueba, por eso salen con "?". Para regenerarla:
 | `n1-cannon_spike-[841-0012]` | Cannon Spike / Gun Spike | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_2_mark_of_the_millenium-[GDL-0008]` | Capcom Vs. SNK 2 Mark of the Millenium 2001 | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_2_mark_of_the_millenium-unlocked-[GDL-0008]` | Capcom Vs. SNK 2 Mark of the Millenium 2001 UNLOCKED | Digital (Stick) |  | ? |
+| `n1-capcom_vs_snk_2_mark_of_the_millenium-Unlocked-debug-[GDL-0008]` | Capcom Vs. SNK 2 Mark of the Millenium 2001 UNLOCKED (debug) | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_2_millionaire_fighting_2001-[GDL-0007]` | Capcom Vs. SNK 2 Millionaire Fighting 2001 | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_2_millionaire_fighting_2001-unlocked-[GDL-0007]` | Capcom Vs. SNK 2 Millionaire Fighting 2001 UNLOCKED | Digital (Stick) |  | ? |
+| `n1-capcom_vs_snk_2_millionaire_fighting_2001-Unlocked-debug-[GDL-0007]` | Capcom Vs. SNK 2 Millionaire Fighting 2001 UNLOCKED (debug) | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_millenium_fight_2000_pro-[GDL-0004]` | Capcom Vs. SNK Millenium Fight 2000 Pro | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_millenium_fight_2000_pro-unlocked-[GDL-0004]` | Capcom Vs. SNK Millenium Fight 2000 Pro UNLOCKED | Digital (Stick) |  | ? |
 | `n1-capcom_vs_snk_millenium_fight_2000-[841-0011]` | Capcom Vs. SNK Millennium Fight 2000 | Digital (Stick) |  | ? |
@@ -104,6 +114,8 @@ se ha documentado ninguna prueba, por eso salen con "?". Para regenerarla:
 | `n1-derby_owners_club_2-[840-0083]` | Derby Owners Club II | Other |  | ? |
 | `n1-derby_owners_club_world_rev.d-[840-0088]` | Derby Owners Club World Edition | Other |  | ? |
 | `n1-doki_doki_idol_star_seeker-[GDL-0005]` | Doki Doki Idol Star Seeker | Digital (Stick) |  | ? |
+| `n1-dragon_treasure_2_rev.a-[GDS-0037A]` | Dragon Treasure 2 Rev A | Other |  | ? |
+| `n1-dragon_treasure_3_rev.a-[GDS-0041A]` | Dragon Treasure 3 Rev A | Other |  | ? |
 | `n1-virtua_golf_{dynamic_golf}-[GDS-0009]` | Dynamic Golf / Virtua Golf | Analog (Trackball) |  | ? |
 | `n1-dynamite_baseball-[840-0001]` | Dynamite Baseball NAOMI | Digital (Stick) |  | ? |
 | `n1-dynamite_deka_ex-[840-0175]` | Dynamite Deka Ex - Asian Dynamite | Digital (Stick) |  | ? |
@@ -143,6 +155,7 @@ se ha documentado ninguna prueba, por eso salen con "?". Para regenerarla:
 | `n1-mobile_suit_gundam_federation_vs_zeon_dx-[GDL-0006]` | Mobile Suit Gundam Federation Vs. Zeon DX | Other |  | ? |
 | `n1-monkey_ball-[GDS-0008]` | Monkey Ball | Analog (Stick) |  | ? |
 | `n1-musapeys_choco_marker-[GDL-0014]` | Musapeys Choco Marker | Digital (Stick) |  | ? |
+| `n1-mushi_king_of_beetles_2004-[840-0152]` | Mushiking The King Of Beetles 2k4 | Other |  | ? |
 | `n1-mushi_king_of_beetles_2005-[840-0158]` | Mushiking The King Of Beetles 2k5 2nd | Other |  | ? |
 | `n1-ninja_assault-[25469801_NJA3_Ver.A]` | Ninja Assault | Lightgun |  | ? |
 | `n1-noukone_puzzle_takoron-[GDL-0042]` | Noukone Puzzle Takoron | Digital (Stick) |  | ? |
@@ -248,50 +261,3 @@ se ha documentado ninguna prueba, por eso salen con "?". Para regenerarla:
 | `aw-sega_clay_challenge_AW21` | Sega Clay Challenge | Lightgun |  | ? |
 | `aw-sports_shooting_AW11` | Sports Shooting USA | Lightgun |  | ? |
 | `aw-tore_tore_sushi_AW12` | Sushi Bar | Digital (Stick) |  | ? |
-
-### Revisar
-
-- Fila del CSV sin fichero: `aw-maximum_speed_AW09.bin.gz`
-- Fila del CSV sin fichero: `ch-crazytaxihighroller_512_SBFY.bin.gz`
-- Fila del CSV sin fichero: `ch-gbos_512_SBJK.bin.gz`
-- Fila del CSV sin fichero: `ch-ghostsquad_512_SBHU.bin.gz`
-- Fila del CSV sin fichero: `ch-maximumtune2verbexp_512_SBKD.bin.gz`
-- Fila del CSV sin fichero: `ch-maximumtuneverb_512_SBHQ.bin.gz`
-- Fila del CSV sin fichero: `ch-ollieking_512_SBHF.bin.gz`
-- Fila del CSV sin fichero: `ch-outrun2_512_SGBZ.bin.gz`
-- Fila del CSV sin fichero: `ch-outrun2specialtours_512_SBJE.bin.gz`
-- Fila del CSV sin fichero: `ch-segagolfclubnexttours_512_SBLF.bin.gz`
-- Fila del CSV sin fichero: `ch-thehouseofthedead3_512_SBFN.bin.gz`
-- Fila del CSV sin fichero: `ch-virtuacop3_SBFZ.bin.gz`
-- Fila del CSV sin fichero: `n1-crazy_taxi-[840-0002].bin.gz`
-- Fila del CSV sin fichero: `n1-mushi_king_of_beetles_2004-[840-0150].bin.gz`
-- Fila del CSV sin fichero: `n2-club_kart_european_session-[840-0062].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_2_export-[GDS-0027].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_2_japan-[GDS-0026].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_2_japan_rev.a-[GDS-0026A].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_2_japan_rev.b-[GDS-0026B].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_3_cycraft_export_rev.a-[GDS-0039A].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_3_cycraft_export_rev.b-[GDS-0039B].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_3_export-[GDS-0033].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_3_japan_rev.b-[GDS-0032B].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_3_japan_rev.c-[GDS-0032C].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_export-[GDS-0025].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_export_rev.a-[GDS-0025A].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_japan-[GDS-0020].bin.gz`
-- Fila del CSV sin fichero: `n2-initial_d_japan_rev.b-[GDS-0020B].bin.gz`
-- Fila del CSV sin fichero: `n2-the_king_of_route66-[840-0087].bin.gz`
-- Fila del CSV sin fichero: `n2-wild_riders-[840-0046].bin.gz`
-- Fila del CSV sin fichero: `tf-fzeroax_SBGG.bin.gz`
-- Fila del CSV sin fichero: `tf-fzeroax_monster_ride_SBHA.bin.gz`
-- Fila del CSV sin fichero: `tf-mariokartarcadegp2_SBNL.bin.gz`
-- Fila del CSV sin fichero: `tf-mariokartarcadegp_SBKP.bin.gz`
-- Fila del CSV sin fichero: `tf-virtuastriker2002_SBEY.bin.gz`
-- Fila del CSV sin fichero: `tf-virtuastriker4ver2006_SBLK.bin.gz`
-- Fichero sin fila en el CSV (no sale en el menú): `n1-capcom_vs_snk_2_mark_of_the_millenium-Unlocked-debug-[GDL-0008].bin.gz`
-- Fichero sin fila en el CSV (no sale en el menú): `n1-capcom_vs_snk_2_millionaire_fighting_2001-Unlocked-debug-[GDL-0007].bin.gz`
-- Fichero sin fila en el CSV (no sale en el menú): `n1-dragon_treasure_2_rev.a-[GDS-0037A].bin.gz`
-- Fichero sin fila en el CSV (no sale en el menú): `n1-dragon_treasure_3_rev.a-[GDS-0041A].bin.gz`
-- Fichero sin fila en el CSV (no sale en el menú): `n1-mushi_king_of_beetles_2004-[840-0152].bin.gz`
-
-Las 36 "filas sin fichero" son juegos (Chihiro, Triforce, Initial D japoneses, etc.) que el CSV conoce pero que no están
-en la tarjeta. Los 5 "ficheros sin fila" están en la tarjeta pero no salen en el menú. Ninguno se ha tocado.
