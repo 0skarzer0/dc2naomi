@@ -1462,7 +1462,7 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      tiene trucos en la pantalla de título: 30 FPS = Arriba, A, Abajo, Abajo, Izq, Der, B, B, Arriba; 60 FPS (con menos
      detalle) = lo mismo acabando en Abajo. Quiere los 30 FPS por defecto: buscar la tabla de la secuencia en
      `RALLY2.EXE` y dejar el modo activado de serie, o que el residente teclee la secuencia solo.
-   - **✅ 30 FPS de serie (2026-11-11), hecho; falta probarlo en placa.** La tabla no está en `RALLY2.EXE` sino en
+   - **✅ 30 FPS de serie (2026-11-11), probado en placa: el usuario confirma el 2026-11-13 que funciona perfecto.** La tabla no está en `RALLY2.EXE` sino en
      **`TITLE.DLL`** (pantalla de título). Cómo se encontró: el `.gdi` original en Flycast modo Dreamcast, el truco
      tecleado con `xdotool` (`scr/run_seq.sh`: A = tecla `x`, B = `c`, cruceta = flechas, 0,15 s por tecla, a los
      24 s) y volcados de RAM comparados (30 FPS / 60 FPS / secuencia mala, 2 pasadas de cada). Sale la tabla en
@@ -1486,7 +1486,7 @@ Disco: pista 3 + 17 pistas CDDA (4-20, la música: no sonaría) + pista 21. Prog
      Hecha en el PC con **`tools/patch_gz.py IN OUT OFFSET VIEJOS NUEVOS`** (parchea un `.bin.gz` sin cargarlo en
      RAM, vale en la Pi) a partir de la limpia. Está en la carpeta del PC `dc2naomi/sr2_30fps/` junto con el `.vmu`.
      **Subida a la Pi .60** (`/boot/roms`, md5 comprobado allí; sustituye a la anterior, el `.vmu` no se ha tocado y
-     el CSV no cambia). Pendiente: que el usuario la pruebe en placa.
+     el CSV no cambia). Probada en placa el 2026-11-13: perfecta.
    - Descartado: no hay instrucción `sleep` en el núcleo (no es STBCR/standby); las esperas del FIFO G2 no se
      atascan en placa (tabla de variantes).
    - Sospechas por orden: (a) algo del arranque del núcleo de CE que la NAOMI real no tolera; (b) la DMA G1 real del
