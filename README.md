@@ -114,6 +114,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Sega Rally 2 (USA; arranca con Windows CE) | experimental | ✅ probado con VMU en fichero (sin la música de las carreras: son pistas de audio CD; la imagen activa de serie el modo oculto de 30 FPS del juego, pendiente de probar en placa) |
 | SF III Double Impact (USA) | ✅ probado (los dos juegos y el menú; con VMU en fichero y partida desbloqueada) | experimental |
 | Daytona USA 2001 | aún no soportado por el programa (necesita recodificar la música) | funciona en placa con una imagen hecha a mano, también con VMU en fichero |
+| OutRun 2006 Coast 2 Coast, demo para Dreamcast de ArkRetro (homebrew KallistiOS; v37, perfil `or37`) | — | llega al título y a la demo en emulador; 24 de sus 28 canciones largas suenan como una de las 4 primeras (no cabe en 512 MB) |
 | Cualquier otro juego de Dreamcast | experimental | experimental |
 
 ### Limitaciones
@@ -194,6 +195,8 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - **[dreamcast-saves](https://github.com/bucanero/dreamcast-saves)** (bucanero, Damian Parrino): la colección de
   partidas `.VMI`/`.VMS` de la que salen las partidas con todo desbloqueado que ponemos en los `.vmu`, y la referencia
   del formato `.VMI` para `tools/vmutool.py`.
+- **[ArkRetro](https://github.com/ArkRetro)**: su demo de OutRun 2006 Coast 2 Coast para Dreamcast (homebrew con
+  KallistiOS), que el usuario convierte para su mueble de Crazy Taxi (la demo no se incluye).
 - **ComradeSnarky**: su traducción al inglés de Super Street Fighter II X for Matching Service, que el usuario
   convierte y juega en la placa (el parche no se incluye: hay que conseguirlo de su autor).
 - **[WiPi Netbooter](https://github.com/chunksin/WiPiNetbooter)** (chunksin y colaboradores): el netbooter con el

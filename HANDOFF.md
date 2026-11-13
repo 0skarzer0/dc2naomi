@@ -1086,6 +1086,27 @@ abajo, en cruceta y stick; acelerador = A disparo, freno = B misil; volante = st
 confirmar en placa qué botón es disparo y cuál misil en After Burner II, y el sentido de la palanca. Hecha con el
 programa desde el CHD (disco idéntico a `ysgw5`). En Flycast llega a PRESS START.
 
+## OutRun DC demo v37 (ArkRetro, 2026-11-12) — perfil `or37`, mueble Crazy Taxi
+
+Nueva versión de la demo de abajo (autor: **ArkRetro**, https://github.com/ArkRetro; el usuario la dejó como
+`outrun_dc_demo37_gdi.zip` en su carpeta `dc2naomi`). Mismo tratamiento que `or2006`; las direcciones de esta compilación
+se encontraron por los mismos patrones en `1ST_READ.BIN` (desensamblado con `sh-elf-objdump`):
+- `_arch_mem_top`: el único literal `0x8e000000` (`0x8c0a36b0`).
+- `maple_dma_addr()`: el único uso del literal `0xa05f6c04` (`0x8c06bd70`: `mov.l 0x1fffffff,r1; and r1,r4; mov.l
+  SB_MDSTAR,r1; mov.l r4,@r1; rts`): literal `0x8c06bd7c` → `HOOKST`, `0x8c06bd72` → `jmp @r1`, `0x8c06bd74` → `nop`.
+- `cdrom_init`: el `cmp/eq #3,r0` tras leer `0xa05f74ec`, antes del desbloqueo con `0xa05f74e4` (`0x8c06740a`) → `sett`.
+- `vid_check_cable` y sus dos copias: el `tst r0,r0` tras `jsr 0x8c07f9fc` delante de cada lectura de PDTRA
+  (`0xff80002c`): `0x8c074414`, `0x8c074732`, `0x8c074af2` → `clrt`.
+Tamaño: 984 MB en disco, 846 MB sin el relleno `0.0` (137 MB de ceros). 28 canciones largas `MUS0`–`MUS27` (402 MB) y
+35 cortas (63 MB). **El usuario eligió quedarse con las 4 primeras**; las otras 24 están en `alias` repartidas
+(4, 8, 12… → `MUS0`; 5, 9… → `MUS1`…), así que todas las carreras tienen música. Imagen: 527.071.232 bytes (502,7 MiB).
+VMU activada (el juego guarda licencias). Mandos `wheel`.
+- Flycast (`FC_PEDALS=1`): pantalla del loader, logo de OutRun 2006 y la demo de atracción en marcha. **En placa: sin
+  probar.**
+- En la Pi .60: `h-or37_dc2naomict.bin.gz` (md5 de la `.gz` `a6535dc17f3fe180adc3c839e4170ad0`) + `.vmu` vacío, fila en
+  el CSV (`audit_name` `or37_dc2naomict.bin.gz`, copia `romsinfo.csv.bak_or37`, reimportado). Copia en el PC:
+  `otros/or37/dc-or37_dc2naomict.bin.gz` (generada en la VM del PC, que tiene el disco y el repo).
+
 ## OutRun 2006 Coast 2 Coast, demo para Dreamcast v24 (homebrew KallistiOS, 2026-11-09) — perfil `or2006`
 
 Demo hecha por fans (textos en español, "OUTRUN DC DEMO", IP.BIN casero con fecha 2026-11-09), GDI con `track03.iso`
