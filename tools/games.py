@@ -579,6 +579,40 @@ GAMES["or2006"] = {
     ],
 }
 
+# OutRun DC demo v37 (homebrew by ArkRetro, https://github.com/ArkRetro; KallistiOS 2.x; IP.BIN dated 2026-11-12):
+# the same treatment as or2006 (v24) at the addresses of this build (found by the same code patterns). 846 MB of
+# data (the 137 MB "0.0" file is zero filler): 28 big songs MUS0..MUS27 (~14 MB each) do not fit in 512 MB, so the
+# user chose to keep the first four and the other 24 play one of them (MUS4, 8, 12... -> MUS0; 5, 9... -> MUS1...):
+# 502 MB. The short music (MUS28 and up) and the videos stay. For the Crazy Taxi cabinet.
+GAMES["or37"] = {
+    "title": "OUTRUN DC DEMO 37",
+    "region": 2,
+    "language": 1,
+    "layout": "gdi",
+    "pads": "wheel",
+    "flags": 0x1404,
+    "vmu": True,
+    "hook_pc": [],
+    "alias": [
+        (['MUS4.ADP', 'MUS8.ADP', 'MUS12.ADP', 'MUS16.ADP', 'MUS20.ADP', 'MUS24.ADP'], 'MUS0.ADP'),
+        (['MUS5.ADP', 'MUS9.ADP', 'MUS13.ADP', 'MUS17.ADP', 'MUS21.ADP', 'MUS25.ADP'], 'MUS1.ADP'),
+        (['MUS6.ADP', 'MUS10.ADP', 'MUS14.ADP', 'MUS18.ADP', 'MUS22.ADP', 'MUS26.ADP'], 'MUS2.ADP'),
+        (['MUS7.ADP', 'MUS11.ADP', 'MUS15.ADP', 'MUS19.ADP', 'MUS23.ADP', 'MUS27.ADP'], 'MUS3.ADP'),
+    ],
+    "groups": [
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C0A36B0, 4, 0x8DC00000),   # arch_stack_32m 0x8e000000 -> top of RAM below the resident
+            (0x8C06BD7C, 4, HOOKST),       # maple_dma_addr() (0x8c06bd70): literal 0x1fffffff -> maple_hook_mdstar
+            (0x8C06BD72, 2, 0x412B),       #   and r1,r4 -> jmp @r1
+            (0x8C06BD74, 2, 0x0009),       #   mov.l (SB_MDSTAR),r1 -> nop (delay slot)
+            (0x8C06740A, 2, 0x0018),       # cdrom_init: cmp/eq #3,r0 -> sett (skip the G1 bus unlock)
+            (0x8C074414, 2, 0x0008),       # vid_check_cable(): tst r0,r0 -> clrt: VGA, no PCTRA write
+            (0x8C074732, 2, 0x0008),       # vid_set_mode(): the same inlined check
+            (0x8C074AF2, 2, 0x0008),       # vid_init(): the same
+        ]},
+    ],
+}
+
 # Sega Rally 2 (USA, 1999; Sega). A Windows CE disc like mw2: IP.BIN boots 0WINCEOS.BIN. Music in 17 CDDA
 # tracks (4-20; not played by the resident). Boot patches only, to start the study of Windows CE.
 CETICK = 0xFFFFFFF9        # PATCH_CETICK: the resident's ce_tick_isr
