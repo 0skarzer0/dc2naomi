@@ -55,8 +55,10 @@ Fighter 3tb); arrancan con Windows CE (Mars Matrix, Marvel vs. Capcom, WWF Attit
 - No versiones de Dreamcast de juegos que ya tiene en su original de NAOMI, **salvo los verticales** (el arcade va con
   el monitor girado; el de Dreamcast se juega en horizontal): Ikaruga, Shikigami II, Karous, Radirgy, Trizeal,
   Triggerheart, Under Defeat y Psyvariar 2 se quedan.
-- `/boot` está casi lleno (937 MB libres el 2026-11-12): para subir más, quitar antes algo.
+- Espacio en `/boot`: 4,6 GB libres el 2026-11-13 (84 %).
 - No comprimir imágenes grandes en la propia Pi (se reinicia por falta de tensión): subir el `.gz` hecho.
 
-*Al cambiar algo en la Pi .250, actualizar esta tabla.* Hecha el 2026-11-13 a partir del HANDOFF (la Pi no
-respondía por SSH en ese momento): comprobar contra `ls /boot/roms/dc-*` la próxima vez que esté encendida.
+*Al cambiar algo en la Pi .250, actualizar esta tabla.* **Comprobada contra la Pi el 2026-11-13 (21:30):** los 27
+`dc-*_dc2naomi.bin.gz` de la tabla y ninguno más, cada uno con una sola fila en el CSV y con su `.vmu` (menos `ysgw`,
+que no lleva); ninguna fila sin fichero. Sobra un `kof02_dc2naomi.vmu` sin prefijo (de antes del cambio de nombre,
+distinto del `dc-kof02` actual y sin fila que lo use): se deja hasta que el usuario diga si lo quiere.
