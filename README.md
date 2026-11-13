@@ -170,6 +170,11 @@ Flycast no basta: el emulador es mucho más permisivo que la placa. Por ejemplo,
 mandos en Flycast y en la placa no (SB_MDAPRO). Flycast sirve para un primer
 paso, pero el juego solo cuenta como probado cuando funciona en la placa.
 
+## Juegos convertidos
+
+Lo que hay cargado en la NAOMI de palancas y su estado: [docs/pi250-juegos.md](docs/pi250-juegos.md). Los del mueble
+Crazy Taxi: [naomi-wheel-games/docs/pi60-juegos.md](https://github.com/0skarzer0/naomi-wheel-games/blob/main/docs/pi60-juegos.md).
+
 ## Agradecimientos
 
 Este proyecto se apoya en el trabajo de mucha gente. Gracias a:

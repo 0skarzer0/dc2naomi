@@ -57,6 +57,9 @@ con claridad qué se ha probado en placa y qué sólo en Flycast. **Regla del us
 
 Recetas añadidas el 2026-11-11/12 (todas hechas de verdad en esa sesión):
 
+**Qué hay en cada Pi:** NAOMI de palancas (.250) en [docs/pi250-juegos.md](docs/pi250-juegos.md); mueble Crazy Taxi (.60)
+en [naomi-wheel-games/docs/pi60-juegos.md](https://github.com/0skarzer0/naomi-wheel-games/blob/main/docs/pi60-juegos.md). Actualizarlos al tocar una Pi.
+
 **8. Trabajar en el PC del usuario (shell Linux de la app de escritorio, carpeta `~/mnt/dc2naomi` =
 `C:\Users\Usuario\Documents\dc2naomi`).** Cada orden dura como mucho 3 min y **lo que se deje en segundo plano
 muere al acabar la orden**: convertir en primer plano, uno o dos juegos por orden (2 núcleos; 30-160 s por juego;
