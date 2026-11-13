@@ -23,7 +23,6 @@ la sección del [HANDOFF](../HANDOFF.md) que se indica.
 | `spf2x` | Super Puzzle Fighter II X | 🧪 | vacía (no hay partida) | Lote de lucha + YSGW |
 | `ysgw` | Yu Suzuki Game Works | 🧪 | sin VMU | Lote de lucha + YSGW |
 | `dcop_es` | Dynamite Cop (PAL, traducción de pitito) | 🧪 | `v18467` (misiones 4-6) | Segundo lote: isosdream |
-| `shutokou2_en` | Shutokou Battle 2 (traducción de SGGG) | 🧪 | `shoudu2` | Segundo lote: isosdream |
 | `soulcal` | Soulcalibur (USA), música en mono | 🧪 | `00000031` | Soulcalibur |
 | `gunbird2` | Gunbird 2 | 🧪 | `v33167` | Lote de 17 juegos |
 | `jojo` | JoJo's Bizarre Adventure | 🧪 | `v11766` | Lote de 17 juegos |
@@ -41,7 +40,7 @@ la sección del [HANDOFF](../HANDOFF.md) que se indica.
 | `underdefeat` | Under Defeat | 🧪 | vacía | Lote de 17 juegos |
 | `wwfrumble` | WWF Royal Rumble | 🧪 | `v39825` | Lote de 17 juegos |
 
-**Ya no están en esta Pi:** `ssf2x` (japonés) y `ssf2x_es` (el usuario se quedó con la inglesa); `cspike_es` (está el
+**Ya no están en esta Pi:** `shutokou2_en` (carreras: al mueble Crazy Taxi va Tokyo Xtreme Racer 2); `ssf2x` (japonés) y `ssf2x_es` (el usuario se quedó con la inglesa); `cspike_es` (está el
 original de NAOMI); Jeremy McGrath Supercross 2000 y Star Wars Racer (pasaron al mueble Crazy Taxi).
 **Convertidos y sin subir** (en el PC, `isosdream/` y `dreamcastisos/`): Buzz Lightyear, Toy Story 2, Unreal Tournament
 y Millennium Racer (sin música), Bangai-O (música en CD-DA, no suena).
@@ -78,12 +77,16 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 (filas nuevas sin imagen ni vídeo; son juegos de cartas). Ahora cada fila tiene su fichero y cada fichero su fila
 (196 juegos).
 
+**Después (mismo día, a petición del usuario: "Dragon Treasure quítalo; si hay algún juego de carreras quítalo, está
+en la otra NAOMI"):** fuera de la tarjeta y del CSV (copia `romsinfo.csv.bak_quita_carreras`) Dragon Treasure 2 y 3,
+18 Wheeler Deluxe y Standard, Faster Than Speed, Wave Runner GP, Tokyo Bus Guide, Jambo! Safari y Shutokou Battle 2 de
+Dreamcast (`dc-shutokou2_en`, con su `.vmu`): los de conducción van al mueble Crazy Taxi (Pi .60). Quedan 187
+juegos; `/boot` con 5,8 GB libres.
+
 ### Originales de NAOMI
 
 | Fichero | Juego | Mandos | VMU | Estado |
 |---|---|---|---|---|
-| `n1-18_wheeler_dx-[840-0023]` | 18 Wheeler Deluxe | Analog (Driving) |  | ? |
-| `n1-18_wheeler_std-[840-0036]` | 18 Wheeler Standard | Analog (Driving) |  | ? |
 | `n1-airline_pilots-[840-0005]` | Airline Pilots | Analog (Stick) |  | ? |
 | `n1-akatsuki_bk_ausf_achse-[841-0058]` | Akatsuki Bk Ausf Achse | Digital (Stick) |  | ? |
 | `n1-alien_front-[840-0048]` | Alien Front | Digital (Stick) |  | ? |
@@ -114,8 +117,6 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 | `n1-derby_owners_club_2-[840-0083]` | Derby Owners Club II | Other |  | ? |
 | `n1-derby_owners_club_world_rev.d-[840-0088]` | Derby Owners Club World Edition | Other |  | ? |
 | `n1-doki_doki_idol_star_seeker-[GDL-0005]` | Doki Doki Idol Star Seeker | Digital (Stick) |  | ? |
-| `n1-dragon_treasure_2_rev.a-[GDS-0037A]` | Dragon Treasure 2 Rev A | Other |  | ? |
-| `n1-dragon_treasure_3_rev.a-[GDS-0041A]` | Dragon Treasure 3 Rev A | Other |  | ? |
 | `n1-virtua_golf_{dynamic_golf}-[GDS-0009]` | Dynamic Golf / Virtua Golf | Analog (Trackball) |  | ? |
 | `n1-dynamite_baseball-[840-0001]` | Dynamite Baseball NAOMI | Digital (Stick) |  | ? |
 | `n1-dynamite_deka_ex-[840-0175]` | Dynamite Deka Ex - Asian Dynamite | Digital (Stick) |  | ? |
@@ -134,7 +135,6 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 | `n1-the_house_of_the_dead_2-[834-13636]` | House of the Dead 2 | Lightgun |  | ? |
 | `n1-ikaruga_v3-[GDL-0010]` | Ikaruga | Digital (Stick) |  | ? |
 | `n1-illmatic_envelope-[841-0059]` | Illvelo | Digital (Stick) |  | ? |
-| `n1-jambo!_safari-[840-0013]` | Jambo! Safari | Analog (Driving) |  | ? |
 | `n1-jingi_storm_the_arcade-[GDL-0037]` | Jingy Storm - The Arcade | Digital (Stick) |  | ? |
 | `n1-karous_v3-[GDL-0040]` | Karous | Digital (Stick) |  | ? |
 | `n1-kuru_kuru_chameleon-[GDL-0034]` | Kurukuru Chameleon | Digital (Stick) |  | ? |
@@ -193,7 +193,6 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 | `n1-street_fighter_zero_3_upper-[GDL-0002]` | Street Fighter Zero 3 Upper | Digital (Stick) |  | ? |
 | `n1-super_shanghai_2005_ver_a-[GDL-0031]` | Super Shanghai 2005 | Digital (Stick) |  | ? |
 | `n1-tetris_kiwamemichi-[GDL-0020]` | Tetris Kiwamemichi | Digital (Stick) |  | ? |
-| `n1-tokyo_bus_tour-[840-0045]` | Tokyo Bus Guide | Analog (Driving) |  | ? |
 | `n1-toy_fighter_{waffupu}-[840-0011]` | Toy Fighter | Digital (Stick) |  | ? |
 | `n1-trigger-heart_exelica-[GDL-0036]` | Trigger Heart Exelica | Digital (Stick) |  | ? |
 | `n1-trizeal-[GDL-0026]` | Trizeal | Digital (Stick) |  | ? |
@@ -206,7 +205,6 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 | `n1-virtua_tennis_{power_smash}-[GDS-0011]` | Virtua Tennis / Power Smash | Digital (Stick) |  | ? |
 | `n1-virtua_tennis_2_{power_smash_2}-[GDS-0015]` | Virtua Tennis 2 / Power Smash 2 | Digital (Stick) |  | ? |
 | `n1-virtual_on_oratorio_tangramvonot-[840-0028]` | Virtual On Oratorio Tangram M.S.B.S. ver5.66 2000 Edition | Other |  | ? |
-| `n1-wave_runner_gp-[840-0064]` | Wave Runner GP | Analog (Driving) |  | ? |
 | `n1-world_series_baseball-[GDS-0010]` | World Series Baseball / Super Major League | Digital (Stick) |  | ? |
 | `n1-wwf_royal_rumble-[840-0040]` | WWF Royal Rumble | Digital (Stick) |  | ? |
 | `n1-zero_gunner_2-[841-0020]` | Zero Gunner 2 | Digital (Stick) |  | ? |
@@ -235,7 +233,6 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 | `aw-demolish_fist_AW14` | Demolish Fist | Digital (Stick) |  | ? |
 | `aw-dirty_pigskin_football_AW13` | Dirty Pigskin Football | Digital (Stick) |  | ? |
 | `aw-dolphin_blue_AW00` | Dolphin Blue | Digital (Stick) |  | ? |
-| `aw-faster_than_speed_AW10` | Faster Than Speed | Analog (Driving) |  | ? |
 | `aw-hokuto_no_ken_AW15` | Fist of the North Star (Hokuto No Ken) | Digital (Stick) |  | ? |
 | `aw-force_five_AW18` | Force Five | Digital (Stick) |  | ? |
 | `aw-guilty_gear_isuka_AW01` | Guilty Gear Isuka | Digital (Stick) |  | ? |
