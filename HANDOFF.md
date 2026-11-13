@@ -1106,6 +1106,13 @@ VMU activada (el juego guarda licencias). Mandos `wheel`.
 - En la Pi .60: `h-or37_dc2naomict.bin.gz` (md5 de la `.gz` `a6535dc17f3fe180adc3c839e4170ad0`) + `.vmu` vacío, fila en
   el CSV (`audit_name` `or37_dc2naomict.bin.gz`, copia `romsinfo.csv.bak_or37`, reimportado). Copia en el PC:
   `otros/or37/dc-or37_dc2naomict.bin.gz` (generada en la VM del PC, que tiene el disco y el repo).
+- 2026-11-13 04:00: cargada en el mueble (`dc2naomi_send.py` a 10.0.0.4; residente vivo, IP.BIN en RAM). **Ojo:** tras el
+  envío no quedaron corriendo ni el vigilante de VMU (`dc2naomi_vmu.py watch`) ni `timehack.py` (no había
+  `/var/log/dc2naomi_vmu.log`; la Pi .60 parecía recién reiniciada). Se arrancaron a mano:
+  `nohup python3 /sbin/piforce/timehack.py 10.0.0.4 &` y `nohup python3 /sbin/piforce/dc2naomi_vmu.py watch 10.0.0.4
+  /boot/roms/h-or37_dc2naomict.vmu &`. Si se repite al cargar desde el menú del WiPi, revisar `wipiloader.py` de la .60.
+  En el CSV de la .60 queda una fila huérfana, `h-daytona3_dc2naomi.bin.gz` (sin fichero), pendiente de que el usuario
+  decida.
 
 ## OutRun 2006 Coast 2 Coast, demo para Dreamcast v24 (homebrew KallistiOS, 2026-11-09) — perfil `or2006`
 
