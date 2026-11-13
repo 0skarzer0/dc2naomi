@@ -43,6 +43,8 @@ PADS_TEXT = {
              "START = START al soltarlo; START + palanca = arriba/abajo"],
     "pole": ["Menús: como Yu Suzuki (START al soltar, START + palanca = arriba/abajo)",
              "Pole Position: acelerador = A, freno = B, palanca = cambio Low/High"],
+    "mk64": ["Menús: START al soltar, START + palanca = arriba/abajo, volante a tope = izquierda/derecha",
+             "Mario Kart 64: acelerador = A, freno = B, palanca adelante = R (salto/derrape), palanca atrás = Z (objeto); volante 2,5 veces más rápido"],
     "ysgw": ["Como el mueble por defecto (START al soltar; con START: palanca = arriba/abajo, freno = X, acelerador = Y)",
              "START + volante a tope a la derecha = modo avión (After Burner II, Space Harrier):",
              "  palanca adelante = arriba, atrás = abajo; acelerador = disparo (A), freno = misil (B)",

@@ -1,0 +1,524 @@
+diff --git a/kernel/arch/dreamcast/fs/fs_dcload.c b/kernel/arch/dreamcast/fs/fs_dcload.c
+index 93e7ca5e..76d28873 100644
+--- a/kernel/arch/dreamcast/fs/fs_dcload.c
++++ b/kernel/arch/dreamcast/fs/fs_dcload.c
+@@ -214,6 +214,9 @@ static ssize_t dcload_write(void * h, const void *buf, size_t cnt) {
+ 
+     if(hnd) {
+         hnd--; /* KOS uses 0 for error, not -1 */
++#ifdef NAOMI_HOST
++        if(hnd == 1 || hnd == 2) { extern void naomi_log_put(const void *, int); naomi_log_put(buf, cnt); }
++#endif
+         ret = dclsc(DCLOAD_WRITE, hnd, buf, cnt);
+     }
+ 
+diff --git a/kernel/arch/dreamcast/hardware/cdrom.c b/kernel/arch/dreamcast/hardware/cdrom.c
+index d76692e4..e161f0ef 100644
+--- a/kernel/arch/dreamcast/hardware/cdrom.c
++++ b/kernel/arch/dreamcast/hardware/cdrom.c
+@@ -872,7 +872,15 @@ void cdrom_init(void) {
+         First, check the protection status to determine if it's necessary 
+         to pass check the entire BIOS again.
+     */
++#ifdef NAOMI_HOST
++    /* dc2naomi: on a NAOMI the G1 bus is the NetDIMM's, not a GD-ROM drive's. Sending
++       the BIOS size and reading the whole BIOS across it can fail with a multibios and
++       lock the bus, after which every read comes back as garbage (see the DreamShell
++       notes in dc2naomi's games.py). Never reactivate. */
++    if (0) {
++#else
+     if (*state != G1_ATA_BUS_PROTECTION_STATUS_PASSED) {
++#endif
+         /* Reactivate drive: send the BIOS size and then read each
+         word across the bus so the controller can verify it.
+         If first bytes are 0xe6ff instead of usual 0xe3ff, then
+diff --git a/kernel/arch/dreamcast/hardware/g2bus.c b/kernel/arch/dreamcast/hardware/g2bus.c
+index 0b1bdf44..2f298863 100644
+--- a/kernel/arch/dreamcast/hardware/g2bus.c
++++ b/kernel/arch/dreamcast/hardware/g2bus.c
+@@ -188,6 +188,27 @@ void g2_memset_8(uintptr_t address, uint8_t c, size_t amt) {
+ 
+ /* When writing to the SPU RAM, this is required at least every 8 32-bit
+    writes that you execute */
++#ifdef NAOMI_HOST
++/* dc2naomi: on a NAOMI the SB_FFST bits (0xa05f688c bit 0 AICA, bit 4 G2) do not
++   clear the way they do on a Dreamcast, and these waits never end - dc2naomi has
++   to patch the same spin out of several commercial games (G2CHK0 and G2CHK4 in its
++   games.py, which give up after 3000000 turns and carry on as if the FIFO were
++   empty). Same count here, then give up; once the bits are known to stick, stop
++   paying for the long wait, because this is called every few writes to SPU RAM.
++   g2_fifo_stuck counts the give-ups: 0 means the FIFO behaved all run. */
++unsigned g2_fifo_stuck = 0;
++unsigned g2_fifo_cap = 3000000u;
++
++void g2_fifo_wait(void) {
++    for(unsigned n = g2_fifo_cap; n; n--)
++        if(!(FIFO_STATUS & (FIFO_AICA | FIFO_G2)))
++            return;
++
++    g2_fifo_stuck++;
++    g2_fifo_cap = 1024u;
++}
++#else
+ void g2_fifo_wait(void) {
+     while(FIFO_STATUS & (FIFO_AICA | FIFO_G2));
+ }
++#endif
+diff --git a/kernel/arch/dreamcast/hardware/maple/maple_utils.c b/kernel/arch/dreamcast/hardware/maple/maple_utils.c
+index 522a3ea5..b6d9e0d7 100644
+--- a/kernel/arch/dreamcast/hardware/maple/maple_utils.c
++++ b/kernel/arch/dreamcast/hardware/maple/maple_utils.c
+@@ -11,6 +11,10 @@
+ #include <arch/memory.h>
+ #include <dc/maple.h>
+ #include <kos/dbglog.h>
++#ifdef NAOMI_HOST
++#include <arch/irq.h>
++#include <kos/thread.h>
++#endif
+ 
+ /* Enable / Disable the bus */
+ void maple_bus_enable(void) {
+@@ -32,8 +36,179 @@ int maple_dma_in_progress(void) {
+     return maple_read(MAPLE_STATE) & MAPLE_STATE_DMA;
+ }
+ 
++#ifdef NAOMI_HOST
++/* dc2naomi live debugging: answer the NetDIMM's peek/poke requests (netboot tools, TCP 10703;
++   dc2naomi's tools/board/pk.py) from here, every vblank, before the resident's maple hook.
++   Same protocol and address rules as the resident's dimm_service() (resident.c, after
++   libnaomi's dimmcomms.c by DragonMinded): command word bit 15 = pending, bits 14-9 = id
++   (4/5/6 peek 8/16/32, 8/9/10 poke 8/16/32), bits 8-0 + OFFSETL = a 25-bit offset into the
++   32 MB of RAM, unless a 32-bit poke at offset 0x01fffffc set a window base (0xa0000000 for
++   Holly/AICA/VRAM, 0xff000000 for SH4 registers, 0 = RAM again).
++   naomi_live records what this program is doing, so a hung game can still be read:
++   the PC/PR the vblank interrupted, and the main thread's saved PC/PR. */
++#define NP_CMD    (*(volatile uint16 *)0xa05f703c)
++#define NP_OFFL   (*(volatile uint16 *)0xa05f7040)
++#define NP_PARL   (*(volatile uint16 *)0xa05f7044)
++#define NP_PARH   (*(volatile uint16 *)0xa05f7048)
++#define NP_STAT   (*(volatile uint16 *)0xa05f704c)
++#define NP_ISTEXT (*(volatile uint32 *)0xa05f6904)
++#define NP_WINDOW 0x01fffffcu
++
++typedef struct {
++    uint32 magic;            /* "LIVE" */
++    uint32 vbls;             /* calls from the vblank (maple) path */
++    uint32 served;           /* peek/poke requests answered here */
++    uint32 last_cmd;         /* last command word seen with bit 15 set */
++    uint32 istext;           /* ISTEXT at the last call */
++    uint32 irq_pc, irq_pr, irq_sr;   /* what the vblank interrupted */
++    uint32 main_pc, main_pr;         /* thread 1's saved context (when not running) */
++    uint32 pc_ring[16];      /* irq_pc of the last 16 vblanks */
++    uint32 thd_polls;        /* turns of the peek thread */
++    uint32 halted;           /* 1 = arch_abort/exit/reboot reached: stopped here instead of resetting */
++    uint32 halt_pr;          /* who called it */
++    uint32 halt_why;         /* 1 abort, 2 exit, 3 reboot */
++    uint32 log_pos;          /* bytes written to log[] so far (it wraps) */
++    uint32 exc_code, exc_evt, exc_pc, exc_pr, exc_sr;   /* the unhandled IRQ/exception (irq.c) */
++    uint32 exc_r[16];
++    uint32 exc_expevt, exc_intevt, exc_tea;            /* SH4 EXPEVT, INTEVT, TEA at that moment */
++    char log[8192];          /* everything KallistiOS printed (dbgio + dcload console), even disabled */
++} naomi_live_t;
++naomi_live_t naomi_live = { 0x4556494cu };
++static uint32 np_base;
++
++static uint32 np_addr(uint32 a) {
++    uint32 phys = a & 0x1fffffffu;
++    if(a >= 0xff000000u) return a;
++    if(phys >= 0x0c000000u && phys < 0x0e000000u)
++        return ((a >> 29) == 5 ? 0xa0000000u : 0x80000000u) | phys;
++    if((phys >= 0x005f6800u && phys < 0x005fa000u) || (phys >= 0x00700000u && phys < 0x00711000u) ||
++       (phys >= 0x00800000u && phys < 0x00a00000u) || (phys >= 0x04000000u && phys < 0x05800000u))
++        return 0xa0000000u | phys;
++    return 0;
++}
++
++void naomi_peek_poll(void) {
++    naomi_live.istext = NP_ISTEXT;
++    if(!(naomi_live.istext & 8)) return;
++    uint32 cmd = NP_CMD;
++    if(cmd == 0xffff || !(cmd & 0x8000)) return;
++    naomi_live.last_cmd = cmd;
++
++    uint32 id = (cmd >> 9) & 0x3f, ret = 1, pl = 0, ph = 0;
++    uint32 off = ((cmd & 0x1ff) << 16) | NP_OFFL;
++    uint32 a = off + (np_base ? np_base : 0x0c000000u);
++    uint32 val = (uint32)NP_PARH << 16 | NP_PARL;
++    uint32 t = np_addr(a);
++    if(off == NP_WINDOW && id == 10) { np_base = val; id = 0; }
++    if(off == NP_WINDOW && id == 6) { pl = np_base & 0xffff; ph = np_base >> 16; id = 0; }
++    switch(id) {
++        case 0: case 1: break;
++        case 3: np_base = val; break;
++        case 4: pl = t ? *(volatile uint8 *)t : 0xad; break;
++        case 5: if(a & 1) ret = 0; else pl = t ? *(volatile uint16 *)t : 0xbadd; break;
++        case 6:
++            if(a & 3) { ret = 0; break; }
++            { uint32 v = t ? *(volatile uint32 *)t : 0xbadadd00u; pl = v & 0xffff; ph = v >> 16; }
++            break;
++        case 8: if(t) *(volatile uint8 *)t = (uint8)val; break;
++        case 9: if(a & 1) ret = 0; else if(t) *(volatile uint16 *)t = (uint16)val; break;
++        case 10: if(a & 3) ret = 0; else if(t) *(volatile uint32 *)t = val; break;
++        default: ret = 0xff; break;
++    }
++    NP_CMD = (uint16)((cmd & 0x7e00) | ret);
++    NP_OFFL = 0;
++    NP_PARL = (uint16)pl;
++    NP_PARH = (uint16)ph;
++    NP_STAT = (uint16)(NP_STAT | 0x100);                       /* acknowledge its interrupt */
++    for(uint32 i = 0; i < 200000 && (NP_ISTEXT & 8); i++) {}
++    NP_STAT = (uint16)(NP_STAT & 0xfffe);                      /* answer ready */
++    naomi_live.served++;
++}
++
++void naomi_record_exc(int code, uint32 evt, const irq_context_t *c) {
++    naomi_live.exc_code = (uint32)code; naomi_live.exc_evt = evt;
++    naomi_live.exc_expevt = *(volatile uint32 *)0xff000024;
++    naomi_live.exc_intevt = *(volatile uint32 *)0xff000028;
++    naomi_live.exc_tea = *(volatile uint32 *)0xff00000c;
++    if(c) {
++        naomi_live.exc_pc = c->pc; naomi_live.exc_pr = c->pr; naomi_live.exc_sr = c->sr;
++        for(int i = 0; i < 16; i++) naomi_live.exc_r[i] = c->r[i];
++    }
++}
++
++void naomi_log_put(const void *data, int len) {
++    const char *c = (const char *)data;
++    for(int i = 0; i < len; i++)
++        naomi_live.log[naomi_live.log_pos++ & 8191] = c[i];
++}
++
++/* Instead of resetting the board (which sends it back to the BIOS and the NetDIMM loads the image
++   again, in a loop, with nothing left to read), stop here and keep answering peeks: naomi_live.log
++   then holds the panic message and the register dump of the exception. */
++__attribute__((noreturn)) void naomi_halt(uint32 why, uint32 pr) {
++    naomi_live.halted = 1;
++    naomi_live.halt_why = why;
++    naomi_live.halt_pr = pr;
++    irq_disable();
++    for(;;)
++        naomi_peek_poll();
++}
++
++/* Called every vblank from the maple path: sample what the vblank interrupted. */
++static void naomi_live_tick(void) {
++    irq_context_t *c = irq_get_context();
++    kthread_t *m = thd_by_tid(1);
++    naomi_live.vbls++;
++    if(c) {
++        naomi_live.irq_pc = c->pc; naomi_live.irq_pr = c->pr; naomi_live.irq_sr = c->sr;
++        naomi_live.pc_ring[naomi_live.vbls & 15] = c->pc;
++    }
++    if(m && m != thd_current) { naomi_live.main_pc = m->context.pc; naomi_live.main_pr = m->context.pr; }
++    naomi_peek_poll();
++}
++
++/* A thread of its own that answers the NetDIMM every 2 ms, as the Daytona native NAOMI port does
++   (naomi_dimmcomms.c, proven on the board): the maple path above only runs while the program keeps
++   starting maple transfers, and a hung program may not. Started by KOS init (init.c) before main(). */
++static void *naomi_live_thd(void *arg) {
++    (void)arg;
++    for(;;) {
++        int o = irq_disable();
++        naomi_live.thd_polls++;
++        naomi_peek_poll();
++        irq_restore(o);
++        thd_sleep(2);
++    }
++    return NULL;
++}
++
++void naomi_live_start(void) {
++    const kthread_attr_t attr = { .create_detached = true, .stack_size = 4096, .label = "naomi live" };
++    if(!thd_create_ex(&attr, naomi_live_thd, NULL))
++        dbglog(DBG_ERROR, "naomi live: no peek thread\n");
++}
++#endif
++
+ /* Set the DMA Address */
+ void maple_dma_addr(void *ptr) {
++#ifdef NAOMI_HOST
++    naomi_live_tick();
++    /* dc2naomi: on a NAOMI there is no maple bus. The resident translates the frame
++       list, answering with the cabinet's JVS controls as a Dreamcast controller (and
++       the emulated Visual Memory), and gives back the address to hand the hardware.
++       It publishes its entry points in a table at RES_BASE, 0x8dc00000:
++         +0 magic "DCLR"  +4 boot_entry  +8 maple_hook  +12/+16 bss
++       (resident/head.S and resident.h in https://github.com/0skarzer0/dc2naomi).
++       Reading the hook from that table instead of patching this function's literal
++       keeps working when the resident is rebuilt, and falls through to the normal
++       path when the table is not there, i.e. on a real Dreamcast. */
++    const volatile uint32 *rt = (const volatile uint32 *)0x8dc00000;
++    if(rt[0] == 0x524c4344u && rt[2]) {
++        uint32 (*hook)(uint32) = (uint32 (*)(uint32))rt[2];
++        maple_write(MAPLE_DMAADDR, hook((uint32)ptr));
++        return;
++    }
++#endif
+     maple_write(MAPLE_DMAADDR, ((uint32) ptr) & MEM_AREA_CACHE_MASK);
+ }
+ 
+diff --git a/kernel/arch/dreamcast/hardware/spu.c b/kernel/arch/dreamcast/hardware/spu.c
+index e5db35f5..e1f15e4d 100644
+--- a/kernel/arch/dreamcast/hardware/spu.c
++++ b/kernel/arch/dreamcast/hardware/spu.c
+@@ -135,6 +135,15 @@ void spu_memload_dma(uintptr_t dst, void *src_void, size_t length) {
+     aligned_len = length & ~31;
+     length &= 31;
+ 
++#ifdef NAOMI_HOST
++    /* dc2naomi: on a NAOMI the AICA G2 DMA can never end (ADST stays 1) - dc2naomi
++       carries a resident stand-in that makes the CPU do the copy for the commercial
++       games that depend on it (G2CPU in its games.py, written for exactly this).
++       Here the transfer would stay EINPROGRESS for ever and this loop would spin,
++       yielding, so the screen keeps refreshing while the game never moves on. The
++       store queues do the same job without the G2 DMA, so always take that path. */
++    spu_memload_sq(dst, src_void, aligned_len);
++#else
+     do {
+         if(spu_dma_transfer(src_void, dst, aligned_len, 1, NULL, NULL) < 0) {
+             if(errno == EINPROGRESS) {
+@@ -145,6 +154,7 @@ void spu_memload_dma(uintptr_t dst, void *src_void, size_t length) {
+         }
+         break;
+     } while (1);
++#endif
+ 
+     if(length > 0) {
+         /* Make sure the destination is in a non-cached area */
+diff --git a/kernel/arch/dreamcast/hardware/video.c b/kernel/arch/dreamcast/hardware/video.c
+index d54e2788..b0dda451 100644
+--- a/kernel/arch/dreamcast/hardware/video.c
++++ b/kernel/arch/dreamcast/hardware/video.c
+@@ -217,6 +217,16 @@ int8_t vid_check_cable(void) {
+         return CT_VGA;
+     }
+ 
++#ifdef NAOMI_HOST
++    /* A Dreamcast build (KOS_SUBARCH=pristine) running on a NAOMI 2 through
++       dc2naomi: writing the Dreamcast BIOS bits into PCTRA leaves the NAOMI 2's
++       tile accelerator dead (TA_LIST_INIT ignored, no polygons, no render), so
++       the game runs blind on a black screen. The dc2naomi resident already
++       forces VGA in the AICA register 0x2c00, which is what the cable pins
++       would have reported here. See resident.c and dc2naomi's HANDOFF. */
++    return CT_VGA;
++#endif
++
+     *porta = (*porta & 0xfff0ffff) | 0x000a0000;
+ 
+     /* Read port8 and port9 */
+diff --git a/kernel/arch/dreamcast/include/dc/g2bus.h b/kernel/arch/dreamcast/include/dc/g2bus.h
+index 248b5a1c..7cfd6df3 100644
+--- a/kernel/arch/dreamcast/include/dc/g2bus.h
++++ b/kernel/arch/dreamcast/include/dc/g2bus.h
+@@ -159,6 +159,12 @@ typedef struct {
+ 
+     \return                 The context containing the IRQ and G2 DMA states.
+ */
++#ifdef NAOMI_HOST
++/* dc2naomi: see g2_fifo_wait in g2bus.c */
++extern unsigned g2_fifo_stuck;
++extern unsigned g2_fifo_cap;
++#endif
++
+ static inline g2_ctx_t g2_lock(void) {
+     g2_ctx_t ctx;
+ 
+@@ -169,7 +175,19 @@ static inline g2_ctx_t g2_lock(void) {
+     G2_DMA_SUSPEND_BBA = 1;
+     G2_DMA_SUSPEND_CH2 = 1;
+ 
++#ifdef NAOMI_HOST
++    /* dc2naomi: bounded, as in g2_fifo_wait (see g2bus.c). This one runs with
++       interrupts disabled, so a NAOMI board whose FIFO bits never clear freezes
++       the machine here: no vblank, no maple, nothing. */
++    for(unsigned n = g2_fifo_cap; n; n--)
++        if(!(FIFO_STATUS & (FIFO_SH4 | FIFO_G2)))
++            return ctx;
++
++    g2_fifo_stuck++;
++    g2_fifo_cap = 1024u;
++#else
+     while(FIFO_STATUS & (FIFO_SH4 | FIFO_G2));
++#endif
+ 
+     return ctx;
+ }
+diff --git a/kernel/arch/dreamcast/kernel/exec.c b/kernel/arch/dreamcast/kernel/exec.c
+index a788b686..23849141 100644
+--- a/kernel/arch/dreamcast/kernel/exec.c
++++ b/kernel/arch/dreamcast/kernel/exec.c
+@@ -62,6 +62,12 @@ void arch_exec_at(const void *image, uint32_t length, uint32_t address) {
+     arch_shutdown();
+ 
+     /* Reset our old SR, VBR, and FPSCR */
++#ifdef NAOMI_HOST
++    /* dc2naomi: never hand the next program user mode (see startup.S): if the saved
++       SR does not have MD set, use the SR the dc2naomi resident starts programs with. */
++    if(!(_arch_old_sr & 0x40000000))
++        _arch_old_sr = 0x400000f0;
++#endif
+     __asm__ __volatile__("ldc	%0,sr\n"
+                          : /* no outputs */
+                          : "z"(_arch_old_sr)
+diff --git a/kernel/arch/dreamcast/kernel/init.c b/kernel/arch/dreamcast/kernel/init.c
+index 765f8850..f2b65c00 100644
+--- a/kernel/arch/dreamcast/kernel/init.c
++++ b/kernel/arch/dreamcast/kernel/init.c
+@@ -44,6 +44,10 @@ extern void __verify_newlib_patch();
+ void (*__kos_init_early_fn)(void) __attribute__((weak,section(".data"))) = NULL;
+ 
+ int main(int argc, char **argv);
++#ifdef NAOMI_HOST
++extern void naomi_halt(uint32_t why, uint32_t pr) __attribute__((noreturn));
++#endif
++
+ uint32 _fs_dclsocket_get_ip(void);
+ 
+ /* We have to put this here so we can include plat-specific devices */
+@@ -231,6 +235,13 @@ int  __weak arch_auto_init(void) {
+     if (!KOS_PLATFORM_IS_NAOMI)
+         KOS_INIT_FLAG_CALL(arch_init_net);
+ 
++#ifdef NAOMI_HOST
++    {   /* dc2naomi: the NetDIMM peek/poke thread and naomi_live (maple_utils.c) */
++        extern void naomi_live_start(void);
++        naomi_live_start();
++    }
++#endif
++
+     return 0;
+ }
+ 
+@@ -363,6 +374,9 @@ void arch_shutdown(void) {
+ 
+ /* Generic kernel exit point */
+ void arch_exit(void) {
++#ifdef NAOMI_HOST
++    naomi_halt(2, (uint32_t)__builtin_return_address(0));
++#endif
+     /* arch_exit always returns EXIT_SUCCESS (0)
+        if return codes are desired then a call to
+        newlib's exit() should be used in its place */
+@@ -408,6 +422,9 @@ void arch_menu(void) {
+    and don't try to call the dtors */
+ __used __noreturn
+ void arch_abort(void) {
++#ifdef NAOMI_HOST
++    naomi_halt(1, (uint32_t)__builtin_return_address(0));
++#endif
+     /* Disable the WDT, if active */
+     wdt_disable();
+ 
+@@ -435,6 +452,9 @@ void arch_abort(void) {
+ /* Called to reboot the system; assume the system is in peril and don't
+    try to call the dtors */
+ void arch_reboot(void) {
++#ifdef NAOMI_HOST
++    naomi_halt(3, (uint32_t)__builtin_return_address(0));
++#endif
+     typedef void (*reboot_func)() __noreturn;
+     reboot_func rb;
+ 
+diff --git a/kernel/arch/dreamcast/kernel/irq.c b/kernel/arch/dreamcast/kernel/irq.c
+index cb8b3d06..efe773ca 100644
+--- a/kernel/arch/dreamcast/kernel/irq.c
++++ b/kernel/arch/dreamcast/kernel/irq.c
+@@ -254,6 +254,10 @@ void irq_handle_exception(int code) {
+     }
+ 
+     if(!handled) {
++#ifdef NAOMI_HOST
++        { extern void naomi_record_exc(int, uint32_t, const irq_context_t *);
++          naomi_record_exc(code, evt, irq_srt_addr); }
++#endif
+         hnd = &irq_handlers[EXC_UNHANDLED_EXC >> 5];
+         if(hnd->hdl != NULL)
+             hnd->hdl(evt, irq_srt_addr, hnd->data);
+diff --git a/kernel/arch/dreamcast/kernel/stack.c b/kernel/arch/dreamcast/kernel/stack.c
+index 1883a1da..b37ed904 100644
+--- a/kernel/arch/dreamcast/kernel/stack.c
++++ b/kernel/arch/dreamcast/kernel/stack.c
+@@ -18,7 +18,16 @@
+ #include <stdint.h>
+ 
+ static uintptr_t arch_stack_16m_dft = 0x8d000000;
++#ifdef NAOMI_HOST
++/* dc2naomi: KOS's startup decides there is 32 MB because on a NAOMI 2 0xadffffff is
++   not a mirror of 0xacffffff, and would put the top of memory (stack and heap) at
++   0x8e000000, right over the dc2naomi resident at 0x8dc00000 - the resident that
++   serves the GD-ROM syscalls this program reads its disc with. Keep below it.
++   Same value DreamShell and the OutRun 2006 demo are patched to in games.py. */
++static uintptr_t arch_stack_32m_dft = 0x8dc00000;
++#else
+ static uintptr_t arch_stack_32m_dft = 0x8e000000;
++#endif
+ 
+ extern uintptr_t arch_stack_16m __attribute__((weak,alias("arch_stack_16m_dft")));
+ extern uintptr_t arch_stack_32m __attribute__((weak,alias("arch_stack_32m_dft")));
+diff --git a/kernel/arch/dreamcast/kernel/startup.S b/kernel/arch/dreamcast/kernel/startup.S
+index 09e4817f..0821b498 100644
+--- a/kernel/arch/dreamcast/kernel/startup.S
++++ b/kernel/arch/dreamcast/kernel/startup.S
+@@ -29,6 +29,16 @@ _start:
+ start:
+ 	! Disable interrupts (if they're enabled)
+ 	mov.l	old_sr_addr,r0
++#ifdef NAOMI_HOST
++	! dc2naomi: store the old SR through P2. It is saved before the CCR write
++	! below, which invalidates the operand cache (OCI) without writing it back;
++	! a loader that leaves the cache in copy-back mode (any KallistiOS program,
++	! like dc2naomi's own loader, which the resident does not change) keeps this
++	! store in a dirty line that is then thrown away, old_sr stays 0, and
++	! arch_exec() later loads SR = 0: user mode, address error on the next fetch.
++	mov.l	p2_mask,r2
++	or	r2,r0
++#endif
+ 	stc	sr,r1
+ 	mov.l	r1,@r0
+ 	mov.l	init_sr,r0
+diff --git a/kernel/debug/dbgio.c b/kernel/debug/dbgio.c
+index 1c79034c..1477b5ad 100644
+--- a/kernel/debug/dbgio.c
++++ b/kernel/debug/dbgio.c
+@@ -10,6 +10,9 @@
+ #include <errno.h>
+ #include <assert.h>
+ #include <kos/dbgio.h>
++#ifdef NAOMI_HOST
++extern void naomi_log_put(const void *data, int len);
++#endif
+ #include <arch/spinlock.h>
+ 
+ /*
+@@ -105,6 +108,9 @@ int dbgio_read(void) {
+ }
+ 
+ int dbgio_write(int c) {
++#ifdef NAOMI_HOST
++    { char ch = (char)c; naomi_log_put(&ch, 1); }
++#endif
+     if(dbgio_enabled) {
+         assert(dbgio);
+         return dbgio->write(c);
+@@ -123,6 +129,9 @@ int dbgio_flush(void) {
+ }
+ 
+ int dbgio_write_buffer(const uint8 *data, int len) {
++#ifdef NAOMI_HOST
++    naomi_log_put(data, len);
++#endif
+     if(dbgio_enabled) {
+         assert(dbgio);
+         return dbgio->write_buffer(data, len, 0);
+@@ -141,6 +150,9 @@ int dbgio_read_buffer(uint8 *data, int len) {
+ }
+ 
+ int dbgio_write_buffer_xlat(const uint8 *data, int len) {
++#ifdef NAOMI_HOST
++    naomi_log_put(data, len);
++#endif
+     if(dbgio_enabled) {
+         assert(dbgio);
+         return dbgio->write_buffer(data, len, 1);

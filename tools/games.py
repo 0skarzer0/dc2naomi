@@ -683,3 +683,37 @@ GAMES["hangon"] = _ysgw_one("HANG-ON", "wheel", 0, 10)
 GAMES["powerdrift"] = _ysgw_one("POWER DRIFT", "wheel", 4, "pd")
 GAMES["afterburner2"] = _ysgw_one("AFTER BURNER II", "ab2", 3, 0)
 GAMES["spaceharrier"] = _ysgw_one("SPACE HARRIER", "plane", 1, 0)
+
+
+# Mario Kart 64 for Dreamcast (jnmartin84/mk64-dc, commit 1cbad2ef, 2026/08/23), built from the N64
+# decompilation against KallistiOS 680d1862. Like DreamShell above, it is a KallistiOS program on a
+# rebuilt disc: SOURCE is a directory with IP.BIN (from KOS makeip and the repo's ip.txt),
+# 1ST_READ.BIN = loader.bin (unscrambled: the GD-ROM path does not scramble), mk64.bin, ghost.ico,
+# kart.ico and the dc_data/ folder. The loader reads /cd/dc_data/common_data.bin and /cd/mk64.bin by
+# their lower-case names, so the disc needs Rock Ridge.
+#
+# No patches: NOIPBOOT (flag 0x1000) skips the IP.BIN bootstrap and jumps straight to 1ST_READ.BIN,
+# which is what a KallistiOS program wants (it sets up the video mode itself), and it means the
+# home-made makeip bootstrap never runs, so none of DreamShell's IP.BIN patch offsets apply here.
+# The game is a 16 MB Dreamcast build (mk64.bin 8.45 MB + 4.74 MB of bss), so it never reaches
+# 0x8dc00000 where the resident lives and needs no top-of-RAM patch.
+#
+# Controls (the user's choice, tried on the board 2026-11-13): pads "mk64" = gas = N64 A, brake = N64 B,
+# lever forward = R (hop/drift), lever back = Z (use item), START = START (on release; START + lever =
+# up/down in menus, wheel lock = left/right), wheel 2.5x faster around the centre.
+GAMES["mk64"] = {
+    "title": "MARIO KART 64",
+    "pads": "mk64",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "rebuild",
+    "rock_ridge": True,   # lower-case and long names
+    "volume": "MARIOKART64",
+    "flags": 0x1404,      # no user break, GD DMA reads in one call, no IP.BIN bootstrap
+    "hook_pc": [],
+    "groups": [],
+}
+
+# The same with CONSOLE=1: the game's own printf drawn on the screen as text. Its loader prints the
+# asset it is reading and a progress bar, and KallistiOS prints its init, so a hang says where it is.
+GAMES["mk64_dbg"] = dict(GAMES["mk64"], title="MARIO KART 64 DBG", flags=0x1C0C)  # + DIAG: restores the loader's 31 kHz timings

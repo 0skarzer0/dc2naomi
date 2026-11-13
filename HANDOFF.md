@@ -113,6 +113,14 @@ mirar qué ocupa (`walk()` agrupado por carpeta y extensión) y, de menos a más
 - PCM sin comprimir de Rush 2049: `tools/rushstr.py` (mono) o compartir canciones con `--alias`;
 Después, releer la imagen y comparar cada archivo (como en las secciones de Soulcalibur, Rainbow Cotton y Buzz).
 
+**15. Un homebrew de KallistiOS compilado por nosotros (Mario Kart 64, 2026-11-13):** compilarlo con la KallistiOS
+parcheada de `homebrew/mk64/kos-680d1862-naomi_host.patch` y `-DNAOMI_HOST` en vez de parchear el binario como en
+`or2006`/`or37`. El parche arregla en el código fuente todo lo que en esos perfiles son parches sueltos (PCTRA, cima de
+memoria, maple, bus G1) y además cinco cosas que nadie había visto (FIFO G2 ×2, DMA del AICA, SR perdido en caché,
+vídeo), y mete en el programa un contestador de peeks propio con log y excepción en RAM
+(`tools/board/kos_live.py`). Se aplica a la 680d1862; para otra versión de KOS, los cambios son pequeños y están todos
+bajo `#ifdef NAOMI_HOST`. Detalle en la sección "Mario Kart 64".
+
 ## Objetivo
 
 Arrancar juegos de **Dreamcast** en una **NAOMI / NAOMI 2** por netboot (NetDIMM), sustituyendo la BIOS de
@@ -1855,3 +1863,110 @@ pasan al mueble Crazy Taxi y salen del de palancas.
 
 **Pi .60:** `dc-msr`, `dc-rush2049`, `dc-rush2049_9` (`.bin.gz` + `.vmu`, md5 comprobado), filas añadidas (copia
 `romsinfo.csv.bak_dc_ct_msr_rush`, reimportado); 18 filas `_dc2naomict` en total, todas con su archivo. `/boot` al 37 %.
+
+## Mario Kart 64 (homebrew KallistiOS, mk64-dc) — perfil `mk64`, mueble Crazy Taxi. ✅ FUNCIONA EN PLACA (2026-11-13)
+
+**Qué es.** El port de Dreamcast de la decompilación de Mario Kart 64, de **jnmartin84**
+([mk64-dc](https://github.com/jnmartin84/mk64-dc), commit `1cbad2ef`, 2026-08-23: audio mezclado por el AICA, backend
+Fast3D directo al PowerVR, 30 fps a 4 jugadores). No es un juego de Dreamcast comercial: **lo compilamos nosotros**
+desde su código con la ROM del usuario (`Mario Kart 64 (U) [!].z64`, MD5 `3a67d9986f54eb282924fca4cd5f6dff`), y
+dc2naomi lo empaqueta con el layout `rebuild` (directorio con los archivos del disco). Todo en un comando:
+
+```sh
+KOS_NAOMI_ENV=/opt/toolchains/dc/kos-naomi/environ.sh homebrew/mk64/build_mk64.sh baserom.us.z64
+# -> build/mk64_dc2naomict.bin(.gz) (17,5 MB / 11,6 MB). PROFILE=mk64_dbg para la de diagnóstico.
+```
+
+El script clona KallistiOS `680d1862` (la que pide mk64-dc) en un árbol propio y le aplica el parche, clona kos-ports
+para `sh4zam`, compila Torch (HarbourMasters) y las herramientas de la decompilación, extrae los assets de la ROM, compila
+el juego (`mk64.bin` 8,45 MB + `dc_data/` 8,3 MB + `loader.bin` como `1ST_READ.BIN` sin cifrar + `IP.BIN` de
+`makeip`) y llama a `./build.sh mk64`. Nada con copyright en el repositorio: ni la ROM, ni código de mk64-dc (que no
+tiene licencia publicada; se descarga de su autor), ni nada derivado de la ROM. Comprobado de cero el 2026-11-13.
+
+**En placa (2026-11-13, usuario):** "todo perfecto", con "alguna caída de frames, lo normal" (es el port; en NAOMI no
+se ha tocado el rendimiento). Música, vídeo a 640×480 VGA, mandos.
+
+**Mandos (`pads: "mk64"`, `DIMM_PAD_MK64 = 8`, elegidos por el usuario):** acelerador = A (acelerar), freno = B
+(frenar), **palanca adelante = R (salto y derrape), palanca atrás = Z (usar objeto)**, START al soltarlo; con START
+apretado la palanca es arriba/abajo (menús); volante a tope = izquierda/derecha. El volante va **2,5 veces más rápido**
+alrededor del centro (la dirección a tope al 40 % del recorrido; lo pidió el usuario: "tener que girarlo mucho
+menos"). El port traduce el mando de Dreamcast así (`src/main.c`, `update_controller`): A = N64 A, X = N64 B, gatillo
+L = Z en carrera / L en menús, gatillo R = R, Y = C-arriba; por eso el residente manda acelerador → A, freno → X,
+palanca adelante → gatillo R y atrás → gatillo L.
+
+**Pendiente:** VMU (ahora `flags` sin `0x8000`: no guarda récords ni opciones; el juego guarda en la VMU con su propio
+formato, así que no hay partida que buscar en bucanero/dreamcast-saves: nunca hubo un Mario Kart 64 comercial de
+Dreamcast); versión en **español** con el parche de **blade133bo** (v1.1, `Mario Kart 64 (ES).xdelta`, se aplica a la
+misma ROM: comprobado que da 12.582.912 bytes, mismo tamaño, 1,4 % de bytes cambiados en 82 zonas, nada movido de
+sitio; habría que saltarse la comprobación de MD5 de la compilación y ver si Torch extrae bien los assets cambiados).
+
+### Lo que hubo que arreglar en KallistiOS (todo en `kos-680d1862-naomi_host.patch`, bajo `#ifdef NAOMI_HOST`)
+
+mk64-dc se compila para Dreamcast (`KOS_SUBARCH=pristine`), así que KallistiOS hace lo que haría en una Dreamcast. En
+la NAOMI 2, por orden de aparición en placa:
+
+| # | Dónde | Qué pasaba | Arreglo |
+|---|---|---|---|
+| 1 | `hardware/video.c` `vid_check_cable()` | escribe PCTRA para leer el cable: **mata el TA** (sección "CAUSA ENCONTRADA") → pantalla negra con ruido | devuelve VGA sin escribir nada (el residente ya pone VGA en el AICA `0x2c00`) |
+| 2 | `kernel/stack.c` | la NAOMI 2 no hace espejo de `0xadffffff` → KOS cree 32 MB y pone la cima en `0x8e000000`, **encima del residente** | `arch_stack_32m` = `0x8dc00000` (lo mismo que DreamShell y or2006) |
+| 3 | `maple/maple_utils.c` `maple_dma_addr()` | sin el gancho de maple no hay mandos (ni VMU) | lee el gancho de la **tabla del residente** (`0x8dc00000`: `"DCLR"`, +8 `maple_hook`) y escribe su resultado en `SB_MDSTAR`; sin tabla (Dreamcast real) hace lo normal. **Mejor que el parche `HOOKST`:** no depende de direcciones y sobrevive a recompilar el residente |
+| 4 | `hardware/cdrom.c` `cdrom_init()` | desbloqueo del bus G1 leyendo la BIOS entera (con multibios puede bloquearlo) | no lo intenta |
+| 5 | `hardware/g2bus.c` `g2_fifo_wait()` | espera sin límite a que bajen los bits 0/4 de `SB_FFST` (`0xa05f688c`): los mismos que `G2CHK0`/`G2CHK4` | 3.000.000 vueltas como el residente, luego sigue; tras el primer fallo solo 1024 (`g2_fifo_stuck` lo cuenta) |
+| 6 | `include/dc/g2bus.h` `g2_lock()` | igual, **con las interrupciones apagadas**: congela la placa entera | igual que 5 |
+| 7 | `hardware/spu.c` `spu_memload()` | sube el audio por DMA G2 del AICA, que en esta placa no termina (`ADST` se queda a 1, como en `G2CPU`): bucle infinito cediendo el turno → pantalla quieta/temblando tras el logo de Nintendo | siempre por las store queues (CPU) |
+| 8 | `kernel/startup.S` + `kernel/exec.c` | **el fallo de fondo, descubierto leyendo la RAM:** la primera instrucción guarda el SR de quien lo lanza en `_arch_old_sr` y tres instrucciones después reescribe el CCR con OCI (invalida la caché de datos **sin escribirla**). El loader de dc2naomi (KallistiOS) deja la caché en copy-back y el residente no la toca: el SR se queda en una línea sucia que se tira, en RAM queda 0. Al saltar del cargador de Mario Kart al juego (`arch_exec`), `ldc r0,sr` con SR = 0 = **modo usuario**: error de dirección en la siguiente instrucción (`EXPEVT 0x0e0`), excepción contra la tabla del residente rellena de `0xff`, reinicio, y la NetDIMM vuelve a cargar: **logo de Nintendo en bucle, sonido y tembleque** | guardar el SR por P2 (sin caché); y `arch_exec` nunca carga un SR sin el bit MD (usa `0x400000f0`, el del residente) |
+
+Los puntos 5, 6 y 7 eran cosas que ya habíamos medido en placa con juegos comerciales (`G2CHK0/4`, `G2CPU`): KallistiOS
+tropieza igual. DreamShell no lo había destapado porque dibuja en 2D y casi no usa el AICA. El 8 afecta a cualquier
+programa de KallistiOS que encadene otro (`arch_exec`) lanzado por el loader de dc2naomi; también a or2006/or37 si
+alguna vez lo hacen.
+
+**Descartado:** el camino de DMA de texturas a `0x11000000` que no escribe en la NAOMI 2 (`TEXPATH`) no afecta: el
+port sube las texturas con `pvr_txr_load()` (store queues a VRAM), no por DMA.
+
+### Depuración en placa de un homebrew de KallistiOS (con NAOMI_HOST)
+
+Los peeks del residente (`tools/board/pk.py`) **no sirven** con un programa de KallistiOS: el residente solo atiende la
+NetDIMM dentro de sus llamadas de GD-ROM y del gancho de maple, y KallistiOS lee el disco con sus propias rutinas. Lo que
+devuelven es basura (el valor de la ventana, `a0000000`) o se agota el tiempo. Por eso el parche añade al programa:
+
+- **Un contestador de peeks propio** (`naomi_peek_poll`, `maple_utils.c`), mismo protocolo que el residente y que
+  `dimmcomms.c` de libnaomi (DragonMinded), llamado desde un hilo cada 2 ms (como `naomi_dimmcomms.c` del Daytona nativo)
+  y en cada vblank. Ventana en `0x01fffffc` igual que el residente: `pk.py` funciona también.
+- **`naomi_live`** (dirección con `sh-elf-nm`; la imprime `build_mk64.sh`): vblanks, peeks atendidos, PC/PR que
+  interrumpió el último vblank y los 16 últimos (un perfilador por muestreo), contexto del hilo principal, y **las
+  últimas 8 KB de todo lo que imprime KallistiOS** (dbgio y la consola de dcload, aunque estén desactivadas).
+- **Parar en vez de reiniciar:** `arch_abort/exit/reboot` se quedan en un bucle atendiendo peeks; la excepción no
+  atendida (`irq.c`) deja código, evento, PC, PR, SR, R0–R15, EXPEVT, INTEVT y TEA en `naomi_live`.
+- Lector: `tools/board/kos_live.py IP ADDR` desde la Raspberry (sondea hasta que el programa se detiene y vuelca el
+  log). **Sin `timehack.py` corriendo** mientras se lee (`wipiloader.py … hackoff`, o matarlo): con los dos hablando
+  a la NetDIMM los peeks devolvieron valores viejos.
+
+Así salió el punto 8: log con `kernel panic: unhandled IRQ/Exception` justo tras "Please wait..." del cargador,
+`EXPEVT 0x0e0`, `SR = 0`, PC en `arch_exec_at` tras `ldc r0,sr`. Y con el juego ya corriendo, el anillo de PCs lo
+mostró dibujando (`gfx_sp_tri1_impl`), subiendo texturas y con la música en marcha (`note_set_vel_pan_reverb`).
+
+Otras herramientas que ayudaron: el perfil `mk64_dbg` (`CONSOLE | DIAG`: el `printf` del juego en pantalla y los
+tiempos de 31 kHz del cargador restaurados) y Flycast con la BIOS de NAOMI 2 del usuario (`epr-23608b.ic27`, CRC32
+`a554b1e3`, en un `naomi2.zip`): arranca el loader y reconoce el juego, pero se queda en negro tras "Starting..."
+(no se siguió: la placa con `kos_live.py` resultó más directa).
+
+### Notas de la compilación
+
+- **Torch:** `make` dentro de `tools/torch` no hace falta; `cmake -B cmake-build-release -GNinja` y `cmake --build`.
+- **Assets `.mio0`:** los `.mk` de `assets/include/` cuelgan las texturas de objetos que no son los que las incluyen
+  (`data/textures_0a.s` incluye `assets/character_select/mario/mario_face_00.mio0`, pero el `.mk` la pone como requisito
+  de `data/course_player_selection.o`). Con `make -j` se ensambla antes de que exista. `build_mk64.sh` compila primero
+  los 52 objetos que nombran esos `.mk` y luego todo.
+- **No usar el `.cdi`/`.iso` que circulan** (el usuario trajo tres): el de diciembre de 2025 lleva 640 MB de relleno
+  delante de los datos y no cabe en la NetDIMM; el `.iso` es para DreamShell; el CDI de BootDreams es de agosto de 2025.
+  Además ninguno lleva los arreglos de arriba.
+- **gitlab.com no es accesible** desde el entorno de la IA: `mkdcdisc` no hace falta (dc2naomi hace el ISO con
+  genisoimage).
+
+**Pi .60:** `dc-mk64_dc2naomict.bin.gz` (nombre y fila del CSV de siempre: `audit_name` `mk64_dc2naomict.bin.gz`) y
+`dc-mk64dbg_dc2naomict.bin.gz` (fila "Mario Kart 64 (DC diagnostico)"; borrable). Copia de la versión con mandos
+`pole` en `/boot/roms/_test/dc-mk64_dc2naomict.bin.gz.pole-2026-11-13`. **La última imagen (palanca adelante = salto,
+y free play / attract mudo puestos con `naomi-ct-patches/tools/sysdef_all.py` como piden las imágenes nuevas) quedó en la
+carpeta `dc2naomi` del PC sin subir: la .60 estaba apagada** (2026-11-13 17:50). Al subirla, el nombre y la fila no
+cambian.

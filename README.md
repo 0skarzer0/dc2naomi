@@ -194,14 +194,28 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - **[DreamShell](https://github.com/DC-SWAT/DreamShell)** y **SWAT** ([DC-SWAT](http://www.dc-swat.ru)): DreamShell
   se estudió y probó por netboot, y sus notas sobre NAOMI y JVS fueron de mucha ayuda.
 - **[DragonMinded](https://github.com/DragonMinded)**: su [libnaomi](https://github.com/DragonMinded/libnaomi)
-  documenta el protocolo de peticiones de la NetDIMM (`dimmcomms.c`), que el residente sigue para contestar las
-  lecturas de memoria por red, y sus [herramientas de netboot](https://github.com/DragonMinded/netboot) son las que
+  documenta el protocolo de peticiones de la NetDIMM (`dimmcomms.c`), que el residente (y el parche
+  `NAOMI_HOST` de KallistiOS) sigue para contestar las lecturas de memoria por red, y sus [herramientas de netboot](https://github.com/DragonMinded/netboot) son las que
   usamos para depurar en la placa real.
 - **[dreamcast-saves](https://github.com/bucanero/dreamcast-saves)** (bucanero, Damian Parrino): la colección de
   partidas `.VMI`/`.VMS` de la que salen las partidas con todo desbloqueado que ponemos en los `.vmu`, y la referencia
   del formato `.VMI` para `tools/vmutool.py`.
 - **[ArkRetro](https://github.com/ArkRetro)**: su demo de OutRun 2006 Coast 2 Coast para Dreamcast (homebrew con
   KallistiOS), que el usuario convierte para su mueble de Crazy Taxi (la demo no se incluye).
+- **Mario Kart 64** (`homebrew/mk64/`):
+  - **[jnmartin84](https://github.com/jnmartin84)** y su [mk64-dc](https://github.com/jnmartin84/mk64-dc), el port de
+    Mario Kart 64 a Dreamcast (audio mezclado por el AICA, Fast3D directo al PowerVR) que compilamos para la NAOMI. Su
+    código no se incluye: `build_mk64.sh` lo descarga de su repositorio.
+  - El proyecto de **decompilación de Mario Kart 64** ([n64decomp/mk64](https://github.com/n64decomp/mk64)) y todos
+    sus colaboradores, del que parte el port.
+  - **[HarbourMasters](https://github.com/HarbourMasters)** y su [Torch](https://github.com/HarbourMasters/Torch), con
+    el que se extraen los assets de la ROM.
+  - **Falco Girgis** ([gyrovorbis](https://github.com/gyrovorbis)) y [SH4ZAM](https://github.com/gyrovorbis/sh4zam),
+    la biblioteca de matemáticas del SH-4 que usa el juego (vía [kos-ports](https://github.com/KallistiOS/kos-ports)).
+  - **[KallistiOS](https://github.com/KallistiOS/KallistiOS)** otra vez: el juego va sobre su versión `680d1862`, con
+    nuestro parche `NAOMI_HOST` para que funcione dentro de dc2naomi.
+  - **blade133bo**, autor de la traducción al español (v1.1) que nos pasó el usuario para una versión en castellano
+    (pendiente; el parche no se incluye).
 - **ComradeSnarky**: su traducción al inglés de Super Street Fighter II X for Matching Service, que el usuario
   convierte y juega en la placa (el parche no se incluye: hay que conseguirlo de su autor).
 - **[WiPi Netbooter](https://github.com/chunksin/WiPiNetbooter)** (chunksin y colaboradores): el netbooter con el

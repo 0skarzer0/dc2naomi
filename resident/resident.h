@@ -54,6 +54,10 @@
 #define DIMM_PAD_PLANE  6             /* After Burner II / Space Harrier on their own (Yu Suzuki GW split, 2026-11-11): the
                                          DIMM_PAD_YSGW plane controls always (wheel = left/right, lever = up/down, gas = A
                                          fire, brake = B missile), START as DIMM_PAD_WHEEL */
+#define DIMM_PAD_MK64   8             /* Mario Kart 64 (mk64-dc, 2026-11-13, the user's choice): as MENU (START sent on
+                                         release, START + lever = up/down, wheel lock = left/right), gas = A (N64 A),
+                                         brake = X (N64 B), lever forward = R trigger (N64 R, hop/drift), lever back =
+                                         L trigger (N64 Z, use item); wheel 2.5x faster around the centre */
 #define DIMM_PAD_AB2    7             /* After Burner II on its own: DIMM_PAD_PLANE with its own buttons and throttle (resident.c) */
 #define DIMM_PAD_WHEEL  4             /* Crazy Taxi cabinet default (games not tuned yet): START sent on release, only
                                          if nothing else was used while held; held START: lever = up/down, brake = X,

@@ -1027,7 +1027,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
         u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
-        if (H.pad_map == DIMM_PAD_MENU || H.pad_map == DIMM_PAD_POLE) {
+        if (H.pad_map == DIMM_PAD_MENU || H.pad_map == DIMM_PAD_POLE || H.pad_map == DIMM_PAD_MK64) {
             /* Yu Suzuki Game Works (2026-11-08): START is a plain START, but it is sent when released, and only if
                the lever was not used while it was held: START + lever forward = up, START + lever back = down
                (the menu needs clean up/down). Lever alone = B/A; wheel at the end of its travel = left/right. */
@@ -1053,6 +1053,20 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                 if (brk > 64) b |= DC_B;
                 acc = (!start && (fwd || back)) ? 255 : 0;
                 brk = 0;
+            }
+            if (H.pad_map == DIMM_PAD_MK64) {
+                /* Mario Kart 64 (mk64-dc maps DC A = N64 A, X = B, L trigger = Z, R trigger = R) */
+                b &= ~(u32)(DC_A | DC_B);
+                if (acc > 64) b |= DC_A;
+                if (brk > 64) b |= DC_X;
+                acc = (!start && fwd) ? 255 : 0;     /* lever forward = R trigger = N64 R: hop / drift */
+                brk = (!start && back) ? 255 : 0;    /* lever back = L trigger = N64 Z: use item */
+                /* the user asked for much less wheel travel (2026-11-13): 2.5x around the centre, so the
+                   stick is at its end at 40 % of the wheel's travel (the d-pad above still needs the lock) */
+                {
+                    int sx = 128 + ((int)x - 128) * 5 / 2;
+                    x = sx < 0 ? 0 : sx > 255 ? 255 : sx;
+                }
             }
         } else {
             /* Crazy Taxi cabinet mapping (tuned on Crazy Taxi 2, 2026-11-08):
