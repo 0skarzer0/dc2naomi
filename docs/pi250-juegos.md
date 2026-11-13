@@ -24,6 +24,8 @@ la sección del [HANDOFF](../HANDOFF.md) que se indica.
 | `ysgw` | Yu Suzuki Game Works | 🧪 | sin VMU | Lote de lucha + YSGW |
 | `dcop_es` | Dynamite Cop (PAL, traducción de pitito) | 🧪 | `v18467` (misiones 4-6) | Segundo lote: isosdream |
 | `soulcal` | Soulcalibur (USA), música en mono | 🧪 | `00000031` | Soulcalibur |
+| `buzz_es` | Buzz Lightyear of Star Command (traducción al español de pitito), vídeos recodificados | 🧪 | `v18060` (completo) | Buzz Lightyear |
+| `toystory2_es` | Toy Story 2 (traducción al español de pitito), vídeos recodificados | 🧪 | `v38204` (100 %) | Toy Story 2 |
 | `gunbird2` | Gunbird 2 | 🧪 | `v33167` | Lote de 17 juegos |
 | `jojo` | JoJo's Bizarre Adventure | 🧪 | `v11766` | Lote de 17 juegos |
 | `karous` | Karous | 🧪 | vacía | Lote de 17 juegos |
@@ -42,8 +44,8 @@ la sección del [HANDOFF](../HANDOFF.md) que se indica.
 
 **Ya no están en esta Pi:** `shutokou2_en` (carreras: al mueble Crazy Taxi va Tokyo Xtreme Racer 2); `ssf2x` (japonés) y `ssf2x_es` (el usuario se quedó con la inglesa); `cspike_es` (está el
 original de NAOMI); Jeremy McGrath Supercross 2000 y Star Wars Racer (pasaron al mueble Crazy Taxi).
-**Convertidos y sin subir** (en el PC, `isosdream/` y `dreamcastisos/`): Buzz Lightyear, Toy Story 2, Unreal Tournament
-y Millennium Racer (sin música), Bangai-O (música en CD-DA, no suena).
+**Convertidos y sin subir** (en el PC, `isosdream/` y `dreamcastisos/`): Bangai-O (música en CD-DA, no suena). Unreal Tournament y
+Millennium Racer (sin música) ya no están en el PC.
 **No convertidos** de lo que había en `dreamcastisos/`: pasan de 512 MB (Tech Romancer, Vampire Chronicle, Pro Pinball Trilogy, Psychic Force 2012, Virtua
 Fighter 3tb); arrancan con Windows CE (Mars Matrix, Marvel vs. Capcom, WWF Attitude). **Descartados y borrados** (2026-11-13, se
 juegan mal con palanca digital): Jet Grind Radio, Fur Fighters, Evil Dead, Sonic Adventure 1 y 2 y Rayman 2.
@@ -258,3 +260,8 @@ juegos; `/boot` con 5,8 GB libres.
 | `aw-sega_clay_challenge_AW21` | Sega Clay Challenge | Lightgun |  | ? |
 | `aw-sports_shooting_AW11` | Sports Shooting USA | Lightgun |  | ? |
 | `aw-tore_tore_sushi_AW12` | Sushi Bar | Digital (Stick) |  | ? |
+
+**2026-11-13, 22:50:** subidos Buzz Lightyear y Toy Story 2 (`isosdream/`, con su VMU; md5 comprobado), filas
+añadidas (copia `romsinfo.csv.bak_toystory_buzz`, reimportado; género Action, nombre de auditoría sin `dc-`). El
+usuario consultó los manuales: se juegan bien con palanca digital. Durante la subida la Pi marcaba
+`throttled=0x50005` (falta de tensión, como otras veces): conviene revisar su fuente.
