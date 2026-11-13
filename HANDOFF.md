@@ -1962,3 +1962,10 @@ tiempos de 31 kHz del cargador restaurados) y Flycast con la BIOS de NAOMI 2 del
 y free play / attract mudo puestos con `naomi-ct-patches/tools/sysdef_all.py` como piden las imágenes nuevas) quedó en la
 carpeta `dc2naomi` del PC sin subir: la .60 estaba apagada** (2026-11-13 17:50). Al subirla, el nombre y la fila no
 cambian.
+
+## Descartados por los mandos (2026-11-13)
+
+Repasando los 11 que no caben sin recortes, el usuario descarta por jugarse mal con palanca digital **Jet Grind Radio,
+Fur Fighters y Evil Dead**: sus CHD borrados de `dreamcastisos/` (con su permiso de borrado), y el `.part` que quedó de
+Evil Dead en `_to_delete/`. Quedan por recortar, por orden de interés para la palanca: Vampire Chronicle, VF3tb, Tech
+Romancer, Psychic Force 2012, Pro Pinball Trilogy; luego Sonic Adventure 1 y 2 y Rayman 2 (analógicos, jugables).
