@@ -118,7 +118,7 @@ parcheada de `homebrew/mk64/kos-680d1862-naomi_host.patch` y `-DNAOMI_HOST` en v
 `or2006`/`or37`. El parche arregla en el código fuente todo lo que en esos perfiles son parches sueltos (PCTRA, cima de
 memoria, maple, bus G1) y además cinco cosas que nadie había visto (FIFO G2 ×2, DMA del AICA, SR perdido en caché,
 vídeo), y mete en el programa un contestador de peeks propio con log y excepción en RAM
-(`tools/board/kos_live.py`). Se aplica a la 680d1862; para otra versión de KOS, los cambios son pequeños y están todos
+(`pi/live.py` de [naomi-pi-tools](https://github.com/0skarzer0/naomi-pi-tools), bloque `LIVE`). Se aplica a la 680d1862; para otra versión de KOS, los cambios son pequeños y están todos
 bajo `#ifdef NAOMI_HOST`. Detalle en la sección "Mario Kart 64".
 
 ## Objetivo
@@ -1938,7 +1938,7 @@ devuelven es basura (el valor de la ventana, `a0000000`) o se agota el tiempo. P
   últimas 8 KB de todo lo que imprime KallistiOS** (dbgio y la consola de dcload, aunque estén desactivadas).
 - **Parar en vez de reiniciar:** `arch_abort/exit/reboot` se quedan en un bucle atendiendo peeks; la excepción no
   atendida (`irq.c`) deja código, evento, PC, PR, SR, R0–R15, EXPEVT, INTEVT y TEA en `naomi_live`.
-- Lector: `tools/board/kos_live.py IP ADDR` desde la Raspberry (sondea hasta que el programa se detiene y vuelca el
+- Lector: `live.py IP ADDR` de [naomi-pi-tools](https://github.com/0skarzer0/naomi-pi-tools) desde la Raspberry (reconoce el bloque `LIVE`; sondea hasta que el programa se detiene y vuelca el
   log). **Sin `timehack.py` corriendo** mientras se lee (`wipiloader.py … hackoff`, o matarlo): con los dos hablando
   a la NetDIMM los peeks devolvieron valores viejos.
 
@@ -1949,7 +1949,7 @@ mostró dibujando (`gfx_sp_tri1_impl`), subiendo texturas y con la música en ma
 Otras herramientas que ayudaron: el perfil `mk64_dbg` (`CONSOLE | DIAG`: el `printf` del juego en pantalla y los
 tiempos de 31 kHz del cargador restaurados) y Flycast con la BIOS de NAOMI 2 del usuario (`epr-23608b.ic27`, CRC32
 `a554b1e3`, en un `naomi2.zip`): arranca el loader y reconoce el juego, pero se queda en negro tras "Starting..."
-(no se siguió: la placa con `kos_live.py` resultó más directa).
+(no se siguió: la placa con el lector `live.py` resultó más directa).
 
 ### Notas de la compilación
 
