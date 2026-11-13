@@ -44,9 +44,9 @@ la sección del [HANDOFF](../HANDOFF.md) que se indica.
 original de NAOMI); Jeremy McGrath Supercross 2000 y Star Wars Racer (pasaron al mueble Crazy Taxi).
 **Convertidos y sin subir** (en el PC, `isosdream/` y `dreamcastisos/`): Buzz Lightyear, Toy Story 2, Unreal Tournament
 y Millennium Racer (sin música), Bangai-O (música en CD-DA, no suena).
-**No convertidos** de lo que había en `dreamcastisos/`: pasan de 512 MB (Rayman 2, Sonic Adventure 1 y 2, Tech Romancer, Vampire Chronicle, Pro Pinball Trilogy, Psychic Force 2012, Virtua
+**No convertidos** de lo que había en `dreamcastisos/`: pasan de 512 MB (Tech Romancer, Vampire Chronicle, Pro Pinball Trilogy, Psychic Force 2012, Virtua
 Fighter 3tb); arrancan con Windows CE (Mars Matrix, Marvel vs. Capcom, WWF Attitude). **Descartados y borrados** (2026-11-13, se
-juegan mal con palanca digital): Jet Grind Radio, Fur Fighters y Evil Dead.
+juegan mal con palanca digital): Jet Grind Radio, Fur Fighters, Evil Dead, Sonic Adventure 1 y 2 y Rayman 2.
 
 ## Reglas del usuario para esta Pi
 

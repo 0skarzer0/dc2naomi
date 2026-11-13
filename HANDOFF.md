@@ -1968,4 +1968,5 @@ cambian.
 Repasando los 11 que no caben sin recortes, el usuario descarta por jugarse mal con palanca digital **Jet Grind Radio,
 Fur Fighters y Evil Dead**: sus CHD borrados de `dreamcastisos/` (con su permiso de borrado), y el `.part` que quedó de
 Evil Dead en `_to_delete/`. Quedan por recortar, por orden de interés para la palanca: Vampire Chronicle, VF3tb, Tech
-Romancer, Psychic Force 2012, Pro Pinball Trilogy; luego Sonic Adventure 1 y 2 y Rayman 2 (analógicos, jugables).
+Romancer, Psychic Force 2012, Pro Pinball Trilogy. Después borrados también Sonic Adventure 1 y 2 y Rayman 2 (usuario,
+mismo día): de los recortes solo quedan esos cinco.
