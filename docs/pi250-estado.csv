@@ -1,0 +1,18 @@
+# Estado en placa de los juegos de la Raspberry del mueble estándar (.250), para tools/board/picatalog.py.
+# fichero sin .bin.gz,estado (ok = funciona en placa, test = sin probar en placa, warn = con problemas),nota
+# Sale de lo que el usuario ha confirmado en las sesiones (HANDOFF). Lo que no está aquí sale como "?".
+dc-ikaruga_dc2naomi,ok,con VMU desbloqueada; vertical en arcade: esta versión se juega en monitor horizontal
+dc-ssf2x_en_dc2naomi,ok,traducción de ComradeSnarky; con la RAM a cero al arrancar (2026-11-12)
+dc-sf3di_dc2naomi,ok,menú y los dos juegos; lecturas de 8 KB (read_chunk 4)
+dc-rcotton_en_dc2naomi,ok,traducción de Derek Pascarella; vídeos recodificados
+dc-buzz_es_dc2naomi,test,traducción de pitito; vídeos recodificados
+dc-toystory2_es_dc2naomi,test,traducción de pitito; vídeos recodificados
+dc-ysgw_dc2naomi,test,disco entero con mandos de palanca (el de volante funciona en el otro mueble)
+dc-kof02_dc2naomi,test,
+dc-motw_dc2naomi,test,
+dc-sf3ts_dc2naomi,test,
+dc-spf2x_dc2naomi,test,
+dc-dcop_es_dc2naomi,test,traducción de pitito
+dc-shutokou2_en_dc2naomi,test,traducción de SGGG
+dc-soulcal_dc2naomi,test,música en mono para que quepa
+dc-bangaio_dc2naomi,test,

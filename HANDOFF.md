@@ -1088,6 +1088,21 @@ abajo, en cruceta y stick; acelerador = A disparo, freno = B misil; volante = st
 confirmar en placa qué botón es disparo y cuál misil en After Burner II, y el sentido de la palanca. Hecha con el
 programa desde el CHD (disco idéntico a `ysgw5`). En Flycast llega a PRESS START.
 
+## PENDIENTE: lista de juegos del mueble estándar (`docs/pi250-juegos.md`)
+
+Idea del usuario (2026-11-13): una página con lo que hay en la Raspberry del mueble estándar (.250) y su estado, como
+`docs/pi60-juegos.md` de naomi-wheel-games para el mueble Crazy Taxi. **Preparado, falta generarla** (la .250 estaba
+apagada):
+```
+PIHOST=192.168.68.250 PIPASS=... python3 tools/board/picatalog.py docs/pi250-estado.csv > docs/pi250-juegos.md
+```
+- `tools/board/picatalog.py`: lee por SSH el CSV y la carpeta `/boot/roms/` y escribe una tabla por tipo de imagen
+  (`dc-`, `h-`, `n1-`, `n2-`, `aw-`, `ch-`, `tf-`): fichero, juego, mandos, si tiene `.vmu` y estado; al final, filas sin
+  fichero y ficheros sin fila. Vale para cualquier Raspberry del WiPi.
+- `docs/pi250-estado.csv`: el estado de cada juego según lo que el usuario ha confirmado (lo no listado sale "?").
+  Repasarlo con el HANDOFF antes de generar (lote de 17 del 2026-11-12, traducciones en CDI, etc.) y completar.
+- Después: enlazar la página desde el README de dc2naomi y desde naomi-wheel-games, y marcar esto como hecho.
+
 ## OutRun DC demo v37 (ArkRetro, 2026-11-12) — perfil `or37`, mueble Crazy Taxi
 
 Nueva versión de la demo de abajo (autor: **ArkRetro**, https://github.com/ArkRetro; el usuario la dejó como
