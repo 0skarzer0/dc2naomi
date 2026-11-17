@@ -76,6 +76,8 @@ GAMES = {
     "sf3di": ("Street Fighter III: Double Impact (USA)", {
         "ct": ("broken", "wheel", "Son dos programas cargados por un menú: los mandos no llegan"),
         "joy": ("broken", "joy", "Son dos programas cargados por un menú: los mandos no llegan")}),
+    "orc3": ("OutRun 2006 Coast 2 Coast, demo de ArkRetro compilada para NAOMI", {"ct": ("experimental", "wheel",
+             "Compilado aparte (homebrew/orc2cdc): datos comprimidos y parte de la música a 22 kHz")}),
 }
 
 # Discs recognised by their IP.BIN product number but not convertible by this program yet.

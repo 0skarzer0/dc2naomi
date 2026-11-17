@@ -276,6 +276,15 @@ def main(default_cab):
         del args[i:i + 2]
     interactive = "--batch" not in args
     vmu = True if "--vmu" in args else False if "--sin-vmu" in args else None
+    if "--perfil" in args:   # a profile of tools/games.py by name, for builds no checksum can identify (homebrew)
+        i = args.index("--perfil")
+        forced = args[i + 1]
+        del args[i:i + 2]
+        if forced not in games.GAMES or forced not in catalog.GAMES:
+            say(f"No conozco el perfil {forced}")
+            return 1
+        global identify
+        identify = lambda disc: forced  # noqa: E731
     args = [a for a in args if a not in ("--batch", "--vmu", "--sin-vmu")]
     if not args:
         say(f"dc2naomi {VERSION} - {CABS[cab]}\n")

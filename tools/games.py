@@ -613,6 +613,24 @@ GAMES["or37"] = {
     ],
 }
 
+# OutRun 2006 Coast 2 Coast, ArkRetro's demo (https://github.com/ArkRetro/ORC2CDC, "Turbo v3", 3539fa6) built from
+# its sources for the NAOMI (homebrew/orc2cdc): KallistiOS d81aa3f with the NAOMI_HOST patch does what the or2006 /
+# or37 binary patches did (top of RAM below the resident, maple through the resident, G1 bus, video cable), so no
+# patches here. The big files are ZCK1 (zlib in 64 KB pieces, read by the patched comun/gd.c) and 25 of the 29 long
+# songs play at 22 kHz (MUSn.A22), so that the 984 MB disc fits in the NetDIMM. Not identified by checksum (every
+# build changes it): app/dc2naomi.py --perfil orc3. For the Crazy Taxi cabinet.
+GAMES["orc3"] = {
+    "title": "OUTRUN 2006 C2C NAOMI",
+    "region": 2,
+    "language": 1,
+    "layout": "gdi",
+    "pads": "wheel",
+    "flags": 0x1404,
+    "vmu": True,
+    "hook_pc": [],
+    "groups": [],
+}
+
 # Sega Rally 2 (USA, 1999; Sega). A Windows CE disc like mw2: IP.BIN boots 0WINCEOS.BIN. Music in 17 CDDA
 # tracks (4-20; not played by the resident). Boot patches only, to start the study of Windows CE.
 CETICK = 0xFFFFFFF9        # PATCH_CETICK: the resident's ce_tick_isr
