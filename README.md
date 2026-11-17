@@ -236,6 +236,9 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - Herramientas usadas durante el desarrollo: GCC para SH-4, Python, ffmpeg y genisoimage. **ffmpeg** recodifica
   además el vídeo MPEG-1 de las películas Sofdec (de CRI Middleware) que `tools/sfdre.py` vuelve a empaquetar
   con la misma estructura que las originales (Rainbow Cotton).
+- **ArkRetro** ([ORC2CDC](https://github.com/ArkRetro/ORC2CDC)), por su demo de OutRun 2006 Coast 2 Coast para
+  Dreamcast y por publicar las fuentes, que `homebrew/orc2cdc/` compila para la NAOMI; **zlib** (Jean-loup Gailly y Mark
+  Adler), cuyo inflate lee allí los ficheros comprimidos; **SH4ZAM** (Falco Girgis), que usa la demo.
 - **[vgmstream](https://github.com/vgmstream/vgmstream)**: la descripción del ADX de CRI (cabecera, coeficientes de
   predicción a partir del filtro, fórmula de decodificación) que siguen `tools/adxmono.c` y `afsmono.py` sale de su
   código y documentación; no se ha copiado código. El resultado se comprobó decodificándolo con **ffmpeg**

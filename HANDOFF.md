@@ -1970,3 +1970,25 @@ Fur Fighters y Evil Dead**: sus CHD borrados de `dreamcastisos/` (con su permiso
 Evil Dead en `_to_delete/`. Quedan por recortar, por orden de interés para la palanca: Vampire Chronicle, VF3tb, Tech
 Romancer, Psychic Force 2012, Pro Pinball Trilogy. Después borrados también Sonic Adventure 1 y 2 y Rayman 2 (usuario,
 mismo día): de los recortes solo quedan esos cinco.
+
+## OutRun 2006 C2C "Turbo v3" de ArkRetro compilado para NAOMI (2026-11-17) — `h-orc2c3_dc2naomict`, sin probar en placa
+
+El usuario dejó la v3 (`outrun coast2coast_outrunners_TAXI_V3.rar`, GDI de 984 MB, IP.BIN `ORC2CDC` de 2026-11-14) y
+luego las fuentes (https://github.com/ArkRetro/ORC2CDC, `3539fa6`). Sin las fuentes no cabía (el juego sin música ya
+son 458 MB; la música, 492 MB en ADPCM de Yamaha estéreo a 44,1 kHz). Con ellas: **compilado desde el código con
+KallistiOS `NAOMI_HOST`, datos grandes comprimidos (ZCK1, zlib en trozos de 64 KB) y 25 de las 29 canciones largas a
+22 kHz** (reparto del usuario: a 44 kHz `MUS0`–`MUS3` de OutRun 2 y las 35 pistas cortas; si no cupiera, bajar otra
+larga, nunca las cortas). Rechazó LZMA (más compresión) por riesgo. Todo en **`homebrew/orc2cdc/`** (README con los
+pasos, parches de KallistiOS `d81aa3f` y de ORC2CDC, `zck.py`, `adp22.c`).
+- Imagen **500,6 MB** (453 MB la `.gz` a nivel 1), perfil nuevo **`orc3`** (`tools/games.py`; sin parches) y opción
+  nueva **`--perfil NOMBRE`** de `app/dc2naomi.py` para forzar un perfil (un homebrew recompilado cambia de suma cada
+  vez). Mandos `wheel`, VMU vacía (no hay partida publicada).
+- Pi .60: `/boot/roms/h-orc2c3_dc2naomict.{bin.gz,vmu}` (md5 de la `.gz` `561212d584c49ddd3a277ac0150be393`), fila
+  añadida (copia `romsinfo.csv.bak_orc2c3`, reimportado; `audit_name` `orc2c3_dc2naomict.bin.gz`, como `h-or37`).
+- Trabajo en el PC del usuario: `otros/orc3/` (`datos/` = los ficheros ya comprimidos y recodificados, `gdi/` = el
+  disco y la imagen, `1ST_READ.BIN`, `IP.BIN`); scripts sueltos `~/orc3data.py` (el paso 3 del README) en la VM.
+- **Sin probar en Flycast ni en placa.** Qué mirar en placa: que arranque (si no, leer el bloque `LIVE` con
+  `naomi-pi-tools`), que la música suene (las de 22 kHz a su tono) y cuánto tarda en cargar una etapa conduciendo.
+- Toolchain en el contenedor de la nube: apt solo va por HTTPS a través del proxy (cambiar `http://` por `https://` en
+  `/etc/apt/sources.list.d/ubuntu.sources` y `-o Acquire::https::Proxy=$HTTPS_PROXY`); kos-ports no puede bajar de
+  zlib.net (zlib clonado de GitHub); el gcc de Ubuntu no trae C++ (SH4ZAM a mano).
