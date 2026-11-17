@@ -1992,3 +1992,12 @@ pasos, parches de KallistiOS `d81aa3f` y de ORC2CDC, `zck.py`, `adp22.c`).
 - Toolchain en el contenedor de la nube: apt solo va por HTTPS a través del proxy (cambiar `http://` por `https://` en
   `/etc/apt/sources.list.d/ubuntu.sources` y `-o Acquire::https::Proxy=$HTTPS_PROXY`); kos-ports no puede bajar de
   zlib.net (zlib clonado de GitHub); el gcc de Ubuntu no trae C++ (SH4ZAM a mano).
+- **2026-11-18 00:00, en placa (Pi .60, `dc2naomi_send.py`, 3 min):** arranca. `live.py 10.0.0.4 0x8c0c54a0` (dirección
+  de `_naomi_live` de esta compilación) desde `/root` de la Pi: KallistiOS ve mando y VMU en A, `MVTS.VQV` entero (7722 KB
+  en 61 lecturas, sin errores: la lectura ZCK1 va), `MVATTR.VQV` saltado, música del menú, licencia `OR2C2C` guardada y
+  releída bien, menú principal y selección de coches. **Pendiente:** el juego solo ve 16 MB (`RAM: al arrancar en uso
+  12941K, libre 309K` y un `Out of memory` de 212 KB): el `gcc-sh-elf` de Ubuntu no define `__KOS_GCC_32MB__`, así que
+  `arch.h` fija `_arch_mem_top` en `0x8d000000` aunque `startup.S` ya mide `0x8dc00000`. Arreglo: `-D__KOS_GCC_32MB__` en
+  `KOS_CFLAGS`, recompilar KallistiOS y el juego (unos 12 MB más). Las cachés de ZCK1 (~330 KB de bss) restan de esos 16 MB.
+- Los árboles de trabajo del contenedor (`/home/claude/orc-build/kos`, `.../orc`) son clones de terceros: sus cambios
+  solo se guardan como los dos parches de `homebrew/orc2cdc/` (regenerados con `git diff`).
