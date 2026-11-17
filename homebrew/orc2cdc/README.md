@@ -1,5 +1,17 @@
 # OutRun 2006 Coast 2 Coast (demo de ArkRetro) compilado para NAOMI
 
+> **Versión actual (2026-11-18, `h-orc2c3_dc2naomict`, 491,6 MB, sin comprimir nada):** elección del usuario tras la
+> primera prueba en placa (faltaban los sonidos de carrera: `VOCES.DAT` no cabía en los 16 MB, "Out of memory" de
+> 212 KB). KallistiOS con `-D__KOS_GCC_32MB__` (el gcc de Ubuntu no lo define y `arch.h` fijaba la RAM en 16 MB):
+> ahora usa la RAM hasta el residente (`0x8dc00000`) y carga `VOCES.DAT`. Fuera del disco: los vídeos (`MVATTR.VQV`,
+> `MVTS.VQV`), OutRunners (`OUTRUNNERS.BIN`, `CORE.ASSETS`, `TILES4.Z`, `SPRITES.Z`, `PCM.BIN`, `AICA_*.BIN`) y el taxi
+> de Crazy Taxi (`COCHE07.DAT`); el menú los deja bloqueados y sin venta en el Salón (`-DSIN_OR_TAXI` en
+> `comun/menu.c`, y sin la tarjeta de All I Want). Música: **una sola canción larga**, `MUS0` (Splash Wave): las demás
+> largas son copias suyas (`tools/gdi.py` de ORC2CDC guarda una vez los ficheros repetidos); las 35 cortas intactas.
+> Ya no hay ZCK1 ni `MUSn.A22`: el parche de ORC2CDC actual solo toca `comun/menu.c` y `demo/Makefile` (`zck.py` y
+> `adp22.c` quedan para la versión anterior, descrita abajo). Pasos: los mismos, con `~/orc3data2.py` en vez del 3.
+> En placa: arranca, carga las voces, guarda la licencia; carrera sin probar todavía.
+
 La demo [ORC2CDC](https://github.com/ArkRetro/ORC2CDC) de **ArkRetro** (KallistiOS, para Dreamcast) compilada desde sus
 fuentes para la NAOMI 2 del mueble Crazy Taxi, y su disco adelgazado para que quepa en la NetDIMM de 512 MB (el de
 Dreamcast, "Turbo v3", ocupa 984 MB). Probado: compila y la imagen sale en **500,6 MB**; **en placa, sin probar**.

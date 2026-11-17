@@ -2001,3 +2001,9 @@ pasos, parches de KallistiOS `d81aa3f` y de ORC2CDC, `zck.py`, `adp22.c`).
   `KOS_CFLAGS`, recompilar KallistiOS y el juego (unos 12 MB más). Las cachés de ZCK1 (~330 KB de bss) restan de esos 16 MB.
 - Los árboles de trabajo del contenedor (`/home/claude/orc-build/kos`, `.../orc`) son clones de terceros: sus cambios
   solo se guardan como los dos parches de `homebrew/orc2cdc/` (regenerados con `git diff`).
+- **2026-11-18 00:40, segunda versión** (pedida por el usuario: sin sonidos en carrera; quitar OutRunners, el taxi y el
+  turbo taxi, los vídeos, dejar una sola canción larga, aprovechar la NAOMI 2): 32 MB (`-D__KOS_GCC_32MB__`), sin
+  vídeos / OutRunners / `COCHE07.DAT` (taxi), menú con `-DSIN_OR_TAXI`, largas = copias de `MUS0`, nada comprimido:
+  **491,6 MB**, mismo nombre `h-orc2c3_dc2naomict` (md5 `.gz` `86c214c54795d0cb9185292225441bb0`). En placa (live.py
+  `0x8c0bf488`): `VOZ: VOCES.DAT, 34 muestras, 207 KB en el AICA` (antes no cabía), sin "Out of memory". Detalle en
+  `homebrew/orc2cdc/README.md`. No se creó fork de ORC2CDC (el usuario no contestó): sigue como parche.
