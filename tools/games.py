@@ -616,9 +616,10 @@ GAMES["or37"] = {
 # OutRun 2006 Coast 2 Coast, ArkRetro's demo (https://github.com/ArkRetro/ORC2CDC, "Turbo v3", 3539fa6) built from
 # its sources for the NAOMI (homebrew/orc2cdc): KallistiOS d81aa3f with the NAOMI_HOST patch does what the or2006 /
 # or37 binary patches did (top of RAM below the resident, maple through the resident, G1 bus, video cable), so no
-# patches here. The big files are ZCK1 (zlib in 64 KB pieces, read by the patched comun/gd.c) and 25 of the 29 long
-# songs play at 22 kHz (MUSn.A22), so that the 984 MB disc fits in the NetDIMM. Not identified by checksum (every
-# build changes it): app/dc2naomi.py --perfil orc3. For the Crazy Taxi cabinet.
+# patches here; with -D__KOS_GCC_32MB__ it uses the RAM up to the resident (28 MB). To fit the 512 MB NetDIMM without
+# compressing anything (user's choice, 2026-11-18): no movies, no OutRunners, no Crazy Taxi car (the menu keeps them
+# locked: -DSIN_OR_TAXI) and every long song is a copy of MUS0 (stored once). Not identified by checksum (every build
+# changes it): app/dc2naomi.py --perfil orc3. For the Crazy Taxi cabinet.
 GAMES["orc3"] = {
     "title": "OUTRUN 2006 C2C NAOMI",
     "region": 2,
