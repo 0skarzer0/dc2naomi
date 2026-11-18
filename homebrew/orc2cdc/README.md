@@ -1,6 +1,17 @@
 # OutRun 2006 Coast 2 Coast (demo de ArkRetro) compilado para NAOMI
 
-> **2026-11-18 noche: versión definitiva `h-orc2c4_dc2naomict`** (sustituye a `h-orc2c3` en la Pi .60 y en el CSV; la
+> **VERSIÓN FINAL (2026-11-19 00:40, el usuario: "funciona todo perfecto"): `h-orc2c8_dc2naomict`** en la Pi .60
+> (fila 53 de `romsinfo.csv`), md5 `.gz` `e800dd0a6556ecbfb182cedcab4006b2`, copia en `otros/orc3/gdi5img/` del
+> usuario. Es la `h-orc2c4` de abajo con las sombras sin copia de la pintura y montada en un GDI rehecho con un relleno
+> de 0xFF para el `1ST_READ.BIN` (con el de ceros la imagen lo cortaba y no arrancaba: ver MEDIDAS.md). Compilada con
+> `KOS_CFLAGS="$KOS_CFLAGS -DFPS_OBJETIVO=30 -DCPU_MS_CORTA=29.0f -DCPU_MS_ALARGA=25.0f -DGD_TROZO=4 -DNAOMI_PALANCA
+> -DSUELO_SS=1 -DSUELO_MIPBIAS=PVR_MIPBIAS_0_25 -DREFLEJO_CIELO=1 -DSOMBRA_COCHE=1 -DOPB_TR=PVR_BINSIZE_32
+> -DOPB_EXTRA=8"`, datos `datos3` + `REFLEJO.DAT`, perfil `orc3`, `--cab ct`. Pasos del disco:
+> 1. `gdi.escribe(salida, relleno_ff_de_1MB, IP.BIN, datos)` (`tools/gdi.py` de ORC2CDC; mejor en un disco local).
+> 2. `GZIP_LEVEL=1 tools/withfiles.py CARPETA_CON_1ST_READ --perfil orc3 --cab ct --batch disc.gdi`.
+> 3. Comprobar que el `1ST_READ.BIN` va entero en la imagen (`withfiles.py` ya se niega si lo cortaría).
+>
+> **2026-11-18 noche: versión `h-orc2c4_dc2naomict`** (no arrancaba: imagen cortada) (sustituye a `h-orc2c3` en la Pi .60 y en el CSV; la
 > VMU copiada de la anterior). Con las medidas y las pruebas en [MEDIDAS.md](MEDIDAS.md). Sobre la `h-orc2c3`, en
 > `demo/main.c` (`orc2cdc-a689a9a-naomi.patch`) y compilada además con `-DSUELO_SS=1
 > -DSUELO_MIPBIAS=PVR_MIPBIAS_0_25 -DREFLEJO_CIELO=1 -DSOMBRA_COCHE=1 -DOPB_TR=PVR_BINSIZE_32 -DOPB_EXTRA=8`:

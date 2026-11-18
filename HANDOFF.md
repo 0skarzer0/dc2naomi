@@ -2066,3 +2066,16 @@ V1.003, IP.BIN `07BBA10`, parche VGA de la comunidad; 774 MB en `.gdi`):
 `FC_REGTRACE=1` (`tools/flycast/run1.sh`): los parches VGA reescriben los modos de vídeo y pueden dejar mal las
 variables que el juego reutiliza cada cuadro.
 
+
+## OutRun C2C NAOMI: versión final `h-orc2c8_dc2naomict` (2026-11-19 00:40)
+
+El usuario la da por buena. Detalle en `homebrew/orc2cdc/README.md` (cabecera) y `MEDIDAS.md`. Lecciones:
+- **La imagen cortaba el `1ST_READ.BIN`**: `build_image.nonzero_runs` mira qué sectores tenían datos en el disco tal y
+  como era; un `1ST_READ` más grande que lo que había con datos en el hueco (relleno de ceros) sale cortado y la placa
+  se queda en "starting..." del cargador. Rellenar el hueco con 0xFF; `tools/withfiles.py` ya lo detecta y se para.
+- **No leer de la NetDIMM (peek/poke, live.py, med.py) mientras la placa arranca**, y no dejar varios
+  `dc2naomi_vmu.py watch` a la vez: la NetDIMM atiende una conexión y los vigilantes viejos escribían la VMU de otra
+  imagen. `/root/manda.sh IMAGEN` en la Pi para los que haya y manda.
+- **La SD de la Pi .60 dio errores de FAT** ("invalid cluster chain") y pasó `/boot` a solo lectura; tras reiniciar
+  escribe, pero **falta un `fsck.vfat`** (pendiente del usuario). Imágenes de prueba en `/boot/roms/h-orcp*`,
+  `h-orcRL*`, `h-orc2c4..7*` (se pueden borrar).

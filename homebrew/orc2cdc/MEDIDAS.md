@@ -200,3 +200,9 @@ La c7 arranca en el mueble (usuario, 00:24). **`h-orc2c8_dc2naomict`** = la c7 c
 -DOPB_EXTRA=8` (más OPB para los translúcidos, por los trozos de cielo cortados), md5 `.gz`
 `e800dd0a6556ecbfb182cedcab4006b2`, `1ST_READ.BIN` entero comprobado; en la Pi .60 y en el CSV (copia
 `romsinfo.csv.bak_orc2c8`), copia en `otros/orc3/gdi5img/`. Si no arrancara, la c7.
+
+**Final (2026-11-19 00:40):** la c8 arranca y el usuario la da por buena ("funciona todo perfecto"). Queda así.
+Pendiente si se retoma: confirmar en uniones que ya no salen los trozos de cielo ni falta la carretera (8'59-9'03); el
+panel del túnel de LASV (los planos aditivos de los focos, texturas 129-131 de SEG22) y la nube azul (7'05); quitar los
+mipmaps del suelo (versión mejorada); el coste de los reflejos (~2 ms; RC 29,4 frente a RC3 29,0 fps: panorámica,
+cristales o el término a lo largo del coche).
