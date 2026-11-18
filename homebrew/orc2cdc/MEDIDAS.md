@@ -165,3 +165,13 @@ El usuario la pide como definitiva tras ver la RL. Glitches de sus fotos del ví
   desviación pedida para la Dreamcast). Sin cambiar.
 - Chispas al rozar y coche oscuro en zonas oscuras: normales (el usuario).
 - Sombras: `SOMBRAS: 148 mallas de sombra` en LAKE (registro del juego).
+
+### `h-orc2c4` no arranca; `h-orc2c5` (2026-11-18, 23:40)
+
+La `h-orc2c4` (versión normal con `OPB_TR=PVR_BINSIZE_32 -DOPB_EXTRA=8`) se queda en "starting..." del cargador de
+dc2naomi, sin dibujar nada, dos veces, también tras reiniciar el mueble; la imagen está entera (md5). Las de prueba con
+el piloto automático y esos mismos ajustes sí arrancaban (pasan por menos menús). Sospecha: el OPB mayor (memoria de
+vídeo) choca con lo que la versión normal reserva al arrancar. `h-orc2c5` = la misma sin esos dos ajustes (con las
+sombras), md5 `.gz` `4af643f1a6cd1453560e1d4461cb4304`, **sin probar**; la deja el usuario en la Pi él mismo (copia en
+`otros/orc3/gdi5img/`). Mientras tanto va la RL (probada). La SD de la Pi .60 dio errores de FAT ("invalid cluster
+chain") y pasó `/boot` a solo lectura; tras reiniciar vuelve a escribir, pero falta un `fsck` (pendiente del usuario).
