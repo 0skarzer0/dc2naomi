@@ -85,6 +85,12 @@ def replaced_disc(folder):
                 return dirpatch[lba]
             return raw(lba)
         d.sector = sector
+
+        def track_sectors(track):            # a .gdi's Gdi reads its track files directly: through sector() too,
+            start, n = track[1], track[5]      # or the zeroed sectors are not seen and stay in the image
+            for i in range(n):
+                yield start + i, sector(start + i)
+        d.track_sectors = track_sectors
         print(f"  {len(news)} archivos sustituidos ({sum(sizes.values()) / 1048576:.1f} MB), "
               f"{len(zero)} sectores sobrantes a cero")
         return d
