@@ -58,3 +58,25 @@ Las que van peor (ciudades y bosque denso): **METR** 25,7 fps (64 % de ventanas 
 **LASV** 27,0 (45 %), **GHOS** 27,5 (45 %), **FLOR** 27,6 (37 %, hasta 600 m); NEWY y SANF 29,0 (19 %); CLOU 29,2 (13 %).
 Las demás, 29,3-29,9 con 0-10 %. El peor cuadro por zona, 31-63 ms (sin los cambios de pantalla). CSV completo en la
 Pi .60: `/root/med_CB0.csv`.
+
+## Más detalle a lo lejos: CL0 frente a CB0 (2026-11-18, rama izquierda, 55 min cada una)
+
+CL0 = CB0 + `-DREPARTO_LOD_MAS=1 -DTA_VB_BYTES=(3072*1024)`: los objetos pequeños (líneas y marcas de la carretera,
+señales, piedras...) que el original quita por LOD siguen dibujándose hasta el doble de su distancia (la idea de
+DisableStageCulling de OutRun2006Tweaks; ya estaba en ORC2CDC, apagada), en la cola del reparto: solo si sobra TA
+después de lo que dibuja el original. El búfer de parámetros del TA sube de 1,9 a 3 MB (la NAOMI 2 tiene 16 MB de VRAM).
+
+| | fps medio | ventanas < 28 fps | cpu medio | lejos mediana | peor cuadro |
+|---|---|---|---|---|---|
+| CB0 (= R3) | 29,3 | 11 % | 30,1 ms | 3150 m | 63 ms |
+| CL0 | 29,1 | 13 % | 30,6 ms | 3100 m | 71 ms |
+
+Por zona (fps CB0 → CL0, ventanas < 28): las abiertas casi igual (CAPE, SEQU, YOSE, DESE, GRAN, NIAG: ±0,1 fps); las
+que ya iban justas empeoran: **CLOU** 29,2 → 28,7 (14 → 28 %), **LAKE** 29,5 → 29,0 (9 → 20 %), **SANF** 29,0 → 28,5
+(19 → 26 %), **LASV** 27,0 → 26,5 (46 → 57 %), **METR** 25,7 → 24,7 (65 → 69 %), GHOS 27,5 → 27,1. La CPU sube
+0,5 ms de media (1-2 ms en las ciudades): el coste es de CPU (recorrer y mandar más nodos), no del TA, así que el
+búfer mayor no lo arregla. Lo que se gana a la vista (líneas pintadas más lejos) hay que mirarlo en el mueble: las
+medidas no lo ven.
+
+Conclusión: no entra en la versión de la Pi sin que lo pruebe el usuario; si se quiere, lo razonable sería encenderlo
+solo en las zonas abiertas (por zona, con la lista de arriba).
