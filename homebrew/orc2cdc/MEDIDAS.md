@@ -128,3 +128,9 @@ los edificios.
   normal derecha coge lo de la derecha, la de atrás lo de detrás), a lo largo del coche (`REF_KZ`) y corriendo hacia atrás
   con la distancia (`REF_VEL`: 0,1 de la velocidad de un espejo). Sin `REFLEJO.DAT` en el disco, el cielo de la etapa como
   antes. Hay que añadir `REFLEJO.DAT` a los datos y rehacer el GDI (no se puede sustituir un fichero que no estaba).
+
+Imágenes hechas (2026-11-18 18:20): GDI nuevo con `REFLEJO.DAT` en `datos3` (`gdi.escribe` de ORC2CDC con el
+`1ST_READ_pad.BIN` de 1 MB; escrito en el disco local de la máquina virtual, 51 s, porque en la carpeta compartida va
+a ~1,8 MB/s), y con `tools/withfiles.py --perfil orc3 --cab ct`: `h-orcpRC3` (piloto automático, `naomi_med` en
+0x8c0bcb5c) y `h-orcRL` (la versión normal con las rayas, los cristales, el rojo y el reflejo del escenario), 504,2 MB,
+en `otros/orc3/gdi5img/`. Sin probar en el mueble todavía: la Pi .60 no contesta (el mueble apagado).
