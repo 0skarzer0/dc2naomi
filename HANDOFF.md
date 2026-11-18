@@ -2057,7 +2057,10 @@ V1.003, IP.BIN `07BBA10`, parche VGA de la comunidad; 774 MB en `.gdi`):
    reimportó. El `.bin.gz` USA y su `.vmu` siguen en `/boot/roms/` sin fila (no salen en el menú).
 6. Cargada con `dc2naomi_send.py 10.0.0.3` dentro de `nohup sh -c "…; timehack; vmu watch"`. **Ojo:** `pkill -f
    timehack.py` lanzado por SSH se mata a sí mismo (el patrón está en su propia línea de órdenes): usar
-   `pkill -f "[t]imehack.py"`. Y el envío de 340 MB tarda más que el tiempo de espera de `pi.py`: lanzarlo con nohup.
+   `pkill -f "[t]imehack.py"`. Y el envío de 340 MB (unos 2 min) tarda más que el tiempo de espera de `pi.py`: lanzarlo
+   con nohup. `dc2naomi_send.py` de la .250 ya arranca él solo el vigilante de la VMU al acabar: no lanzar otro (quedaron
+   dos y se mató uno); `timehack.py` sí hay que arrancarlo a mano. Cargada 2026-11-18 21:10 (hora de la Pi, que va
+   atrasada), sin probar aún en placa.
 
 **Para otros juegos con parche VGA:** si tras los logos queda negro con el juego vivo, mirar VO_STARTY/VO_STARTX con
 `FC_REGTRACE=1` (`tools/flycast/run1.sh`): los parches VGA reescriben los modos de vídeo y pueden dejar mal las
