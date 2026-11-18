@@ -15,9 +15,12 @@ largas a 22 kHz), mismos datos (`datos3`).
 | E | D + `-ffast-math -ffp-contract=fast` | 17,1 (6,3) | 60 % | 86,9 (159) | — | 103 ms |
 | D | B + **lecturas del disco en trozos de 4 sectores** (`GD_TROZO=4`, `comun/gd.c`) | 29,2 (20,6) | 14 % | 30,8 (48,5) | 2728 (1200) | 57 ms |
 | F | D + **lectura de la NetDIMM por DMA del G1** (perfil `orc3dma`, `DIMM_DMA` en el residente) | 29,6 (20,1) | 7 % | 29,6 (49,8) | 2827 (1600) | 47 ms |
+| G | F con el recorte a 27 / 23 ms | 29,6 (20,7) | 5 % | 29,4 (48,2) | 2563 (900) | 44 ms |
+| **R** | **= F, la que queda en la Pi** (`h-orc2c3`, 172 ventanas) | **29,7 (23,7)** | **5 %** | 29,2 (42,1) | **2839 (1650)** | **45 ms** |
 | H | F + `-O3` (menos `main.c` y `camara.c`, que el gcc 13 no compila con `-O3`) | no arranca (no contesta a los peeks) | | | | |
 
 Lo que dicen:
+- **Elegida F (= R):** G apenas gana estabilidad y deja la distancia en 900 m en algún momento (más popping).
 - **`-ffast-math` es mucho peor** (la CPU por cuadro se triplica con el gcc 13 de Ubuntu): descartado.
 - **La CPU no llega a 45 fps en la NAOMI** (~30 ms por cuadro de media en carrera): con el tope de 45 el juego va a
   32 fps de media, sube y baja, y para intentarlo **acorta la distancia de dibujo hasta el mínimo (600 m)**: eso es el
