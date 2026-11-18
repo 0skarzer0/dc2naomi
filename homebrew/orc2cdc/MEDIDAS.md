@@ -46,3 +46,15 @@ ms por cuadro de cada parte del dibujo (las de `PRF()` de `demo/main.c`; "ini" i
 
 Cargas con F (registro del juego): etapas `SEGnn.DAT` en 3,8-5,4 s y uniones `BKnn.DAT` en 1,7-2,5 s mientras se
 conduce (hay ~12 s de margen).
+
+## Todas las etapas (2026-11-18, piloto automático, rama izquierda)
+
+La demo normal solo pasa por unas pocas etapas. Con los modos de prueba de ORC2CDC (`-DPRUEBA_AUTO -DPRUEBA_ORDEN
+-DPRUEBA_SIN_TIEMPO -DPRUEBA_RAMA=0 -DPRUEBA_RAMA_FIJA=0`: el piloto corre seguidas las carreras de la lista `PO`,
+OutRun 2 y SP en sus cuatro árboles, contrarreloj, misiones, siempre por la izquierda) sobre la versión R3 (la de la
+Pi), 55 min, 3101 ventanas de carrera en **33 zonas**: 29,3 fps de media, 10 % de ventanas por debajo de 28.
+
+Las que van peor (ciudades y bosque denso): **METR** 25,7 fps (64 % de ventanas < 28, distancia hasta 800 m),
+**LASV** 27,0 (45 %), **GHOS** 27,5 (45 %), **FLOR** 27,6 (37 %, hasta 600 m); NEWY y SANF 29,0 (19 %); CLOU 29,2 (13 %).
+Las demás, 29,3-29,9 con 0-10 %. El peor cuadro por zona, 31-63 ms (sin los cambios de pantalla). CSV completo en la
+Pi .60: `/root/med_CB0.csv`.
