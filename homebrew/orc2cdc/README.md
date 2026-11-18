@@ -1,12 +1,17 @@
 # OutRun 2006 Coast 2 Coast (demo de ArkRetro) compilado para NAOMI
 
+> **2026-11-18 09:30: cambio de marchas en la palanca del mueble** (`-DNAOMI_PALANCA`, `demo/main.c`): con los mandos
+> `wheel` la palanca adelante llega como B y atrás como A, que en ORC2CDC eran freno y acelerador a fondo (A = gas, B / X =
+> freno); ahora suben y bajan de marcha en el cambio manual, y gas y freno salen solo de los pedales. md5 `.gz`
+> `a0034116d6077beb42b8ebd780a24e78`.
+>
 > **2026-11-18 08:15: vuelve el taxi de Crazy Taxi** (`COCHE07.DAT`, 0,2 MB, y su compra en el Salón; el usuario lo
 > quiso; OutRunners no cabe con las 8 canciones: 14 MB, y la tarjeta de All I Want sigue fuera). Imagen 504,0 MB, md5
 > `.gz` `a17a7cab16f8c08c5e8d4a7c691d82fd`.
 >
 > **Versión de la madrugada del 2026-11-18 (`h-orc2c3_dc2naomict`, 504 MB):** ORC2CDC **`a689a9a`** ("FINAL7") con
 > `orc2cdc-a689a9a-naomi.patch` y compilada con `KOS_CFLAGS="$KOS_CFLAGS -DFPS_OBJETIVO=30 -DCPU_MS_CORTA=29.0f
-> -DCPU_MS_ALARGA=25.0f -DGD_TROZO=4"`; perfil `orc3` con `DIMM_DMA`. Por qué, con las medidas en la placa:
+> -DCPU_MS_ALARGA=25.0f -DGD_TROZO=4 -DNAOMI_PALANCA"`; perfil `orc3` con `DIMM_DMA`. Por qué, con las medidas en la placa:
 > [MEDIDAS.md](MEDIDAS.md). En resumen: **30 fps fijos** (la CPU de la NAOMI no llega a los 45 del port y el juego
 > acortaba la distancia de dibujo hasta 600 m: el popping), **lecturas del disco troceadas y por DMA** (los tirones
 > de 60-120 ms venían de leer la etapa siguiente y la música con el residente parado copiando), y la **música a

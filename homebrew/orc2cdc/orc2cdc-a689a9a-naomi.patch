@@ -124,7 +124,7 @@ index 02a06c4..5933b86 100644
  # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
  # del TA (docs/DREAMCAST.md)
 diff --git a/demo/main.c b/demo/main.c
-index 2e885cc..a8f6087 100644
+index 2e885cc..20d3816 100644
 --- a/demo/main.c
 +++ b/demo/main.c
 @@ -816,7 +816,7 @@ static void pon_vista(const float *o, const float *mira, float bal)
@@ -153,7 +153,34 @@ index 2e885cc..a8f6087 100644
  int main(int argc, char **argv)
  {
      /* bufer de parametros de TA_VB_BYTES (x2); opacos con bloques de 32 (el suelo cercano toca muchas teselas) y 4
-@@ -12235,7 +12245,7 @@ int main(int argc, char **argv)
+@@ -11403,6 +11413,12 @@ int main(int argc, char **argv)
+         if (estado != TITULO && manual_) {                      /* cambio manual: cruceta arriba sube, abajo baja */
+             if (nuevo & CONT_DPAD_UP) pide_cambio = 1;
+             if (nuevo & CONT_DPAD_DOWN) pide_cambio = -1;
++#ifdef NAOMI_PALANCA
++            /* NAOMI, mueble Crazy Taxi (dc2naomi, mandos "wheel"): la palanca adelante llega como B y atras como A:
++               sube y baja de marcha (como el cambio de la recreativa), en vez de frenar y acelerar a fondo */
++            if (nuevo & CONT_B) pide_cambio = 1;
++            if (nuevo & CONT_A) pide_cambio = -1;
++#endif
+         }
+         if (st) {
+             /* volante: el eje y la cruceta van a or2_volante en cada paso (zona muerta 0,25, rampa de la cruceta y
+@@ -11416,8 +11432,13 @@ int main(int argc, char **argv)
+             if (giro < -1) giro = -1;
+             /* pedales: volumenes 1 y 2 del original, 0..255 tal cual (el original lee la presion de los botones
+                sin curva); A y B/X a fondo */
++#ifdef NAOMI_PALANCA
++            gas = st->rtrig / 255.0f;                           /* NAOMI: solo los pedales (A y B son la palanca) */
++            freno = st->ltrig / 255.0f;
++#else
+             gas = st->rtrig / 255.0f; if (b & CONT_A) gas = 1;
+             freno = st->ltrig / 255.0f; if (b & (CONT_B | CONT_X)) freno = 1;
++#endif
+         }
+         mando.nivel = etapa_n;
+ 
+@@ -12235,7 +12256,7 @@ int main(int argc, char **argv)
          tri_enviados = 0; vtx_ult = vtx_env; vtx_env = 0; ta_inicia_cuadro(); vtx_et_ult = vtx_et; vtx_et = 0;
          en_cuenta = estado == CUENTA;                           /* (el precalentamiento manda hasta el semaforo) */
          arranque_hold = estado == CARRERA && t_estado < REPARTO_ARRANQUE;   /* (suelo del arranque, ver arriba) */
@@ -162,7 +189,7 @@ index 2e885cc..a8f6087 100644
          prf_v0 = 0;
  #endif
          PRF(0);
-@@ -12470,6 +12480,10 @@ int main(int argc, char **argv)
+@@ -12470,6 +12491,10 @@ int main(int argc, char **argv)
          diag_dib_us = (uint32_t)(timer_us_gettime64() - c0);
  #endif
          tcpu += timer_us_gettime64() - c0;
@@ -173,7 +200,7 @@ index 2e885cc..a8f6087 100644
  #ifdef DIAG_PICO
          dg_ult_dib = timer_us_gettime64() - c0;
  #endif
-@@ -12490,6 +12504,16 @@ int main(int argc, char **argv)
+@@ -12490,6 +12515,16 @@ int main(int argc, char **argv)
          if (++cuadro % 30 == 0) {
              uint64_t t1 = timer_ms_gettime64();
              fps = 30000.0f / (float)(t1 - t0); ms = tcpu / 30000.0f; ms_log = t_log / 30000.0f; t0 = t1; tcpu = 0; t_log = 0;
