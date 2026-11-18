@@ -494,6 +494,15 @@ GAMES["lb2"] = _katana_joy("LAST BLADE 2 DC", 1, 1, [
 # 911 MB of data. To fit the 512 MB NetDIMM the 29 character story movies (ZSFD/NN_*.SFD) all point at the shortest
 # one (25_SHIGEN2.SFD, 6 MB) and their data is left out. Left out as zeros instead, the opening hangs (Flycast).
 GAMES["lb2"]["alias"] = (["ZSFD/[0-2][0-9]_*.SFD"], "ZSFD/25_SHIGEN2.SFD")
+# Gekka no Kenshi 2 / The Last Blade 2 Final Edition (Japan, T3107M V1.003) with a community VGA patch (IP.BIN
+# peripherals 07BBA10; the USA disc above has the VGA bit clear and always sets 480i/15 kHz, "OUT OF RANGE" on a
+# 31 kHz cabinet). Videos re-encoded with tools/sfdbatch.py so the disc fits (477 -> 106 MB, no alias needed).
+# findpatch's automatic cable guesses (0x8c13a47e, 0x8c15d38a) are NOT PDTRA reads and hang it after the SEGA logo.
+GAMES["lb2fe"] = _katana_joy("GEKKA NO KENSHI2 FINAL EDITION", 0, 0, [
+    (0x8C132B7E, 2, mov_imm0(4)),   # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
+    (0x8C15588A, 2, mov_imm0(0)),   # cable: mov.w @r0,r0 (PDTRA, the VGA patch's own check) -> mov #0,r0
+    (0x8C14ADD8, 4, HOOK),          # maple: to-physical 0x8c14c426
+])
 # Street Fighter III: 3rd Strike (USA). 1ST_READ.BIN is 14 MB (up to 0x8cdeaa00).
 GAMES["sf3ts"] = _katana_joy("SF3 THIRD STRIKE DC", 1, 1, [
     (0x8CD6A7A6, 2, mov_imm0(4)),   # cable

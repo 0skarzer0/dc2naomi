@@ -1,0 +1,24 @@
+00:00:000 sdl/sdl.cpp:939 N[RENDERER]: Monitor refresh rate: 0 Hz (800 x 600)
+00:00:313 ui/gui.cpp:245 N[RENDERER]: Screen DPI is 96, size 640 x 480. Scaling by 1.00
+00:00:316 rend/gles/gles.cpp:606 N[RENDERER]: OpenGL version 4.5
+00:00:316 rend/gles/gles.cpp:607 N[RENDERER]: Vendor 'Mesa' Renderer 'llvmpipe (LLVM 20.1.2, 256 bits)' Version '4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.4'
+00:00:369 rend/gles/gles.cpp:618 N[RENDERER]: glBlitFramebuffer test successful
+00:00:380 hw/mem/addrspace.cpp:440 N[VMEM]: Info: nvmem is enabled
+00:00:398 hw/mem/addrspace.cpp:472 N[VMEM]: BASE 0x7f16ef890000 RAM(16 MB) 0x7f16fb890000 VRAM64(8 MB) 0x7f16f3890000 ARAM(2 MB) 0x7f170f890000
+00:00:414 hw/mem/addrspace.cpp:440 N[VMEM]: Info: nvmem is enabled
+00:00:448 hw/mem/addrspace.cpp:472 N[VMEM]: BASE 0x7f16ef890000 RAM(32 MB) 0x7f16fb890000 VRAM64(16 MB) 0x7f16f3890000 ARAM(8 MB) 0x7f170f890000
+00:00:457 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577h.ic27
+00:00:457 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577g.ic27
+00:00:457 hw/naomi/naomi_cart.cpp:464 W[NAOMI]: Warning: Region 1 bios not found in naomi.zip
+00:00:457 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21576h.ic27
+00:00:457 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21576g.ic27
+00:00:457 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21578h.ic27
+00:00:457 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21578g.ic27
+00:00:459 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577h.ic27
+00:00:459 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21577g.ic27
+00:00:459 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21579d.ic27
+00:00:459 hw/naomi/naomi_cart.cpp:109 W[NAOMI]: naomi: Cannot open epr-21576h_multi.ic27
+00:01:150 hw/naomi/naomi_cart.cpp:668 N[NAOMI]: NAOMI GAME ID [DAYTONA USA DC] region ff players 0 vertical 0
+00:01:151 emulator.cpp:60 N[BOOT]: Game ID is [DAYTONA USA DC]
+00:01:152 hw/naomi/naomi_flashrom.cpp:148 N[NAOMI]: Initializing Naomi EEPROM for game DAYTONA USA DC                  
+00:01:152 emulator.cpp:60 N[BOOT]: Game ID is [DAYTONA USA DC]
