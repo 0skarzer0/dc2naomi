@@ -29,7 +29,7 @@ la sección del [HANDOFF](../HANDOFF.md) que se indica.
 | `gunbird2` | Gunbird 2 | 🧪 | `v33167` | Lote de 17 juegos |
 | `jojo` | JoJo's Bizarre Adventure | 🧪 | `v11766` | Lote de 17 juegos |
 | `karous` | Karous | 🧪 | vacía | Lote de 17 juegos |
-| `lastblade2` | The Last Blade 2 (ripeo: sin vídeos) | 🧪 | `v35892` | Lote de 17 juegos; Last Blade 2 |
+| `lastblade2fe` | The Last Blade 2 Final Edition (Japón, parche VGA), vídeos recodificados. Sustituye a `lastblade2` (USA): esa sale a 15 kHz, "OUT OF RANGE" en el monitor | 🧪 | vacía | Last Blade 2 Final Edition (VGA) |
 | `neogoldenlogres` | Neo Golden Logres | 🧪 | vacía | Lote de 17 juegos |
 | `netdetennis` | Net de Tennis | 🧪 | vacía | Lote de 17 juegos |
 | `psyvariar2` | Psyvariar 2 | 🧪 | vacía | Lote de 17 juegos |

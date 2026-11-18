@@ -2025,3 +2025,41 @@ sombras de la calzada sobre el coche, cristales transparentes, rojo menos rosa y
 pendientes (panel del túnel de LASV, nube azul): `homebrew/orc2cdc/README.md` y `MEDIDAS.md`. En la Pi: `/root/manda.sh
 IMAGEN` (para med.py y los `vmu.py watch` que se queden y manda la imagen); había vigilantes de VMU de envíos viejos
 guardando en la VMU de otra imagen. Imágenes de prueba en `/boot/roms/h-orcp*` (se pueden borrar).
+
+## The Last Blade 2 Final Edition (Japón, parche VGA) — perfil `lb2fe`, Pi .250 (2026-11-18) — sin probar en placa
+
+**Problema:** `dc-lastblade2_dc2naomi` (USA) en la .250 se queda en negro tras el logo de SEGA y el monitor dice
+"OUT OF RANGE … 15.2KHZ 29HZ". La versión USA no tiene modo VGA: el campo de periféricos del IP.BIN es `07BBA00` (bit
+VGA 0x10 a cero) y el juego fija NTSC 480i (15 kHz) diga lo que diga el cable. No se arregla con un parche de cable.
+
+**Solución elegida por el usuario:** convertir su `THE LAST BLADE 2 FINAL EDITITION (JAPONES)-(VGA).7z` (T3107M
+V1.003, IP.BIN `07BBA10`, parche VGA de la comunidad; 774 MB en `.gdi`):
+1. `discfiles.py DISCO ORIG .SFD` + `sfdbatch.py`: los 29 `ZSFD/*.SFD` de 477 MB a 106 MB.
+2. `withfiles.py NUEVOS --cab joy --batch disc.gdi` → 404 MB (323 MB en .gz). Hizo falta arreglar `withfiles.py`
+   (f08f75d): con un `.gdi` de origen los sectores puestos a cero no se quitaban y salían 775 MB.
+3. **Perfil `lb2fe`** (catálogo por SHA1 del 1ST_READ `6d0dd952…`). `findpatch.py` adivinó mal los puntos del cable
+   (0x8c13a47e y 0x8c15d38a no son lecturas de PDTRA: corrompían código y se colgaba tras SEGA). Los buenos:
+   - 0x8C132B7E `mov.w @r3,r4` (PDTRA, 0xFF800030) → `mov #0,r4`;
+   - 0x8C15588A `mov.w @r0,r0` → `mov #0,r0`: es la comprobación del propio parche VGA (si cable = VGA llama a
+     0x8c11f534(0), que pone los bits de salida de audio del AICA 0xa0702c00);
+   - HOOK en el literal 0x8C14ADD8 (función "a física" 0x8c14c426).
+4. Con eso salían los logos (SEGA, Sofdec, SNK) y luego **negro con el juego vivo** (la música y la demo seguían: la
+   caja negra mostraba lecturas de `MUSIC.AFS`, `VOICE.AFS`, `TIT.GKC`, `GE*.GKC`). Con `FC_REGTRACE=1` en Flycast:
+   al pasar a 320×240 se escribe **VO_STARTY = 0x0027fff8** → campo 1 = línea 1016, fuera de la pantalla. Causa: un
+   fallo del parche VGA. Su código (0x8c1557c6) guarda el VO_STARTY de su tabla (0x00280028) en las variables del
+   juego al revés: `extu.w` → 0x8cef9f70 (campo 2) y `shll16` → 0x8cef9f6c (campo 1 = 0x00280000). El juego suma cada
+   cuadro su desplazamiento vertical (0x8cef9f64 = -8 en ese modo) y escribe `[9f6c]+d | ([9f70]+d)<<16`
+   (0x8c13c766). **Parche:** 0x8C1557D2 `shll16 r0` (0x4028) → `extu.w r1,r0` (0x601D). En Flycast llega a la intro
+   ("1864年", SNK Presents…), al título y al menú (STORY / VS / TIME ATTACK / …).
+5. Subida a la .250 como `dc-lastblade2fe_dc2naomi.bin.gz` + `.vmu` vacía (md5 del .gz `cefbbd0f…`), comprimida en la VM
+   del PC (no comprimir en la Pi .250: se reinicia por baja tensión). En `romsinfo.csv` la fila de
+   `dc-lastblade2_dc2naomi.bin.gz` (USA) se cambió por la de la Final Edition (copia: `romsinfo.csv.bak_lb2fe`) y se
+   reimportó. El `.bin.gz` USA y su `.vmu` siguen en `/boot/roms/` sin fila (no salen en el menú).
+6. Cargada con `dc2naomi_send.py 10.0.0.3` dentro de `nohup sh -c "…; timehack; vmu watch"`. **Ojo:** `pkill -f
+   timehack.py` lanzado por SSH se mata a sí mismo (el patrón está en su propia línea de órdenes): usar
+   `pkill -f "[t]imehack.py"`. Y el envío de 340 MB tarda más que el tiempo de espera de `pi.py`: lanzarlo con nohup.
+
+**Para otros juegos con parche VGA:** si tras los logos queda negro con el juego vivo, mirar VO_STARTY/VO_STARTX con
+`FC_REGTRACE=1` (`tools/flycast/run1.sh`): los parches VGA reescriben los modos de vídeo y pueden dejar mal las
+variables que el juego reutiliza cada cuadro.
+

@@ -108,6 +108,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: salir con B deja negro) |
 | Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (disparo automático, acelerador = gases, freno = misil, START + acelerador = frenar, START + freno = quitar/poner el disparo automático; las luces del arcade, en el botón START); Space Harrier (acelerador = disparo rápido); se crean con `tools/mkgz.py` |
+| The Last Blade 2 Final Edition (Japón) con el parche VGA de la comunidad (perfil `lb2fe`; vídeos recodificados) | experimental (llega a la intro, al título y al menú en emulador) | experimental |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
@@ -200,6 +201,9 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
 - **[dreamcast-saves](https://github.com/bucanero/dreamcast-saves)** (bucanero, Damian Parrino): la colección de
   partidas `.VMI`/`.VMS` de la que salen las partidas con todo desbloqueado que ponemos en los `.vmu`, y la referencia
   del formato `.VMI` para `tools/vmutool.py`.
+- Los autores del **parche VGA de The Last Blade 2 Final Edition** (Gekka no Kenshi 2 FE) para Dreamcast, de la escena
+  de parches VGA de Dreamcast (la imagen del usuario no trae el nombre del autor): sin él el juego sale a 15 kHz y no se
+  ve en un mueble NAOMI. El perfil `lb2fe` corrige además un fallo suyo en la posición vertical del modo 320×240.
 - **[ArkRetro](https://github.com/ArkRetro)**: su demo de OutRun 2006 Coast 2 Coast para Dreamcast (homebrew con
   KallistiOS), que el usuario convierte para su mueble de Crazy Taxi (la demo no se incluye).
 - **Mario Kart 64** (`homebrew/mk64/`):
