@@ -15,7 +15,9 @@ import time
 sys.path.append('/sbin/piforce/dm_netboot')
 from netdimm import NetDimm, PeekPokeTypeEnum as T  # noqa: E402
 
-CAMPOS = "marca n estado nodo fps ms ms_log lejos vtx tri ta_real ta_opb tarde peor_campos peor_us gd_us vbl zona".split()
+PARTES = "ini vis cielo etapa bo coche robot traf l2 fin".split()   # con -DNAOMI_PRF (si no, ceros)
+CAMPOS = ("marca n estado nodo fps ms ms_log lejos vtx tri ta_real ta_opb tarde peor_campos peor_us gd_us vbl zona".split()
+          + ["us_" + p for p in PARTES] + ["v_" + p for p in PARTES])
 FLOAT = {"fps", "ms", "ms_log", "lejos"}
 
 
@@ -48,6 +50,8 @@ def main():
         lin = ("t+%5.0f n=%d est=%d %s fps=%.1f cpu=%.1f+%.1f ms lejos=%.0f vtx=%d ta=%dK tarde=%d peor=%dc/%dus" %
                (time.time() - t0, r["n"], r["estado"], r["zona"], r["fps"], r["ms"], r["ms_log"], r["lejos"], r["vtx"],
                 r["ta_real"] >> 10, r["tarde"], r["peor_campos"], r["peor_us"]))
+        if any(r["us_" + p] for p in PARTES):
+            lin += " | " + " ".join("%s %d/%d" % (p, r["us_" + p], r["v_" + p]) for p in PARTES)
         print(lin, flush=True)
         if out:
             out.write("%.0f," % (time.time() - t0) + ",".join(str(r[k]) for k in CAMPOS[1:]) + "\n"); out.flush()
