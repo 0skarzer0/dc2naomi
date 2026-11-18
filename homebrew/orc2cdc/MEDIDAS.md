@@ -134,3 +134,16 @@ Imágenes hechas (2026-11-18 18:20): GDI nuevo con `REFLEJO.DAT` en `datos3` (`g
 a ~1,8 MB/s), y con `tools/withfiles.py --perfil orc3 --cab ct`: `h-orcpRC3` (piloto automático, `naomi_med` en
 0x8c0bcb5c) y `h-orcRL` (la versión normal con las rayas, los cristales, el rojo y el reflejo del escenario), 504,2 MB,
 en `otros/orc3/gdi5img/`. Sin probar en el mueble todavía: la Pi .60 no contesta (el mueble apagado).
+
+### RC3 en el mueble (2026-11-18 noche, 23 min con el piloto automático, parada a petición del usuario)
+
+Carga las 30 panorámicas (`REFLEJO: 30 panoramicas de 256x64` en el registro) y al usuario le gusta mucho cómo se ve.
+Pero frente a CB0 **no sale gratis**: 29,0 fps de media (29,5), 17 % de ventanas < 28 (8 %), cpu 32,1 ms (29,8) y la
+distancia de dibujo mediana baja de 3100 a 2550 m (mínimo 700). Peor en CLOU (27,8 fps), SANF (28,0) y LAKE (28,9). La
+variante RC (solo el cielo, sin los cristales nuevos) medía 29,4: lo que pesa está entre RC y RC3 (panorámica, cristales
+con `MODULATEALPHA`, término a lo largo del coche); sin averiguar todavía.
+
+**Sombras sobre el coche** (pregunta del usuario): en los datos las sombras sobre la calzada son mallas planas aparte en
+la lista transparente (BEAC, SEG17: textura 37, 128x128, la sombra de una palmera, 30 mallas junto a la ruta; 6, 15 y
+16, bandas oscuras de carteles, puentes y vallas, unas 380 mallas). Se pueden pasar al convertir a un mapa a lo largo de
+la ruta y consultarlo en unos puntos bajo el coche para oscurecer la carrocería.
