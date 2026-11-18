@@ -1,0 +1,194 @@
+diff --git a/comun/gd.c b/comun/gd.c
+index 18705d7..2ab3f5a 100644
+--- a/comun/gd.c
++++ b/comun/gd.c
+@@ -52,7 +52,25 @@ static int lee(uint32_t lba, int n, void *dst)
+     sig_lba = lba + n;
+ #endif
+     for (k = 0; k < 4; k++) {
++#ifdef GD_TROZO
++        /* NAOMI (dc2naomi, 2026-11): el residente sirve cada lectura de una vez, copiando de la NetDIMM con las
++           interrupciones cortadas (~1,3 MB/s): una lectura de 64 sectores paraba el juego ~90 ms (los tirones de la
++           carrera mientras se lee la etapa siguiente, y uno cada vez que la musica pide su trozo). Aqui se pide de
++           GD_TROZO en GD_TROZO sectores y se cede la CPU entre trozo y trozo: el bucle entra entre medias. */
++        {
++            int h = 0, m;
++            r = 0;
++            while (h < n && !r) {
++                m = n - h > GD_TROZO ? GD_TROZO : n - h;
++                r = cdrom_read_sectors_ex((uint8_t *)dst + h * 2048, lba + h + 150, m, ((uintptr_t)dst & 31) == 0);
++                h += m;
++                if (h < n) thd_pass();
++            }
++            if (!r) break;
++        }
++#else
+         if (!(r = cdrom_read_sectors_ex(dst, lba + 150, n, ((uintptr_t)dst & 31) == 0))) break;
++#endif
+         n_err++; ult_err = r;
+         if (r == ERR_DISC_CHG || r == ERR_NO_DISC) cdrom_reinit();
+         thd_sleep(20);
+diff --git a/comun/menu.c b/comun/menu.c
+index f9e430e..c427148 100644
+--- a/comun/menu.c
++++ b/comun/menu.c
+@@ -99,7 +99,11 @@ static const char *const UNOM[NU] = { "TITULO_FONDO", "TITULO_LOGO", "TITULO_STA
+    Taxi, MUS67.ADP): una tarjeta mas al final de la lista 2 y siempre disponible, para cualquier coche. */
+ #define N_LISTAS 3
+ #define N_TEMAS 29
++#ifdef SIN_OR_TAXI
++static const int8_t TEMAS_LISTA[N_LISTAS] = { 9, 7, 12 };   /* NAOMI: sin la tarjeta de ALL I WANT (Crazy Taxi) */
++#else
+ static const int8_t TEMAS_LISTA[N_LISTAS] = { 9, 7, 13 };
++#endif
+ static const uint8_t DESBLOQ_TEMA[N_TEMAS] = { 174, 174, 174, 174, 174, 174, 174, 172, 173, 174, 175, 176, 177, 178,
+                                                179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
+                                                192 };
+@@ -423,6 +427,10 @@ static int lic_entirety(const uint8_t *p) { return p && !memcmp(p, "ENTIRETY", 8
+ static int menu_or_ok(void)
+ {
+     const uint8_t *p = activa();
++#ifdef SIN_OR_TAXI
++    /* NAOMI (dc2naomi, 2026-11): sin OutRunners en el disco, la entrada se queda en gris para siempre */
++    (void)p; return 0;
++#endif
+     if (!p) return 0;
+     if (lic_entirety(p)) return 1;
+     return lic_bit(SA_BIT_OUTRUNNERS);
+@@ -432,6 +440,9 @@ static int menu_or_ok(void)
+ int menu_taxi_comprado(void)
+ {
+     const uint8_t *p = activa();
++#ifdef SIN_OR_TAXI
++    (void)p; return 0;                                      /* NAOMI: sin el taxi (COCHE15.DAT) en el disco */
++#endif
+     if (!p) return 0;
+     if (lic_entirety(p)) return 1;
+     return lic_bit(SA_BIT_TAXI);
+@@ -1973,7 +1984,11 @@ static int sa_tiene(int b)
+     return b >= 0 && b < 0x96 * 8 && ((p[0x28 + b / 8] >> (b % 8)) & 1);
+ }   /* 0x1a1cc8 */
+ static uint32_t sa_precio(int i) { return i >= 0 && i < SA_NPRECIO ? SA->precio[i] : 0; }   /* 0x1f4198 */
+-static int sa_vende(int i) { int k; for (k = 0; k < 26; k++) if (SA->fuera[k] == i) return 0; return 1; }   /* 0x25d790 */
++static int sa_vende(int i) { int k;
++#ifdef SIN_OR_TAXI
++    if (i == SA_BIT_OUTRUNNERS || i == SA_BIT_TAXI) return 0;   /* NAOMI: los dos articulos, fuera de la venta */
++#endif
++    for (k = 0; k < 26; k++) if (SA->fuera[k] == i) return 0; return 1; }   /* 0x25d790 */
+ /* 0x1a1ba0 (447460): sin el bit y con las millas (truncadas sin signo, 0x131ca8) >= precio: pone el bit y resta */
+ static int sa_compra(int b, uint32_t precio)
+ {
+diff --git a/comun/musica.c b/comun/musica.c
+index 4fb4504..e7c2a93 100644
+--- a/comun/musica.c
++++ b/comun/musica.c
+@@ -18,7 +18,7 @@ static int t_arranca;
+ static uint32_t lba0, tam, pos;
+ static snd_stream_hnd_t hs = SND_STREAM_INVALID;
+ static kthread_t *hilo;
+-static int volumen = 255, adpcm;                            /* musica_nivel: el de la opcion de musica */
++static int volumen = 255, adpcm, frec = 44100;                            /* musica_nivel: el de la opcion de musica */
+ static mutex_t m_poll = MUTEX_INITIALIZER;                   /* snd_stream_poll desde el bucle o desde el lector */
+ 
+ static void *lector(void *arg)
+@@ -88,7 +88,10 @@ int musica_pon(int n)
+     musica_para();
+     una = 0; leida = 0;
+     thd_sleep(30);
+-    sprintf(nom, "MUS%d.ADP", n); adpcm = 1;                     /* ADPCM de Yamaha a 44,1 kHz o, si no, PCM */
++    /* NAOMI (dc2naomi, 2026-11): las pistas a 22,05 kHz (para caber en la NetDIMM de 512 MB) se llaman MUSn.A22: el
++       mismo ADPCM de Yamaha estereo con la mitad de muestras; si no esta, MUSn.ADP a 44,1 kHz */
++    sprintf(nom, "MUS%d.A22", n); adpcm = 1; frec = 22050;
++    if (gd_busca(nom, &lba0, &tam)) { sprintf(nom, "MUS%d.ADP", n); frec = 44100; }   /* ADPCM de Yamaha o, si no, PCM */
+     if (gd_busca(nom, &lba0, &tam)) {
+         sprintf(nom, "MUS%d.PCM", n); adpcm = 0;
+         if (gd_busca(nom, &lba0, &tam)) return -1;
+@@ -104,7 +107,7 @@ static void empieza(void)
+ {
+     /* 44,1 kHz como el original: SOUNDCD.IRX (0x1640..0x1650) pone el pitch 0xEB3 (44100 / 48000 x 0x1000) a las
+        dos voces del flujo de musica; a 48 kHz sonaba un 8,8 % acelerada */
+-    if (adpcm) snd_stream_start_adpcm(hs, 44100, 1);
++    if (adpcm) snd_stream_start_adpcm(hs, frec, 1);
+     else snd_stream_start(hs, 44100, 1);
+     snd_stream_volume(hs, volumen);
+     arranca = 0;
+diff --git a/demo/Makefile b/demo/Makefile
+index 02a06c4..dc18c98 100644
+--- a/demo/Makefile
++++ b/demo/Makefile
+@@ -1,6 +1,8 @@
+ # Prueba 0: KOS_BASE y el entorno de KallistiOS (source environ.sh)
+ TARGET = demo.elf
+ OBJS = main.o camara.o coli.o perfil.o meta.o fin.o final.o sp.o pcarga.o nombre.o ../comun/gd.o ../comun/musica.o ../comun/or2_fisica.o ../comun/turbo_taxi.o ../comun/hud.o ../comun/sfx.o ../comun/voces.o ../comun/video.o ../comun/menu.o ../comun/vmu.o ../comun/vmuesc.o ../comun/robot.o ../comun/infarto.o ../comun/modo_video.o ../comun/registro.o ../comun/sprani.o ../comun/fsp.o ../comun/rksp.o ../comun/rival.o
++# NAOMI (dc2naomi): sin OutRunners ni el taxi en el disco (comun/menu.c)
++../comun/menu.o: CFLAGS += -DSIN_OR_TAXI
+ all: rm-elf $(TARGET)
+ # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
+ # del TA (docs/DREAMCAST.md)
+diff --git a/demo/main.c b/demo/main.c
+index 2e885cc..a8f6087 100644
+--- a/demo/main.c
++++ b/demo/main.c
+@@ -816,7 +816,7 @@ static void pon_vista(const float *o, const float *mira, float bal)
+ }
+ 
+ typedef struct { float x, y, w, u, v; uint32_t c, o; } pt_t;   /* o: color de desplazamiento */
+-#ifdef DIAG_MS
++#if defined(DIAG_MS) || defined(NAOMI_PRF)
+ static uint64_t prf_t; static unsigned prf_us[10], prf_v[10], prf_v0;   /* medida: us y vertices por parte del cuadro */
+ #define PRF(i) do { uint64_t t_ = timer_us_gettime64(); prf_us[i] += (unsigned)(t_ - prf_t); prf_t = t_; prf_v[i] += vtx_env - prf_v0; prf_v0 = vtx_env; } while (0)
+ #else
+@@ -11170,6 +11170,16 @@ int or_programa_lanza(void)
+     arch_exec(img, tam);
+ }
+ 
++/* NAOMI (dc2naomi, 2026-11): medidas de cada 30 cuadros para leerlas desde la Raspberry por la NetDIMM (peek; ver
++   homebrew/orc2cdc/med.py de dc2naomi), sin cable serie ni log: cuadros por segundo, ms de CPU (dibujo y logica),
++   distancia de dibujo, vertices y TA del ultimo cuadro, cuadros que empezaron tarde y el peor cuadro (campos de
++   vblank entre dos presentaciones y us de CPU). */
++volatile struct {
++    uint32_t marca, n, estado, nodo;                          /* "MEDI", ventanas de 30 cuadros, estado, etapa */
++    float fps, ms, ms_log, lejos;
++    uint32_t vtx, tri, ta_real, ta_opb, tarde, peor_campos, peor_us, gd_us, vbl, zona;
++    uint32_t prf_us[10], prf_v[10];                           /* con -DNAOMI_PRF: us y vertices medios por parte */
++} naomi_med = { 0x4944454du };
+ int main(int argc, char **argv)
+ {
+     /* bufer de parametros de TA_VB_BYTES (x2); opacos con bloques de 32 (el suelo cercano toca muchas teselas) y 4
+@@ -12235,7 +12245,7 @@ int main(int argc, char **argv)
+         tri_enviados = 0; vtx_ult = vtx_env; vtx_env = 0; ta_inicia_cuadro(); vtx_et_ult = vtx_et; vtx_et = 0;
+         en_cuenta = estado == CUENTA;                           /* (el precalentamiento manda hasta el semaforo) */
+         arranque_hold = estado == CARRERA && t_estado < REPARTO_ARRANQUE;   /* (suelo del arranque, ver arriba) */
+-#ifdef DIAG_MS
++#if defined(DIAG_MS) || defined(NAOMI_PRF)
+         prf_v0 = 0;
+ #endif
+         PRF(0);
+@@ -12470,6 +12480,10 @@ int main(int argc, char **argv)
+         diag_dib_us = (uint32_t)(timer_us_gettime64() - c0);
+ #endif
+         tcpu += timer_us_gettime64() - c0;
++        { static uint32_t vb_ant; uint32_t d = (uint32_t)(timer_us_gettime64() - c0), v = vbl_n;
++          if (d > naomi_med.peor_us) naomi_med.peor_us = d;
++          if (vb_ant && v - vb_ant > naomi_med.peor_campos) naomi_med.peor_campos = v - vb_ant;
++          vb_ant = v; }
+ #ifdef DIAG_PICO
+         dg_ult_dib = timer_us_gettime64() - c0;
+ #endif
+@@ -12490,6 +12504,16 @@ int main(int argc, char **argv)
+         if (++cuadro % 30 == 0) {
+             uint64_t t1 = timer_ms_gettime64();
+             fps = 30000.0f / (float)(t1 - t0); ms = tcpu / 30000.0f; ms_log = t_log / 30000.0f; t0 = t1; tcpu = 0; t_log = 0;
++            naomi_med.fps = fps; naomi_med.ms = ms; naomi_med.ms_log = ms_log; naomi_med.lejos = lejos;
++            naomi_med.vtx = vtx_ult; naomi_med.tri = tri_enviados; naomi_med.ta_real = ta_real_ult; naomi_med.ta_opb = ta_opb_ult;
++            naomi_med.tarde = pres_tarde; naomi_med.estado = (uint32_t)estado; naomi_med.nodo = (uint32_t)cur_nodo;
++            naomi_med.gd_us = (uint32_t)gd_us_juego(); naomi_med.vbl = vbl_n;
++            if (cur_nodo >= 0) memcpy((void *)&naomi_med.zona, curso[cur_nodo].zona, 4);
++#ifdef NAOMI_PRF
++            { int j; for (j = 0; j < 10; j++) { naomi_med.prf_us[j] = prf_us[j] / 30; naomi_med.prf_v[j] = prf_v[j] / 30; }
++              memset(prf_us, 0, sizeof prf_us); memset(prf_v, 0, sizeof prf_v); }
++#endif
++            naomi_med.n++;
+ #ifdef DIAG_MS
+             if (estado != TITULO && cur_nodo >= 0) {        /* medida: tiempos medios de los ultimos 30 cuadros */
+                 pvr_stats_t ps; pvr_get_stats(&ps);
