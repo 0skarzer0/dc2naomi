@@ -631,6 +631,7 @@ GAMES["orc3"] = {
     "hook_pc": [],
     "groups": [],
 }
+GAMES["orc3dma"] = dict(GAMES["orc3"], flags=0x1444)   # + DIMM_DMA: the NetDIMM copied by G1 DMA, not PIO (test)
 
 # Sega Rally 2 (USA, 1999; Sega). A Windows CE disc like mw2: IP.BIN boots 0WINCEOS.BIN. Music in 17 CDDA
 # tracks (4-20; not played by the resident). Boot patches only, to start the study of Windows CE.
