@@ -196,3 +196,7 @@ datos del original. **`h-orc2c7_dc2naomict`** = la c6 (RL4: rayas, reflejo del e
 pintura, cristales, sin el OPB mayor) en ese GDI, 504,5 MB, md5 `.gz` `8dc76a08fa4ebdffee41a27cd55aed52`, comprobado
 que lleva el `1ST_READ.BIN` entero; en la Pi .60 y en el CSV (copia `romsinfo.csv.bak_orc2c7`).
 La c4 (con el OPB mayor) quizá también arrancaba: no se llegó a probar bien.
+La c7 arranca en el mueble (usuario, 00:24). **`h-orc2c8_dc2naomict`** = la c7 con `-DOPB_TR=PVR_BINSIZE_32
+-DOPB_EXTRA=8` (más OPB para los translúcidos, por los trozos de cielo cortados), md5 `.gz`
+`e800dd0a6556ecbfb182cedcab4006b2`, `1ST_READ.BIN` entero comprobado; en la Pi .60 y en el CSV (copia
+`romsinfo.csv.bak_orc2c8`), copia en `otros/orc3/gdi5img/`. Si no arrancara, la c7.
