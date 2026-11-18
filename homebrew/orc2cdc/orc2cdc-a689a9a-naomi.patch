@@ -124,7 +124,7 @@ index 02a06c4..5933b86 100644
  # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
  # del TA (docs/DREAMCAST.md)
 diff --git a/demo/main.c b/demo/main.c
-index 2e885cc..3ea138b 100644
+index 2e885cc..8ad7623 100644
 --- a/demo/main.c
 +++ b/demo/main.c
 @@ -290,6 +290,20 @@ static inline int malla_de_cartel(const modelo_t *m, const malla_t *ma)
@@ -219,21 +219,20 @@ index 2e885cc..3ea138b 100644
  /* luz del coche en carrera (coche_luz): la del entorno 2 del original (scn_env_sun lista 2; 40D840(2) en 46BD30) en
     el marco del modelo; cex_luz_on = 0: la luz de tools/conv_coche.py (menu) */
  static float cex_L[3], cex_lv[12]; static int cex_luz_on;
-+static uint32_t *som_ofs0; static int som_sucio;               /* sombras sobre el coche (coche_sombra, mas abajo) */
++static int som_sucio;                                          /* sombras sobre el coche (coche_sombra, mas abajo) */
 +#ifndef SOMBRA_COCHE
 +#define SOMBRA_COCHE 0
 +#endif
  static void coche_color(int c)
  {
      uint32_t k, i;
-@@ -9365,9 +9402,13 @@ static void coche_color(int c)
+@@ -9365,9 +9402,12 @@ static void coche_color(int c)
                  col = 0xFF000000u | (uint32_t)(((p >> 16) & 255) * lr[0]) << 16 | (uint32_t)(((p >> 8) & 255) * lr[1]) << 8 | (uint32_t)((p & 255) * lr[2]);
              } else col = cex_mul(p, q >> 24);
              if (e->tipo == 1) coche.verts[m->v0 + i].c = (coche.verts[m->v0 + i].c & 0xFF000000u) | (col & 0xFFFFFF);
 -            else coche.ofs[m->v0 + i] = col;
 +            else {
 +                coche.ofs[m->v0 + i] = CRISTAL_MALLA(e) ? cex_mul(col, (uint32_t)(CRISTAL_ALFA * 255.0f)) : col;
-+                if (som_ofs0) som_ofs0[m->v0 + i] = coche.ofs[m->v0 + i];
 +            }
          }
      }
@@ -241,7 +240,7 @@ index 2e885cc..3ea138b 100644
      cex_color = c;
  }
  /* la luz de los coches (entorno 2) en la pintura del coche del jugador (coche_color): en el marco del modelo (mc,
-@@ -9485,10 +9526,17 @@ static uint32_t noche_ban(void)
+@@ -9485,10 +9525,17 @@ static uint32_t noche_ban(void)
  static matrix_t ani_m[NPZ] __attribute__((aligned(32)));      /* matriz de cada pieza en el marco del coche */
  /* lee el CEX2 del coche recien cargado: desplazamiento por vertice, cabeceras con desplazamiento para el entorno y
     grupos de luces */
@@ -259,16 +258,16 @@ index 2e885cc..3ea138b 100644
      for (k = 0; k < cex_n; k++) {
          int32_t t = coche.mallas[cex_m[k].malla].tex;
          if (cex_m[k].tipo >= 2 && t >= 0) compila_cab(&coche, t, cex_m[k].tipo == 3 ? 3 : 1);
-@@ -9498,6 +9546,8 @@ static void coche_cex(int c, int taxi)
+@@ -9498,6 +9545,8 @@ static void coche_cex(int c, int taxi)
  {
      const uint32_t *w = (const uint32_t *)coche.ruta; uint32_t k;
      cex_n = 0; cex_ngrp = 0; cex_color = 0; cex_luces = -1; cex_taxi = taxi; cex_freno_hold = 0; free(cex_n0); cex_n0 = NULL; nsvol = 0;
 +    ref_on = 0; ref_clave = 0; free(ref_c0); ref_c0 = NULL; ref_nc = 0;
-+    free(som_ofs0); som_ofs0 = NULL; som_sucio = 1;
++    som_sucio = 1;
      if (!w || coche.paso_ruta != 1 || coche.nruta < 6 || memcmp(w, "CEX2", 4) || w[1] != 8) return;
      if (6 + 8 * w[2] + 5 * w[3] + w[4] + 2 * w[5] > coche.nruta) return;
      cex_nsl = w[2]; cex_col = w + 6; cex_m = (const cex_t *)(cex_col + 8 * cex_nsl); cex_vd = (const uint32_t *)(cex_m + w[3]);
-@@ -9511,7 +9561,16 @@ static void coche_cex(int c, int taxi)
+@@ -9511,6 +9560,14 @@ static void coche_cex(int c, int taxi)
          coche.ofs = (uint32_t *)(void *)(coche_bloque + coche_usado); memset(coche.ofs, 0, coche.nvert * sizeof(uint32_t));
      } else if (!(coche.ofs = calloc(coche.nvert, sizeof(uint32_t)))) { free(cex_n0); cex_n0 = NULL; return; }
      cex_n = w[3]; cex_ngrp = w[5];
@@ -281,11 +280,9 @@ index 2e885cc..3ea138b 100644
 +            }
 +        }
      coche_cab_cex();
-+    if (SOMBRA_COCHE) som_ofs0 = calloc(coche.nvert, sizeof(uint32_t));   /* (sin RAM: sin sombras) */
      coche_color(c);
      coche_luces(0, 0, 0);                                       /* pilotos sin luces ni freno */
- #ifdef PRUEBA_FRENO_LOAD
-@@ -9549,7 +9608,7 @@ static void coche_entorno(matrix_t mc)
+@@ -9549,7 +9606,7 @@ static void coche_entorno(matrix_t mc)
      for (k = 0; k < cex_n; k++) {
          const cex_t *e = cex_m + k; const malla_t *m = coche.mallas + e->malla; vert_t *v = coche.verts + m->v0;
          const uint32_t *q = cex_vd + e->v0;
@@ -294,7 +291,7 @@ index 2e885cc..3ea138b 100644
          p = m->nodo < 0 ? 0 : (m->nodo >> 8) & 0xFF; if (p >= NPZ) p = 0;
          a = A[p]; b = B[p];
  #if defined(CON_SH4ZAM) && !defined(SIN_SHZ_ENTORNO)
-@@ -9577,6 +9636,331 @@ static void coche_entorno(matrix_t mc)
+@@ -9577,6 +9634,337 @@ static void coche_entorno(matrix_t mc)
      }
  }
  
@@ -580,8 +577,8 @@ index 2e885cc..3ea138b 100644
 +static void coche_sombra(matrix_t mc)
 +{
 +    uint8_t q[SOM_N]; int k, cambia = 0, alguna = 0; uint32_t e, i;
-+    if (!SOMBRA_COCHE || !som_ofs0 || !ref_on) {
-+        if (som_aplicada && som_ofs0) { som_aplicada = 0; memcpy(coche.ofs, som_ofs0, coche.nvert * sizeof(uint32_t)); if (ref_on) ref_base(1); }
++    if (!SOMBRA_COCHE || !ref_on) {
++        if (som_aplicada) { som_aplicada = 0; coche_color(cex_color); if (ref_on) ref_base(1); }
 +        return;
 +    }
 +    for (k = 0; k < 3; k++) if (som_m[k].datos != tramos[k]->datos) som_prepara(som_m + k, tramos[k]);
@@ -601,9 +598,13 @@ index 2e885cc..3ea138b 100644
 +        alguna |= q[k]; cambia |= q[k] != som_q[k];
 +    }
 +    if (!cambia && !som_sucio) return;
-+    som_sucio = 0; memcpy(som_q, q, sizeof q);
-+    if (!alguna && !som_aplicada) return;
++    memcpy(som_q, q, sizeof q);
++    if (!alguna && !som_aplicada) { som_sucio = 0; return; }
 +    som_aplicada = alguna != 0;
++    /* la pintura sin sombra: coche_color la rehace (sin copia guardada: este port no puede pedir RAM nueva del monton
++       una vez colocada la carrera; con una copia de 42 KB pedida al cargar el coche la version normal no arrancaba) */
++    if (!som_sucio) coche_color(cex_color);
++    som_sucio = 0;
 +    ref_base(1);                                                /* (la fuerza del reflejo sin sombra) */
 +    for (e = 0; e < cex_n; e++) {
 +        const cex_t *c = cex_m + e; const malla_t *m = coche.mallas + c->malla;
@@ -617,8 +618,10 @@ index 2e885cc..3ea138b 100644
 +            j0 = (int)g; g -= j0;
 +            d = (q[j0] + g * (q[j0 + 1] - q[j0])) * (1.0f / 15.0f);
 +            f = 1 - SOM_K * d; ff = (uint32_t)(f * 255.0f);
-+            coche.ofs[m->v0 + i] = alguna ? cex_mul(som_ofs0[m->v0 + i], ff) : som_ofs0[m->v0 + i];
-+            if (alguna) v->c = (v->c & 0xFF000000u) | (cex_mul(v->c, ff) & 0xFFFFFF);
++            if (alguna) {
++                coche.ofs[m->v0 + i] = cex_mul(coche.ofs[m->v0 + i], ff);
++                v->c = (v->c & 0xFF000000u) | (cex_mul(v->c, ff) & 0xFFFFFF);
++            }
 +        }
 +    }
 +}
@@ -626,7 +629,7 @@ index 2e885cc..3ea138b 100644
  /* coche parado (seleccion, salida): ruedas, volante, faros y carroceria en reposo */
  static void coche_anima_reposo(void)
  {
-@@ -11170,6 +11554,16 @@ int or_programa_lanza(void)
+@@ -11170,6 +11558,16 @@ int or_programa_lanza(void)
      arch_exec(img, tam);
  }
  
@@ -643,7 +646,7 @@ index 2e885cc..3ea138b 100644
  int main(int argc, char **argv)
  {
      /* bufer de parametros de TA_VB_BYTES (x2); opacos con bloques de 32 (el suelo cercano toca muchas teselas) y 4
-@@ -11177,7 +11571,18 @@ int main(int argc, char **argv)
+@@ -11177,7 +11575,18 @@ int main(int argc, char **argv)
         en la consola real un bufer u OPB lleno cuelga el TA. Modificadores opacos (la sombra del coche, sombra_dibuja)
         con bloques de 8 y translucidos de 16 a 8: el OPB ocupa lo mismo que antes (64 palabras por tesela). Cuentas en
         docs/DREAMCAST.md */
@@ -663,7 +666,7 @@ index 2e885cc..3ea138b 100644
      int estado = TITULO, auto_ = 0, ver = VER, pausa = 0, l, i, r;
      int reintenta = 0;                                          /* REINTENTAR del menu de pausa: salida otra vez */
      unsigned coches_m; int ficha_ini;
-@@ -11281,6 +11686,7 @@ int main(int argc, char **argv)
+@@ -11281,6 +11690,7 @@ int main(int argc, char **argv)
      /* el humo, las marcas y las chispas (EFECTOS.DAT, siempre en VRAM) con lo fijo, antes de la pareja, el coche y el HUD:
         detras del HUD partian la VRAM libre de las carreras en dos (vram_ordena) */
      efectos_inicia();
@@ -671,7 +674,7 @@ index 2e885cc..3ea138b 100644
      {   int pp, aa;                                             /* la pareja de OUTRUN2SP y de la licencia 0 (11 / 9) */
          if (!robot_pareja(1, 1, 0, &pp, &aa)) robot_carga(pp, aa); }
      if ((r = coche_carga(ficha_ini))) {
-@@ -11403,6 +11809,12 @@ int main(int argc, char **argv)
+@@ -11403,6 +11813,12 @@ int main(int argc, char **argv)
          if (estado != TITULO && manual_) {                      /* cambio manual: cruceta arriba sube, abajo baja */
              if (nuevo & CONT_DPAD_UP) pide_cambio = 1;
              if (nuevo & CONT_DPAD_DOWN) pide_cambio = -1;
@@ -684,7 +687,7 @@ index 2e885cc..3ea138b 100644
          }
          if (st) {
              /* volante: el eje y la cruceta van a or2_volante en cada paso (zona muerta 0,25, rampa de la cruceta y
-@@ -11416,8 +11828,13 @@ int main(int argc, char **argv)
+@@ -11416,8 +11832,13 @@ int main(int argc, char **argv)
              if (giro < -1) giro = -1;
              /* pedales: volumenes 1 y 2 del original, 0..255 tal cual (el original lee la presion de los botones
                 sin curva); A y B/X a fondo */
@@ -698,7 +701,7 @@ index 2e885cc..3ea138b 100644
          }
          mando.nivel = etapa_n;
  
-@@ -12223,8 +12640,9 @@ int main(int argc, char **argv)
+@@ -12223,8 +12644,9 @@ int main(int argc, char **argv)
  #else
          if (cex_n || cex_taxi) coche_luces(ani.ban, estado != TITULO && (meta_pas ? meta.freno != 0 : fis_ok ? fis.freno_op != 0 : yo.freno_ant > 0.0f), estado != TITULO && ani.caliente);   /* car+38 != 0 (con la fisica del original coche_paso no toca freno_ant: los pilotos del freno no se encendian nunca) */
  #endif
@@ -709,7 +712,7 @@ index 2e885cc..3ea138b 100644
          rc_chr.listo = rc_band.listo = 0; chr_vtx_ult = chr_vtx; chr_us_ult = chr_us; chr_vtx = chr_us = 0;
          if (fin24 && chr_ok == 1) robot_matrices(&rc_chr, &mod_coche, 0);   /* la pareja del final */
          if (chr_ok == 1 && estado != TITULO && !mundo_fuera) {
-@@ -12235,7 +12653,7 @@ int main(int argc, char **argv)
+@@ -12235,7 +12657,7 @@ int main(int argc, char **argv)
          tri_enviados = 0; vtx_ult = vtx_env; vtx_env = 0; ta_inicia_cuadro(); vtx_et_ult = vtx_et; vtx_et = 0;
          en_cuenta = estado == CUENTA;                           /* (el precalentamiento manda hasta el semaforo) */
          arranque_hold = estado == CARRERA && t_estado < REPARTO_ARRANQUE;   /* (suelo del arranque, ver arriba) */
@@ -718,7 +721,7 @@ index 2e885cc..3ea138b 100644
          prf_v0 = 0;
  #endif
          PRF(0);
-@@ -12470,6 +12888,10 @@ int main(int argc, char **argv)
+@@ -12470,6 +12892,10 @@ int main(int argc, char **argv)
          diag_dib_us = (uint32_t)(timer_us_gettime64() - c0);
  #endif
          tcpu += timer_us_gettime64() - c0;
@@ -729,7 +732,7 @@ index 2e885cc..3ea138b 100644
  #ifdef DIAG_PICO
          dg_ult_dib = timer_us_gettime64() - c0;
  #endif
-@@ -12490,6 +12912,16 @@ int main(int argc, char **argv)
+@@ -12490,6 +12916,16 @@ int main(int argc, char **argv)
          if (++cuadro % 30 == 0) {
              uint64_t t1 = timer_ms_gettime64();
              fps = 30000.0f / (float)(t1 - t0); ms = tcpu / 30000.0f; ms_log = t_log / 30000.0f; t0 = t1; tcpu = 0; t_log = 0;

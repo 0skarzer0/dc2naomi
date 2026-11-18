@@ -175,3 +175,11 @@ vídeo) choca con lo que la versión normal reserva al arrancar. `h-orc2c5` = la
 sombras), md5 `.gz` `4af643f1a6cd1453560e1d4461cb4304`, **sin probar**; la deja el usuario en la Pi él mismo (copia en
 `otros/orc3/gdi5img/`). Mientras tanto va la RL (probada). La SD de la Pi .60 dio errores de FAT ("invalid cluster
 chain") y pasó `/boot` a solo lectura; tras reiniciar vuelve a escribir, pero falta un `fsck` (pendiente del usuario).
+
+### `h-orc2c5` tampoco arranca; `h-orc2c6` (2026-11-18, 23:55)
+
+Lo que tenían la c4 y la c5 y no la RL: `som_ofs0`, una copia de la pintura del coche (42 KB) pedida con `calloc` al
+cargarlo. En la versión normal el coche se carga en el hueco de la unión prestado y luego se copia a un bloque nuevo del
+montón (`compacta_modelo_de`): la memoria está repartida sin holgura. Ahora `coche_sombra` no guarda copia: rehace la
+pintura con `coche_color` cuando cambia la sombra. `h-orc2c6` (RL4, sin el OPB mayor), md5 `.gz`
+`1ba29f48ef6753d5440a5f5690af6478`, en `otros/orc3/gdi5img/`, **sin probar**.
