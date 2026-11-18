@@ -147,3 +147,21 @@ con `MODULATEALPHA`, término a lo largo del coche); sin averiguar todavía.
 la lista transparente (BEAC, SEG17: textura 37, 128x128, la sombra de una palmera, 30 mallas junto a la ruta; 6, 15 y
 16, bandas oscuras de carteles, puentes y vallas, unas 380 mallas). Se pueden pasar al convertir a un mapa a lo largo de
 la ruta y consultarlo en unos puntos bajo el coche para oscurecer la carrocería.
+
+## Versión definitiva `h-orc2c4` (2026-11-18 noche)
+
+El usuario la pide como definitiva tras ver la RL. Glitches de sus fotos del vídeo largo y qué ha pasado con cada uno:
+- **Cielo cortado en rectángulos, en vertical o en diagonal, y la carretera que desaparece (8'59-9'03)**: muchos
+  alineados con las teselas de 32x32, sobre todo en las uniones (dos cielos). Hipótesis: OPB lleno. Se da más OPB a los
+  translúcidos (`OPB_TR` 32, `OPB_EXTRA` 8). En la variante RC5 el registro `PVR_TA_OPB_POS` marca siempre 103 KB (lo que
+  ocupa el primer juego: no se usan los de reserva) en CAST, CLOU y TULI, uniones incluidas, pero el del búfer de
+  vértices lee 0 en la NAOMI, así que estos registros no son de fiar aquí. **Sin confirmar que lo arregle.**
+- **Panel fijo en el túnel (9'38, LASV)**: candidatos, los planos aditivos gigantes de LASV (texturas 129-131, 64x16
+  ARGB4444, 500-600 m de alto, alfa del vértice 0-254: los haces de los focos). **Pendiente.**
+- **Nube azul quieta (7'05)**: **pendiente** (no localizada en los datos).
+- **Edificios negros (9'36, 19'13)**: según docs/PARIDAD.md de ORC2CDC, el edificio negro de LASV es así en el original
+  (cristal oscuro). Sin cambiar.
+- **Arbusto en bloques (3'45)**: el impostor de la vegetación lejana (`LOD_LEJ_PX` 48 px, revisión 46 de ORC2CDC, una
+  desviación pedida para la Dreamcast). Sin cambiar.
+- Chispas al rozar y coche oscuro en zonas oscuras: normales (el usuario).
+- Sombras: `SOMBRAS: 148 mallas de sombra` en LAKE (registro del juego).

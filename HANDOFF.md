@@ -2016,3 +2016,12 @@ pasos, parches de KallistiOS `d81aa3f` y de ORC2CDC, `zck.py`, `adp22.c`).
   Imágenes de prueba `h-orcp{B,D,E,F,G,H,P}` subidas a la Pi .60 para medir (sin fila en el CSV).
 - **2026-11-18 08:15:** vuelve el taxi (`COCHE07.DAT` en `datos3`, `comun/menu.c` ya no lo bloquea); OutRunners sigue fuera (14 MB: no cabe sin quitar una canción) y la tarjeta de All I Want también. `h-orc2c3`, md5 `.gz` `a17a7cab16f8c08c5e8d4a7c691d82fd`.
 - **2026-11-18 09:30:** el usuario no podía cambiar de marcha: en ORC2CDC el cambio manual va en la cruceta arriba/abajo y A / B eran acelerador / freno a fondo, así que la palanca del mueble (B adelante, A atrás) frenaba y aceleraba. `-DNAOMI_PALANCA`: B sube, A baja, gas y freno solo de los pedales. md5 `.gz` `a0034116d6077beb42b8ebd780a24e78`.
+
+## OutRun C2C para NAOMI: `h-orc2c4_dc2naomict` definitiva (2026-11-18 noche)
+
+Sustituye a `h-orc2c3` en la Pi .60 (fila 53 de `romsinfo.csv`, copia `romsinfo.csv.bak_orc2c4`, reimportado; VMU
+copiada de la `h-orc2c3`). Rayas más lejos, reflejo del escenario (panorámicas `REFLEJO.DAT` de `homebrew/orc2cdc/reflejo.py`),
+sombras de la calzada sobre el coche, cristales transparentes, rojo menos rosa y más OPB. Detalle, medidas y glitches
+pendientes (panel del túnel de LASV, nube azul): `homebrew/orc2cdc/README.md` y `MEDIDAS.md`. En la Pi: `/root/manda.sh
+IMAGEN` (para med.py y los `vmu.py watch` que se queden y manda la imagen); había vigilantes de VMU de envíos viejos
+guardando en la VMU de otra imagen. Imágenes de prueba en `/boot/roms/h-orcp*` (se pueden borrar).

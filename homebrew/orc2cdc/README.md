@@ -1,5 +1,21 @@
 # OutRun 2006 Coast 2 Coast (demo de ArkRetro) compilado para NAOMI
 
+> **2026-11-18 noche: versión definitiva `h-orc2c4_dc2naomict`** (sustituye a `h-orc2c3` en la Pi .60 y en el CSV; la
+> VMU copiada de la anterior). Con las medidas y las pruebas en [MEDIDAS.md](MEDIDAS.md). Sobre la `h-orc2c3`, en
+> `demo/main.c` (`orc2cdc-a689a9a-naomi.patch`) y compilada además con `-DSUELO_SS=1
+> -DSUELO_MIPBIAS=PVR_MIPBIAS_0_25 -DREFLEJO_CIELO=1 -DSOMBRA_COCHE=1 -DOPB_TR=PVR_BINSIZE_32 -DOPB_EXTRA=8`:
+> - **Rayas de la carretera más lejos**: supermuestreo de la textura y el mipmap más nítido de la PowerVR en el suelo.
+> - **Reflejo del escenario en la carrocería**: una panorámica de 360 grados por zona (cielo, palmeras, edificios,
+>   carteles), dibujada al convertir con [`reflejo.py`](reflejo.py) a partir de los datos de la etapa (`REFLEJO.DAT`, 30
+>   zonas, 185 KB; va en el disco: hay que rehacer el GDI), girada con el rumbo y corriendo hacia atrás con la distancia.
+>   Cuesta ~2 ms de CPU por cuadro (29,0 fps de media frente a 29,5).
+> - **Sombras de la calzada sobre el coche** (palmeras, carteles, puentes): un degradado que recorre la carrocería.
+> - **Cristales transparentes** (`MODULATEALPHA` y `CRISTAL_ALFA`) y el **rojo menos rosa** (reflejo más suave).
+> - **Más OPB** para los translúcidos (bloques de 32 y 8 juegos de reserva), por los trozos de cielo cortados en
+>   rectángulos y la carretera que desaparece en algunos sitios: sin comprobar todavía que lo arregle.
+> GDI: `gdi.escribe` de ORC2CDC con `datos3` + `REFLEJO.DAT` y el `1ST_READ_pad.BIN` (en el disco local de la máquina
+> virtual), luego `tools/withfiles.py CARPETA --perfil orc3 --cab ct --batch disc.gdi`. md5 `.gz` `7dfcb644ee58f5f55f4a22a2639a794f`.
+>
 > **2026-11-18 09:30: cambio de marchas en la palanca del mueble** (`-DNAOMI_PALANCA`, `demo/main.c`): con los mandos
 > `wheel` la palanca adelante llega como B y atrás como A, que en ORC2CDC eran freno y acelerador a fondo (A = gas, B / X =
 > freno); ahora suben y bajan de marcha en el cambio manual, y gas y freno salen solo de los pedales. md5 `.gz`
@@ -44,6 +60,7 @@ desde tu ISO del juego).
 | `kos-d81aa3f-naomi_host.patch` | KallistiOS `d81aa3f` (la que usa ORC2CDC) con `NAOMI_HOST`: el parche de `homebrew/mk64` llevado a esta versión (cima de RAM bajo el residente, maple por el residente, bus G1, vídeo, FIFO G2, DMA del AICA, bloque `LIVE`) |
 | `orc2cdc-3539fa6-naomi.patch` | ORC2CDC `3539fa6`: `comun/gd.c` lee ficheros ZCK1 (con `-DGD_ZCK`), `comun/musica.c` toca `MUSn.A22` a 22050 Hz, `demo/Makefile` enlaza el inflate de zlib |
 | `zck.py` | un fichero del disco a ZCK1: trozos de 64 KB comprimidos cada uno con zlib (nivel 9), para leer cualquier sector sin descomprimir el fichero entero |
+| `reflejo.py` | las panorámicas del reflejo de la carrocería (`REFLEJO.DAT`): rasterizado por software de cada etapa desde la carretera, con las herramientas de ORC2CDC (`pvs.py`, `pak_union.py`, `vq.py`) |
 | `adp22.c` | una pista `MUSn.ADP` (ADPCM de Yamaha estéreo, 44,1 kHz) a `MUSn.A22` (la mitad de muestras, se toca a 22050 Hz con el mismo tono) |
 
 ## Cómo se hizo (2026-11-17)

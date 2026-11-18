@@ -124,7 +124,7 @@ index 02a06c4..5933b86 100644
  # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
  # del TA (docs/DREAMCAST.md)
 diff --git a/demo/main.c b/demo/main.c
-index 2e885cc..69cfbbb 100644
+index 2e885cc..3ea138b 100644
 --- a/demo/main.c
 +++ b/demo/main.c
 @@ -290,6 +290,20 @@ static inline int malla_de_cartel(const modelo_t *m, const malla_t *ma)
@@ -185,7 +185,25 @@ index 2e885cc..69cfbbb 100644
  #define TA_MARGEN (64 * 1024)                            /* cabeceras vacias de fin de lista y prudencia */
  #define TA_RESERVA_2D (64 * 1024)                        /* minimo para lo 2D (medido: unos 450 vertices) */
  #define TA_BPV_MIN 56                                    /* bytes por vertice 2D (1,3 x 42,5 medidos en la consola) */
-@@ -9343,6 +9364,14 @@ static uint32_t cex_mul(uint32_t c, uint32_t luz)
+@@ -881,6 +902,7 @@ static uint32_t ta_otros_ult, ta_min_otros_teo, ta_traf_teo;   /* bytes de lo qu
+                                                             teorico) y teoricos del coche de trafico mayor con LOD 0 */
+ static uint32_t ta_teo_3d, ta_tiras;                     /* bytes teoricos y tiras 3D del cuadro */
+ static uint32_t ta_real_ult, ta_opb_ult;                 /* lo que gasto de verdad el TA en el cuadro anterior */
++static uint32_t ta_raw_vb, ta_raw_opb, ta_raw_opbtot;     /* NAOMI: los registros tal cual (maximo por ventana de naomi_med) */
+ static uint32_t ta_teo_ult, ta_x_max;                    /* su cuenta teorica y el mayor real / teorico (x 1000) desde
+                                                             que se enciende: la linea "TA" de las medidas (pausa, Y) */
+ static int ta_freno;                                     /* 0..3: OPB muy lleno, la etapa baja a (4 - freno) / 4 */
+@@ -1016,6 +1038,9 @@ static void ta_fin_cuadro(void)
+     ta_v2d_ult = ta_v2d; ta_otros_ult = ta_vb - ta_et - ta_bo; ta_bo_ult = ta_bo_pide;
+     ta_real_ult = usado < TA_VB_BYTES ? usado : 0;
+     ta_opb_ult = opb <= opb_tot ? opb : 0;               /* Flycast no lleva estos registros: 0 */
++    if (usado > ta_raw_vb) ta_raw_vb = usado;           /* (naomi_med: lo leido, sin filtrar, maximo de la ventana) */
++    if (opb > ta_raw_opb) ta_raw_opb = opb;
++    ta_raw_opbtot = opb_tot;
+     if (ta_opb_ult > opb_tot / 10 * 7) { if (ta_freno < 3) ta_freno++; ta_corto = 1; }
+     else if (ta_opb_ult < opb_tot / 2 && ta_freno) ta_freno--;
+     ta_teo_ult = teo;
+@@ -9343,10 +9368,22 @@ static uint32_t cex_mul(uint32_t c, uint32_t luz)
  {
      return 0xFF000000u | ((((c >> 16) & 255) * luz / 255) << 16) | ((((c >> 8) & 255) * luz / 255) << 8) | ((c & 255) * luz / 255);
  }
@@ -200,16 +218,30 @@ index 2e885cc..69cfbbb 100644
  /* colores de pintura del color c (1..8) */
  /* luz del coche en carrera (coche_luz): la del entorno 2 del original (scn_env_sun lista 2; 40D840(2) en 46BD30) en
     el marco del modelo; cex_luz_on = 0: la luz de tools/conv_coche.py (menu) */
-@@ -9365,7 +9394,7 @@ static void coche_color(int c)
+ static float cex_L[3], cex_lv[12]; static int cex_luz_on;
++static uint32_t *som_ofs0; static int som_sucio;               /* sombras sobre el coche (coche_sombra, mas abajo) */
++#ifndef SOMBRA_COCHE
++#define SOMBRA_COCHE 0
++#endif
+ static void coche_color(int c)
+ {
+     uint32_t k, i;
+@@ -9365,9 +9402,13 @@ static void coche_color(int c)
                  col = 0xFF000000u | (uint32_t)(((p >> 16) & 255) * lr[0]) << 16 | (uint32_t)(((p >> 8) & 255) * lr[1]) << 8 | (uint32_t)((p & 255) * lr[2]);
              } else col = cex_mul(p, q >> 24);
              if (e->tipo == 1) coche.verts[m->v0 + i].c = (coche.verts[m->v0 + i].c & 0xFF000000u) | (col & 0xFFFFFF);
 -            else coche.ofs[m->v0 + i] = col;
-+            else coche.ofs[m->v0 + i] = CRISTAL_MALLA(e) ? cex_mul(col, (uint32_t)(CRISTAL_ALFA * 255.0f)) : col;
++            else {
++                coche.ofs[m->v0 + i] = CRISTAL_MALLA(e) ? cex_mul(col, (uint32_t)(CRISTAL_ALFA * 255.0f)) : col;
++                if (som_ofs0) som_ofs0[m->v0 + i] = coche.ofs[m->v0 + i];
++            }
          }
      }
++    som_sucio = 1;
      cex_color = c;
-@@ -9485,10 +9514,17 @@ static uint32_t noche_ban(void)
+ }
+ /* la luz de los coches (entorno 2) en la pintura del coche del jugador (coche_color): en el marco del modelo (mc,
+@@ -9485,10 +9526,17 @@ static uint32_t noche_ban(void)
  static matrix_t ani_m[NPZ] __attribute__((aligned(32)));      /* matriz de cada pieza en el marco del coche */
  /* lee el CEX2 del coche recien cargado: desplazamiento por vertice, cabeceras con desplazamiento para el entorno y
     grupos de luces */
@@ -227,15 +259,16 @@ index 2e885cc..69cfbbb 100644
      for (k = 0; k < cex_n; k++) {
          int32_t t = coche.mallas[cex_m[k].malla].tex;
          if (cex_m[k].tipo >= 2 && t >= 0) compila_cab(&coche, t, cex_m[k].tipo == 3 ? 3 : 1);
-@@ -9498,6 +9534,7 @@ static void coche_cex(int c, int taxi)
+@@ -9498,6 +9546,8 @@ static void coche_cex(int c, int taxi)
  {
      const uint32_t *w = (const uint32_t *)coche.ruta; uint32_t k;
      cex_n = 0; cex_ngrp = 0; cex_color = 0; cex_luces = -1; cex_taxi = taxi; cex_freno_hold = 0; free(cex_n0); cex_n0 = NULL; nsvol = 0;
 +    ref_on = 0; ref_clave = 0; free(ref_c0); ref_c0 = NULL; ref_nc = 0;
++    free(som_ofs0); som_ofs0 = NULL; som_sucio = 1;
      if (!w || coche.paso_ruta != 1 || coche.nruta < 6 || memcmp(w, "CEX2", 4) || w[1] != 8) return;
      if (6 + 8 * w[2] + 5 * w[3] + w[4] + 2 * w[5] > coche.nruta) return;
      cex_nsl = w[2]; cex_col = w + 6; cex_m = (const cex_t *)(cex_col + 8 * cex_nsl); cex_vd = (const uint32_t *)(cex_m + w[3]);
-@@ -9511,6 +9548,14 @@ static void coche_cex(int c, int taxi)
+@@ -9511,7 +9561,16 @@ static void coche_cex(int c, int taxi)
          coche.ofs = (uint32_t *)(void *)(coche_bloque + coche_usado); memset(coche.ofs, 0, coche.nvert * sizeof(uint32_t));
      } else if (!(coche.ofs = calloc(coche.nvert, sizeof(uint32_t)))) { free(cex_n0); cex_n0 = NULL; return; }
      cex_n = w[3]; cex_ngrp = w[5];
@@ -248,9 +281,11 @@ index 2e885cc..69cfbbb 100644
 +            }
 +        }
      coche_cab_cex();
++    if (SOMBRA_COCHE) som_ofs0 = calloc(coche.nvert, sizeof(uint32_t));   /* (sin RAM: sin sombras) */
      coche_color(c);
      coche_luces(0, 0, 0);                                       /* pilotos sin luces ni freno */
-@@ -9549,7 +9594,7 @@ static void coche_entorno(matrix_t mc)
+ #ifdef PRUEBA_FRENO_LOAD
+@@ -9549,7 +9608,7 @@ static void coche_entorno(matrix_t mc)
      for (k = 0; k < cex_n; k++) {
          const cex_t *e = cex_m + k; const malla_t *m = coche.mallas + e->malla; vert_t *v = coche.verts + m->v0;
          const uint32_t *q = cex_vd + e->v0;
@@ -259,7 +294,7 @@ index 2e885cc..69cfbbb 100644
          p = m->nodo < 0 ? 0 : (m->nodo >> 8) & 0xFF; if (p >= NPZ) p = 0;
          a = A[p]; b = B[p];
  #if defined(CON_SH4ZAM) && !defined(SIN_SHZ_ENTORNO)
-@@ -9577,6 +9622,189 @@ static void coche_entorno(matrix_t mc)
+@@ -9577,6 +9636,331 @@ static void coche_entorno(matrix_t mc)
      }
  }
  
@@ -446,10 +481,152 @@ index 2e885cc..69cfbbb 100644
 +    return 1;
 +}
 +
++/* Sombras de la calzada sobre el coche (DESVIACION pedida por el usuario, 2026-11-18, NAOMI). En las etapas las sombras
++   de las palmeras, carteles, puentes y vallas son mallas planas aparte de la lista transparente con una textura oscura
++   con alfa (BEAC, SEG17: la 37, 128x128, la sombra de una palmera; 6, 15 y 16, bandas). El coche no se oscurecia al
++   pasar por encima. Ahora, en carrera: de cada tramo subido (etapa, union, siguiente) se apuntan una vez sus mallas de
++   sombra (lista 2, planas: menos de SOM_PLANO m de alto, y con la textura oscura: luminancia media de 9 texeles <
++   SOM_LUM, del blob en la RAM con texel_de); cada cuadro se miran SOM_N puntos a lo largo del coche (su eje z, de
++   punta a punta) sobre esas mallas (esfera de la malla y luego sus triangulos en x, z, con la UV interpolada y el
++   texel: alfa x lo oscuro); y la pintura (desplazamiento de la carroceria con el reflejo, coche_reflejo) y la fuerza
++   del reflejo se multiplican por 1 - SOM_K x la sombra interpolada a lo largo del coche: la sombra lo recorre de la
++   punta a la cola al pasar. Solo se reescriben los vertices cuando cambia la sombra (en 16 niveles): fuera de las
++   sombras no cuesta nada. La forma de la sombra (las hojas) no se ve en la carroceria: es un degradado a lo largo */
++#ifndef SOM_K
++#define SOM_K 0.55f
++#endif
++#define SOM_N 6
++#define SOM_PLANO 0.8f
++#define SOM_LUM 90
++typedef struct { const uint8_t *datos; uint16_t *ml; uint32_t n; } som_mod_t;
++static som_mod_t som_m[3];
++static uint8_t som_q[SOM_N], som_aplicada;                     /* sombra de cada punto (0..15) puesta en los vertices */
++static float som_z0, som_z1; static int som_z_ok;
++/* ARGB (0..255 cada uno) del texel (u, v) de la textura i de mo (del blob; la textura como venia) */
++static uint32_t som_texel(const modelo_t *mo, int i, float u, float v)
++{
++    static const uint8_t CAN[3][4][2] = { { { 15, 1 }, { 10, 5 }, { 5, 5 }, { 0, 5 } }, { { 0, 0 }, { 11, 5 }, { 5, 6 }, { 0, 5 } },
++                                          { { 12, 4 }, { 8, 4 }, { 4, 4 }, { 0, 4 } } };
++    const tex_t *t = (mo->tex0 ? mo->tex0 : mo->texs) + i; uint32_t fb = t->fmt & 0xff, w = t->w, h = t->h, sd, x, y, k, r = 0, c;
++    uint16_t tx;
++    if (fb > 2 || w < 8 || h < 8) return 0;
++    sd = w < h ? w : h;
++    u -= floorf(u); v -= floorf(v);
++    x = (uint32_t)(u * w) & (w - 1); y = (uint32_t)(v * h) & (h - 1);
++    k = (w > h ? x / sd : y / sd) * sd * sd + (tw_bits(y % sd) | tw_bits(x % sd) << 1);
++    tx = texel_de(mo, t, k);
++    for (c = 0; c < 4; c++) {
++        uint32_t mx = (1u << CAN[fb][c][1]) - 1, val = CAN[fb][c][1] ? ((tx >> CAN[fb][c][0]) & mx) * 255 / mx : 255;
++        r |= val << (24 - 8 * c);
++    }
++    return r;
++}
++/* las mallas de sombra de mo (una vez por fichero subido; sin el blob en la RAM, ninguna) */
++static void som_prepara(som_mod_t *sm, const modelo_t *mo)
++{
++    uint32_t k, n = 0, cap = 0;
++    free(sm->ml); sm->ml = NULL; sm->n = 0; sm->datos = mo->datos;
++    if (!mo->datos || !mo->blob || !mo->tv) return;
++    for (k = mo->inicio[2]; k < mo->inicio[3]; k++) {
++        const malla_t *m = mo->mallas + k; const vert_t *v = mo->verts + m->v0; float y0 = 1e9f, y1 = -1e9f, u0 = 1e9f, u1 = -1e9f, v0 = 1e9f, v1 = -1e9f;
++        uint32_t i, lum = 0, al = 0; int a, b;
++        if (m->tex < 0 || m->n < 3 || m->n > 128 || k > 0xFFFF) continue;
++        for (i = 0; i < m->n; i++) {
++            y0 = fminf(y0, v[i].y); y1 = fmaxf(y1, v[i].y);
++            u0 = fminf(u0, v[i].u); u1 = fmaxf(u1, v[i].u); v0 = fminf(v0, v[i].v); v1 = fmaxf(v1, v[i].v);
++        }
++        if (y1 - y0 > SOM_PLANO) continue;
++        for (a = 0; a < 3; a++) for (b = 0; b < 3; b++) {
++            uint32_t c = som_texel(mo, m->tex, u0 + (u1 - u0) * (0.2f + 0.3f * a), v0 + (v1 - v0) * (0.2f + 0.3f * b));
++            lum += (((c >> 16) & 255) * 3 + ((c >> 8) & 255) * 6 + (c & 255)) / 10; al += c >> 24;
++        }
++        if (lum / 9 >= SOM_LUM || al / 9 < 16) continue;
++        if (n == cap) { uint16_t *q = realloc(sm->ml, (cap = cap ? 2 * cap : 64) * sizeof(uint16_t)); if (!q) break; sm->ml = q; }
++        sm->ml[n++] = (uint16_t)k;
++    }
++    sm->n = n;
++    dbglog(DBG_INFO, "SOMBRAS: %u mallas de sombra\n", (unsigned)n);
++}
++/* lo oscuro (0..1) en el punto p del mundo: lo mas oscuro de las mallas de sombra que tiene debajo */
++static float som_en(const float *p)
++{
++    float d = 0; int t;
++    for (t = 0; t < 3; t++) {
++        const modelo_t *mo = tramos[t]; const som_mod_t *sm = som_m + t; uint32_t j;
++        if (!mo->datos || !mo->blob || sm->datos != mo->datos) continue;
++        for (j = 0; j < sm->n; j++) {
++            const malla_t *m = mo->mallas + sm->ml[j]; const vert_t *v = mo->verts + m->v0; float dx = p[0] - m->cx, dz = p[2] - m->cz; uint32_t i;
++            if (dx * dx + dz * dz > m->r * m->r || fabsf(p[1] - m->cy) > 4.0f) continue;
++            for (i = 0; i + 2 < m->n; i++) {
++                const vert_t *a = v + i, *b = v + i + 1, *c = v + i + 2;
++                float den = (b->z - c->z) * (a->x - c->x) + (c->x - b->x) * (a->z - c->z), l0, l1, l2, s, al, lu; uint32_t tx;
++                if (fabsf(den) < 1e-6f) continue;
++                l0 = ((b->z - c->z) * (p[0] - c->x) + (c->x - b->x) * (p[2] - c->z)) / den;
++                l1 = ((c->z - a->z) * (p[0] - c->x) + (a->x - c->x) * (p[2] - c->z)) / den;
++                l2 = 1 - l0 - l1;
++                if (l0 < 0 || l1 < 0 || l2 < 0) continue;
++                tx = som_texel(mo, m->tex, l0 * a->u + l1 * b->u + l2 * c->u, l0 * a->v + l1 * b->v + l2 * c->v);
++                al = (float)(tx >> 24) * (l0 * (float)(a->c >> 24) + l1 * (float)(b->c >> 24) + l2 * (float)(c->c >> 24)) * (1.0f / 65025.0f);
++                lu = (float)((((tx >> 16) & 255) * 3 + ((tx >> 8) & 255) * 6 + (tx & 255)) / 10) * (1.0f / 255.0f);
++                s = al * (1 - lu);
++                if (s > d) d = s;
++                break;
++            }
++        }
++    }
++    return d > 1 ? 1 : d;
++}
++/* cada cuadro, despues de coche_luz */
++static void coche_sombra(matrix_t mc)
++{
++    uint8_t q[SOM_N]; int k, cambia = 0, alguna = 0; uint32_t e, i;
++    if (!SOMBRA_COCHE || !som_ofs0 || !ref_on) {
++        if (som_aplicada && som_ofs0) { som_aplicada = 0; memcpy(coche.ofs, som_ofs0, coche.nvert * sizeof(uint32_t)); if (ref_on) ref_base(1); }
++        return;
++    }
++    for (k = 0; k < 3; k++) if (som_m[k].datos != tramos[k]->datos) som_prepara(som_m + k, tramos[k]);
++    if (!som_z_ok) {                                            /* lo que ocupa la carroceria a lo largo (z del modelo) */
++        som_z0 = 1e9f; som_z1 = -1e9f;
++        for (e = 0; e < cex_n; e++) if (REF_MALLA(cex_m + e)) {
++            const malla_t *m = coche.mallas + cex_m[e].malla;
++            for (i = 0; i < m->n; i++) { som_z0 = fminf(som_z0, coche.verts[m->v0 + i].z); som_z1 = fmaxf(som_z1, coche.verts[m->v0 + i].z); }
++        }
++        som_z_ok = som_z1 > som_z0;
++        if (!som_z_ok) return;
++    }
++    for (k = 0; k < SOM_N; k++) {
++        float z = som_z0 + (som_z1 - som_z0) * k / (SOM_N - 1), p[3]; int j;
++        for (j = 0; j < 3; j++) p[j] = mc[3][j] + mc[2][j] * z + mc[1][j] * 0.6f;   /* (un poco por encima del suelo) */
++        q[k] = (uint8_t)(som_en(p) * 15.0f + 0.5f);
++        alguna |= q[k]; cambia |= q[k] != som_q[k];
++    }
++    if (!cambia && !som_sucio) return;
++    som_sucio = 0; memcpy(som_q, q, sizeof q);
++    if (!alguna && !som_aplicada) return;
++    som_aplicada = alguna != 0;
++    ref_base(1);                                                /* (la fuerza del reflejo sin sombra) */
++    for (e = 0; e < cex_n; e++) {
++        const cex_t *c = cex_m + e; const malla_t *m = coche.mallas + c->malla;
++        if (!REF_MALLA(c)) continue;
++        for (i = 0; i < cex_n0[c->malla]; i++) {
++            vert_t *v = coche.verts + m->v0 + i;
++            float g = (v->z - som_z0) / (som_z1 - som_z0) * (SOM_N - 1), d, f; int j0;
++            uint32_t ff;
++            if (g < 0) g = 0;
++            if (g > SOM_N - 1.001f) g = SOM_N - 1.001f;
++            j0 = (int)g; g -= j0;
++            d = (q[j0] + g * (q[j0 + 1] - q[j0])) * (1.0f / 15.0f);
++            f = 1 - SOM_K * d; ff = (uint32_t)(f * 255.0f);
++            coche.ofs[m->v0 + i] = alguna ? cex_mul(som_ofs0[m->v0 + i], ff) : som_ofs0[m->v0 + i];
++            if (alguna) v->c = (v->c & 0xFF000000u) | (cex_mul(v->c, ff) & 0xFFFFFF);
++        }
++    }
++}
++
  /* coche parado (seleccion, salida): ruedas, volante, faros y carroceria en reposo */
  static void coche_anima_reposo(void)
  {
-@@ -11170,6 +11398,16 @@ int or_programa_lanza(void)
+@@ -11170,6 +11554,16 @@ int or_programa_lanza(void)
      arch_exec(img, tam);
  }
  
@@ -466,7 +643,27 @@ index 2e885cc..69cfbbb 100644
  int main(int argc, char **argv)
  {
      /* bufer de parametros de TA_VB_BYTES (x2); opacos con bloques de 32 (el suelo cercano toca muchas teselas) y 4
-@@ -11281,6 +11519,7 @@ int main(int argc, char **argv)
+@@ -11177,7 +11571,18 @@ int main(int argc, char **argv)
+        en la consola real un bufer u OPB lleno cuelga el TA. Modificadores opacos (la sombra del coche, sombra_dibuja)
+        con bloques de 8 y translucidos de 16 a 8: el OPB ocupa lo mismo que antes (64 palabras por tesela). Cuentas en
+        docs/DREAMCAST.md */
+-    pvr_init_params_t pp = { { PVR_BINSIZE_32, PVR_BINSIZE_8, PVR_BINSIZE_8, 0, PVR_BINSIZE_16 }, TA_VB_BYTES, 0, 0, 0, 4 };
++    /* NAOMI (2026-11-18, fotos del usuario en el mueble): trozos rectangulares alineados con las teselas de 32 x 32
++       (cielo de otra etapa en un rectangulo, el cielo cortado en vertical u oblicuo, sobre todo en las uniones con los
++       dos cielos fundiendose) son lo que deja un OPB lleno: la PowerVR no ve lo que no cupo en esa tesela. La NAOMI 2
++       tiene 16 MB de VRAM (8,7 MB libres en carrera): translucidos con bloques de OPB_TR palabras y OPB_EXTRA juegos de
++       reserva */
++#ifndef OPB_TR
++#define OPB_TR PVR_BINSIZE_8
++#endif
++#ifndef OPB_EXTRA
++#define OPB_EXTRA 4
++#endif
++    pvr_init_params_t pp = { { PVR_BINSIZE_32, PVR_BINSIZE_8, OPB_TR, 0, PVR_BINSIZE_16 }, TA_VB_BYTES, 0, 0, 0, OPB_EXTRA };
+     int estado = TITULO, auto_ = 0, ver = VER, pausa = 0, l, i, r;
+     int reintenta = 0;                                          /* REINTENTAR del menu de pausa: salida otra vez */
+     unsigned coches_m; int ficha_ini;
+@@ -11281,6 +11686,7 @@ int main(int argc, char **argv)
      /* el humo, las marcas y las chispas (EFECTOS.DAT, siempre en VRAM) con lo fijo, antes de la pareja, el coche y el HUD:
         detras del HUD partian la VRAM libre de las carreras en dos (vram_ordena) */
      efectos_inicia();
@@ -474,7 +671,7 @@ index 2e885cc..69cfbbb 100644
      {   int pp, aa;                                             /* la pareja de OUTRUN2SP y de la licencia 0 (11 / 9) */
          if (!robot_pareja(1, 1, 0, &pp, &aa)) robot_carga(pp, aa); }
      if ((r = coche_carga(ficha_ini))) {
-@@ -11403,6 +11642,12 @@ int main(int argc, char **argv)
+@@ -11403,6 +11809,12 @@ int main(int argc, char **argv)
          if (estado != TITULO && manual_) {                      /* cambio manual: cruceta arriba sube, abajo baja */
              if (nuevo & CONT_DPAD_UP) pide_cambio = 1;
              if (nuevo & CONT_DPAD_DOWN) pide_cambio = -1;
@@ -487,7 +684,7 @@ index 2e885cc..69cfbbb 100644
          }
          if (st) {
              /* volante: el eje y la cruceta van a or2_volante en cada paso (zona muerta 0,25, rampa de la cruceta y
-@@ -11416,8 +11661,13 @@ int main(int argc, char **argv)
+@@ -11416,8 +11828,13 @@ int main(int argc, char **argv)
              if (giro < -1) giro = -1;
              /* pedales: volumenes 1 y 2 del original, 0..255 tal cual (el original lee la presion de los botones
                 sin curva); A y B/X a fondo */
@@ -501,16 +698,18 @@ index 2e885cc..69cfbbb 100644
          }
          mando.nivel = etapa_n;
  
-@@ -12223,7 +12473,7 @@ int main(int argc, char **argv)
+@@ -12223,8 +12640,9 @@ int main(int argc, char **argv)
  #else
          if (cex_n || cex_taxi) coche_luces(ani.ban, estado != TITULO && (meta_pas ? meta.freno != 0 : fis_ok ? fis.freno_op != 0 : yo.freno_ant > 0.0f), estado != TITULO && ani.caliente);   /* car+38 != 0 (con la fisica del original coche_paso no toca freno_ant: los pilotos del freno no se encendian nunca) */
  #endif
 -        if (cex_n) coche_entorno(mod_coche);
 +        if (cex_n) { coche_reflejo(mod_coche, estado != TITULO); coche_entorno(mod_coche); }
          if (cex_n) coche_luz(mod_coche, estado != TITULO);     /* la luz del entorno 2 en la pintura */
++        if (cex_n) coche_sombra(mod_coche);                     /* las sombras de la calzada sobre la carroceria */
          rc_chr.listo = rc_band.listo = 0; chr_vtx_ult = chr_vtx; chr_us_ult = chr_us; chr_vtx = chr_us = 0;
          if (fin24 && chr_ok == 1) robot_matrices(&rc_chr, &mod_coche, 0);   /* la pareja del final */
-@@ -12235,7 +12485,7 @@ int main(int argc, char **argv)
+         if (chr_ok == 1 && estado != TITULO && !mundo_fuera) {
+@@ -12235,7 +12653,7 @@ int main(int argc, char **argv)
          tri_enviados = 0; vtx_ult = vtx_env; vtx_env = 0; ta_inicia_cuadro(); vtx_et_ult = vtx_et; vtx_et = 0;
          en_cuenta = estado == CUENTA;                           /* (el precalentamiento manda hasta el semaforo) */
          arranque_hold = estado == CARRERA && t_estado < REPARTO_ARRANQUE;   /* (suelo del arranque, ver arriba) */
@@ -519,7 +718,7 @@ index 2e885cc..69cfbbb 100644
          prf_v0 = 0;
  #endif
          PRF(0);
-@@ -12470,6 +12720,10 @@ int main(int argc, char **argv)
+@@ -12470,6 +12888,10 @@ int main(int argc, char **argv)
          diag_dib_us = (uint32_t)(timer_us_gettime64() - c0);
  #endif
          tcpu += timer_us_gettime64() - c0;
@@ -530,14 +729,14 @@ index 2e885cc..69cfbbb 100644
  #ifdef DIAG_PICO
          dg_ult_dib = timer_us_gettime64() - c0;
  #endif
-@@ -12490,6 +12744,16 @@ int main(int argc, char **argv)
+@@ -12490,6 +12912,16 @@ int main(int argc, char **argv)
          if (++cuadro % 30 == 0) {
              uint64_t t1 = timer_ms_gettime64();
              fps = 30000.0f / (float)(t1 - t0); ms = tcpu / 30000.0f; ms_log = t_log / 30000.0f; t0 = t1; tcpu = 0; t_log = 0;
 +            naomi_med.fps = fps; naomi_med.ms = ms; naomi_med.ms_log = ms_log; naomi_med.lejos = lejos;
-+            naomi_med.vtx = vtx_ult; naomi_med.tri = tri_enviados; naomi_med.ta_real = ta_real_ult; naomi_med.ta_opb = ta_opb_ult;
++            naomi_med.vtx = vtx_ult; naomi_med.tri = tri_enviados; naomi_med.ta_real = ta_raw_vb; naomi_med.ta_opb = ta_raw_opb; naomi_med.vbl = ta_raw_opbtot; ta_raw_vb = ta_raw_opb = 0;
 +            naomi_med.tarde = pres_tarde; naomi_med.estado = (uint32_t)estado; naomi_med.nodo = (uint32_t)cur_nodo;
-+            naomi_med.gd_us = (uint32_t)gd_us_juego(); naomi_med.vbl = vbl_n;
++            naomi_med.gd_us = (uint32_t)gd_us_juego();
 +            if (cur_nodo >= 0) memcpy((void *)&naomi_med.zona, curso[cur_nodo].zona, 4);
 +#ifdef NAOMI_PRF
 +            { int j; for (j = 0; j < 10; j++) { naomi_med.prf_us[j] = prf_us[j] / 30; naomi_med.prf_v[j] = prf_v[j] / 30; }
