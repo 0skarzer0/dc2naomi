@@ -109,3 +109,22 @@ con `med.py` a la vez (`/root/med_VID.csv` en la Pi; el vídeo empieza 6,6 s ant
   girado con el rumbo de la cámara; fuerza 0,15 en los costados a 0,45 arriba. Variante RC: 29,4 fps frente a 29,5
   (21 min). Al usuario le gusta; los cristales salían opacos (las mallas de tipo 2 en la lista transparente sacan su
   transparencia del alfa del mapa del coche, ARGB1555, y el cielo es RGB565): RC2 deja esas mallas con el mapa de antes.
+
+## Reflejo del escenario, rojo y cristales (2026-11-18, desatendido)
+
+Lo que dijo el usuario con las fotos del mueble frente a las del PC: el coche siempre salió rosa en vez de rojo, los
+cristales nunca dejaron ver la carretera a través, y quiere en la carrocería el reflejo de las palmeras, los carteles y
+los edificios.
+
+- **Cristales**: las mallas de tipo 2 en la lista transparente (COCHE00: 6 mallas, alfa del vértice 140/255, gris 0x4C
+  de desplazamiento) iban con `PVR_TXRENV_MODULATE`, que en la PowerVR toma el alfa solo de la textura (el mapa del coche
+  es ARGB1555: 1 dentro del círculo), así que el alfa del vértice no contaba: cristal opaco. Ahora `MODULATEALPHA` y
+  `CRISTAL_ALFA` (0,6) sobre su alfa y su desplazamiento: ~21 % opacos.
+- **Rosa**: el reflejo se suma a la pintura (0xE21520 en COCHE00) y con el color base blanco un gris o un azul encima
+  del rojo lo vuelve rosa. En carrera la fuerza del reflejo baja a 0,08 en los costados y 0,36 arriba.
+- **Panorámicas** (`homebrew/orc2cdc/reflejo.py` → `REFLEJO.DAT`, 30 zonas, 6 KB cada una, VQ 256x64): una vista de
+  360 grados de cada zona desde la carretera, dibujada al convertir con la geometría y las texturas de su etapa. El juego
+  las sube a la VRAM al arrancar (~190 KB) y la carrocería refleja la de su zona: girada con el rumbo de la cámara (la
+  normal derecha coge lo de la derecha, la de atrás lo de detrás), a lo largo del coche (`REF_KZ`) y corriendo hacia atrás
+  con la distancia (`REF_VEL`: 0,1 de la velocidad de un espejo). Sin `REFLEJO.DAT` en el disco, el cielo de la etapa como
+  antes. Hay que añadir `REFLEJO.DAT` a los datos y rehacer el GDI (no se puede sustituir un fichero que no estaba).
