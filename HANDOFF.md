@@ -2014,3 +2014,4 @@ pasos, parches de KallistiOS `d81aa3f` y de ORC2CDC, `zck.py`, `adp22.c`).
   lecturas en trozos de 4 sectores (`GD_TROZO`) y por DMA del G1 (`DIMM_DMA`, ahora en el perfil `orc3`). Imagen nueva
   con el mismo nombre (`h-orc2c3`, md5 `.gz` `654c485f8b03d8ded6534ba244ecdc7c`), base ORC2CDC `a689a9a`.
   Imágenes de prueba `h-orcp{B,D,E,F,G,H,P}` subidas a la Pi .60 para medir (sin fila en el CSV).
+- **2026-11-18 08:15:** vuelve el taxi (`COCHE07.DAT` en `datos3`, `comun/menu.c` ya no lo bloquea); OutRunners sigue fuera (14 MB: no cabe sin quitar una canción) y la tarjeta de All I Want también. `h-orc2c3`, md5 `.gz` `a17a7cab16f8c08c5e8d4a7c691d82fd`.

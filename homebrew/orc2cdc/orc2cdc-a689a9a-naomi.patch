@@ -29,7 +29,7 @@ index 18705d7..2ab3f5a 100644
          if (r == ERR_DISC_CHG || r == ERR_NO_DISC) cdrom_reinit();
          thd_sleep(20);
 diff --git a/comun/menu.c b/comun/menu.c
-index f9e430e..c427148 100644
+index f9e430e..9d792eb 100644
 --- a/comun/menu.c
 +++ b/comun/menu.c
 @@ -99,7 +99,11 @@ static const char *const UNOM[NU] = { "TITULO_FONDO", "TITULO_LOGO", "TITULO_STA
@@ -37,7 +37,7 @@ index f9e430e..c427148 100644
  #define N_LISTAS 3
  #define N_TEMAS 29
 +#ifdef SIN_OR_TAXI
-+static const int8_t TEMAS_LISTA[N_LISTAS] = { 9, 7, 12 };   /* NAOMI: sin la tarjeta de ALL I WANT (Crazy Taxi) */
++static const int8_t TEMAS_LISTA[N_LISTAS] = { 9, 7, 12 };   /* NAOMI: sin la tarjeta de ALL I WANT (eleccion del usuario) */
 +#else
  static const int8_t TEMAS_LISTA[N_LISTAS] = { 9, 7, 13 };
 +#endif
@@ -55,24 +55,22 @@ index f9e430e..c427148 100644
      if (!p) return 0;
      if (lic_entirety(p)) return 1;
      return lic_bit(SA_BIT_OUTRUNNERS);
-@@ -432,6 +440,9 @@ static int menu_or_ok(void)
+@@ -432,6 +440,7 @@ static int menu_or_ok(void)
  int menu_taxi_comprado(void)
  {
      const uint8_t *p = activa();
-+#ifdef SIN_OR_TAXI
-+    (void)p; return 0;                                      /* NAOMI: sin el taxi (COCHE15.DAT) en el disco */
-+#endif
++
      if (!p) return 0;
      if (lic_entirety(p)) return 1;
      return lic_bit(SA_BIT_TAXI);
-@@ -1973,7 +1984,11 @@ static int sa_tiene(int b)
+@@ -1973,7 +1982,11 @@ static int sa_tiene(int b)
      return b >= 0 && b < 0x96 * 8 && ((p[0x28 + b / 8] >> (b % 8)) & 1);
  }   /* 0x1a1cc8 */
  static uint32_t sa_precio(int i) { return i >= 0 && i < SA_NPRECIO ? SA->precio[i] : 0; }   /* 0x1f4198 */
 -static int sa_vende(int i) { int k; for (k = 0; k < 26; k++) if (SA->fuera[k] == i) return 0; return 1; }   /* 0x25d790 */
 +static int sa_vende(int i) { int k;
 +#ifdef SIN_OR_TAXI
-+    if (i == SA_BIT_OUTRUNNERS || i == SA_BIT_TAXI) return 0;   /* NAOMI: los dos articulos, fuera de la venta */
++    if (i == SA_BIT_OUTRUNNERS) return 0;                  /* NAOMI: sin OutRunners en el disco, fuera de la venta */
 +#endif
 +    for (k = 0; k < 26; k++) if (SA->fuera[k] == i) return 0; return 1; }   /* 0x25d790 */
  /* 0x1a1ba0 (447460): sin el bit y con las millas (truncadas sin signo, 0x131ca8) >= precio: pone el bit y resta */
@@ -113,14 +111,14 @@ index 4fb4504..e7c2a93 100644
      snd_stream_volume(hs, volumen);
      arranca = 0;
 diff --git a/demo/Makefile b/demo/Makefile
-index 02a06c4..dc18c98 100644
+index 02a06c4..5933b86 100644
 --- a/demo/Makefile
 +++ b/demo/Makefile
 @@ -1,6 +1,8 @@
  # Prueba 0: KOS_BASE y el entorno de KallistiOS (source environ.sh)
  TARGET = demo.elf
  OBJS = main.o camara.o coli.o perfil.o meta.o fin.o final.o sp.o pcarga.o nombre.o ../comun/gd.o ../comun/musica.o ../comun/or2_fisica.o ../comun/turbo_taxi.o ../comun/hud.o ../comun/sfx.o ../comun/voces.o ../comun/video.o ../comun/menu.o ../comun/vmu.o ../comun/vmuesc.o ../comun/robot.o ../comun/infarto.o ../comun/modo_video.o ../comun/registro.o ../comun/sprani.o ../comun/fsp.o ../comun/rksp.o ../comun/rival.o
-+# NAOMI (dc2naomi): sin OutRunners ni el taxi en el disco (comun/menu.c)
++# NAOMI (dc2naomi): sin OutRunners (ni la tarjeta de All I Want) en el disco (comun/menu.c)
 +../comun/menu.o: CFLAGS += -DSIN_OR_TAXI
  all: rm-elf $(TARGET)
  # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
