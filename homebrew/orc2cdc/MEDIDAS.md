@@ -98,3 +98,14 @@ con `med.py` a la vez (`/root/med_VID.csv` en la Pi; el vídeo empieza 6,6 s ant
   normal en el espacio de la cámara: con la cámara detrás, el capó coge casi siempre la misma zona negra y nunca refleja
   la etapa. El PC dibuja un cubo dinámico con `cs_ENV_<zona>` (race_env_model_44cd30); propuesta barata pendiente de
   decidir: reflejar el cielo de la etapa girado por el rumbo del coche.
+
+### Probado en el mueble (2026-11-18 tarde)
+
+- **Rayas**: `SUELO_SS=1` solo apenas se nota; `SUELO_SS=1` + `SUELO_MIPBIAS=PVR_MIPBIAS_0_25` (variante S25, el ajuste
+  más nítido que admite la PowerVR) sí: las rayas se ven bastante más lejos y el usuario no nota centelleo. 29,3 fps de
+  media frente a 29,5 (13 min). Quitar los mipmaps del suelo (copia sin niveles de las texturas VQ al subirlas) queda
+  para una futura versión mejorada (decisión del usuario: toca el reparto de la VRAM entre etapa y unión).
+- **Reflejo del cielo** (`-DREFLEJO_CIELO=1`, `demo/main.c coche_reflejo`): la carrocería refleja el cielo de la etapa,
+  girado con el rumbo de la cámara; fuerza 0,15 en los costados a 0,45 arriba. Variante RC: 29,4 fps frente a 29,5
+  (21 min). Al usuario le gusta; los cristales salían opacos (las mallas de tipo 2 en la lista transparente sacan su
+  transparencia del alfa del mapa del coche, ARGB1555, y el cielo es RGB565): RC2 deja esas mallas con el mapa de antes.

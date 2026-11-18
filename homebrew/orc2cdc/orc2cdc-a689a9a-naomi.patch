@@ -124,7 +124,7 @@ index 02a06c4..5933b86 100644
  # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
  # del TA (docs/DREAMCAST.md)
 diff --git a/demo/main.c b/demo/main.c
-index 2e885cc..f36fc27 100644
+index 2e885cc..0fe6ce6 100644
 --- a/demo/main.c
 +++ b/demo/main.c
 @@ -290,6 +290,20 @@ static inline int malla_de_cartel(const modelo_t *m, const malla_t *ma)
@@ -181,7 +181,184 @@ index 2e885cc..f36fc27 100644
  #define TA_MARGEN (64 * 1024)                            /* cabeceras vacias de fin de lista y prudencia */
  #define TA_RESERVA_2D (64 * 1024)                        /* minimo para lo 2D (medido: unos 450 vertices) */
  #define TA_BPV_MIN 56                                    /* bytes por vertice 2D (1,3 x 42,5 medidos en la consola) */
-@@ -11170,6 +11187,16 @@ int or_programa_lanza(void)
+@@ -9485,10 +9502,17 @@ static uint32_t noche_ban(void)
+ static matrix_t ani_m[NPZ] __attribute__((aligned(32)));      /* matriz de cada pieza en el marco del coche */
+ /* lee el CEX2 del coche recien cargado: desplazamiento por vertice, cabeceras con desplazamiento para el entorno y
+    grupos de luces */
++/* reflejo del cielo de la etapa en la carroceria (REFLEJO_CIELO, mas abajo coche_reflejo): estado */
++static int ref_on; static const modelo_t *ref_mo; static pvr_ptr_t ref_tv; static int ref_t = -1; static uint32_t *ref_c0, ref_nc;
++/* las mallas de la carroceria que llevan el cielo: tipo 2 con su textura fuera de la lista transparente (las de la
++   transparente son cristales: su transparencia sale del alfa del mapa del coche, ARGB1555, y el cielo no lo tiene;
++   con el cielo salian opacos y no se veia la carretera a traves; usuario, 2026-11-18) */
++#define REF_MALLA(e) ((e)->tipo == 2 && coche.mallas[(e)->malla].tex >= 0 && coche.texs[coche.mallas[(e)->malla].tex].lista != 2)
+ /* cabeceras de las texturas de la pintura y el reflejo (con desplazamiento: especular 1, sumada 3) */
+ static void coche_cab_cex(void)
+ {
+     uint32_t k;
++    ref_mo = NULL;                                              /* (las del reflejo del cielo se rehacen si van) */
+     for (k = 0; k < cex_n; k++) {
+         int32_t t = coche.mallas[cex_m[k].malla].tex;
+         if (cex_m[k].tipo >= 2 && t >= 0) compila_cab(&coche, t, cex_m[k].tipo == 3 ? 3 : 1);
+@@ -9498,6 +9522,7 @@ static void coche_cex(int c, int taxi)
+ {
+     const uint32_t *w = (const uint32_t *)coche.ruta; uint32_t k;
+     cex_n = 0; cex_ngrp = 0; cex_color = 0; cex_luces = -1; cex_taxi = taxi; cex_freno_hold = 0; free(cex_n0); cex_n0 = NULL; nsvol = 0;
++    ref_on = 0; ref_mo = NULL; ref_t = -1; free(ref_c0); ref_c0 = NULL; ref_nc = 0;
+     if (!w || coche.paso_ruta != 1 || coche.nruta < 6 || memcmp(w, "CEX2", 4) || w[1] != 8) return;
+     if (6 + 8 * w[2] + 5 * w[3] + w[4] + 2 * w[5] > coche.nruta) return;
+     cex_nsl = w[2]; cex_col = w + 6; cex_m = (const cex_t *)(cex_col + 8 * cex_nsl); cex_vd = (const uint32_t *)(cex_m + w[3]);
+@@ -9549,7 +9574,7 @@ static void coche_entorno(matrix_t mc)
+     for (k = 0; k < cex_n; k++) {
+         const cex_t *e = cex_m + k; const malla_t *m = coche.mallas + e->malla; vert_t *v = coche.verts + m->v0;
+         const uint32_t *q = cex_vd + e->v0;
+-        if (e->tipo < 2) continue;
++        if (e->tipo < 2 || (ref_on && REF_MALLA(e))) continue;  /* (la carroceria con el cielo: coche_reflejo) */
+         p = m->nodo < 0 ? 0 : (m->nodo >> 8) & 0xFF; if (p >= NPZ) p = 0;
+         a = A[p]; b = B[p];
+ #if defined(CON_SH4ZAM) && !defined(SIN_SHZ_ENTORNO)
+@@ -9577,6 +9602,141 @@ static void coche_entorno(matrix_t mc)
+     }
+ }
+ 
++/* Reflejo del escenario en la carroceria (DESVIACION pedida por el usuario, 2026-11-18, NAOMI; docs/PARIDAD.md,
++   Coches: reflejo). El mapa de entorno del coche es una vista fija y oscura (COCHE00: media 35/255) indexada por la
++   normal vista desde la camara: con la camara detras, el capo coge casi siempre la misma zona y no refleja la etapa.
++   El PC dibuja cada cuadro un cubo con cs_ENV_<zona> (race_env_model_44cd30): demasiado para la CPU de la NAOMI.
++   Imitacion sin coste por cuadro: en carrera, la carroceria (mallas de tipo 2 del CEX2; los cristales, tipo 3, siguen
++   con su mapa) usa la textura del cielo de la etapa que se dibuja (la mayor de la lista 3, grupo 0, por encima del
++   horizonte: una panoramica con u alrededor, unas REF_REP vueltas, y v = 0 en el horizonte .. 1 en el cenit), con
++   u = rumbo de la camara + REF_KU x la normal hacia la derecha de la pantalla (las nubes resbalan por la carroceria al
++   girar) y v = REF_V0 + REF_VUP x la normal hacia arriba (el capo coge el cielo alto; los costados y la trasera, la
++   franja de nubes del horizonte). La fuerza: el color base del vertice (textura x base + pintura), REF_K0 + REF_K1 x
++   lo que mira arriba, puesto una vez al entrar (y el de antes, de vuelta al salir). Mismas cuentas por vertice que
++   coche_entorno. 0: el mapa del coche siempre (lo de antes) */
++#ifndef REFLEJO_CIELO
++#define REFLEJO_CIELO 0
++#endif
++#ifndef REF_REP
++#define REF_REP 4.0f
++#endif
++#ifndef REF_KU
++#define REF_KU 0.25f
++#endif
++#ifndef REF_V0
++#define REF_V0 0.12f
++#endif
++#ifndef REF_VUP
++#define REF_VUP 0.5f
++#endif
++#ifndef REF_K0
++#define REF_K0 0.15f
++#endif
++#ifndef REF_K1
++#define REF_K1 0.30f
++#endif
++static int ref_cielo_tex(const modelo_t *mo)                    /* la textura del cielo de mo (o -1) */
++{
++    uint32_t k, area = 0; int mejor = -1;
++    if (!mo || !mo->tv) return -1;
++    for (k = mo->inicio[3]; k < mo->inicio[4]; k++) {
++        const malla_t *m = mo->mallas + k; const tex_t *t; const vert_t *vv; uint32_t q;
++        if (m->nodo < -256 || m->tex < 0 || (uint32_t)m->tex >= mo->ntex || m->n < 3) continue;   /* (grupo 0) */
++        if (!mo->tv[m->tex] || mo->tv[m->tex] == tex_gris) continue;
++        t = mo->texs + m->tex; if ((t->fmt & 0xff) > 2 || t->w * t->h <= area) continue;
++        vv = mo->verts + m->v0; for (q = 0; q < m->n && vv[q].y <= 0.0f; q++) ;
++        if (q == m->n) continue;                                /* (todo por debajo del horizonte: el mar lejano) */
++        area = t->w * t->h; mejor = m->tex;
++    }
++    return mejor;
++}
++/* la cabecera de la carroceria (textura t del coche: su lista y estado) con la textura i del cielo de mo */
++static void ref_cab(uint32_t t, const modelo_t *mo, int i)
++{
++    const tex_t *tl = coche.texs + t, *ti = mo->texs + i; uint32_t f, fb = ti->fmt & 0xff, vq = ti->fmt & 0x100, n = ((ti->fmt >> 16) & 0xff) + 1;
++    pvr_ptr_t dir = vq ? (pvr_ptr_t)((uintptr_t)mo->tv[i] - (2048 - 8 * n)) : mo->tv[i];
++    for (f = 0; f < 2; f++) {
++        pvr_poly_cxt_t cx;
++        pvr_poly_cxt_txr(&cx, LISTA[tl->lista], FMT[fb] | PVR_TXRFMT_TWIDDLED | (vq ? PVR_TXRFMT_VQ_ENABLE : 0), ti->w, ti->h, dir,
++                         PVR_FILTER_BILINEAR);
++        cx.gen.fog_type = f ? PVR_FOG_DISABLE : PVR_FOG_TABLE; cx.gen.culling = PVR_CULLING_NONE;
++        cx.txr.env = PVR_TXRENV_MODULATE; cx.gen.specular = PVR_SPECULAR_ENABLE;
++        if (tl->fmt & 0x800) { cx.depth.comparison = PVR_DEPTHCMP_GEQUAL; if (tl->lista == 2) cx.txr.env = PVR_TXRENV_MODULATEALPHA; }
++        if ((tl->fmt & 0x400) && tl->lista == 2) { cx.blend.src = PVR_BLEND_SRCALPHA; cx.blend.dst = PVR_BLEND_ONE; }
++        cx.txr.uv_clamp = PVR_UVCLAMP_V;                        /* (u da la vuelta; v no pasa del horizonte ni del cenit) */
++        if (ti->fmt & 0x200) cx.txr.mipmap = true;
++        pvr_poly_compile(&coche.cabs[f][t], &cx);
++    }
++}
++/* base de los vertices de la carroceria: con el reflejo, la fuerza (gris, el alfa de siempre); sin el, la guardada */
++static void ref_base(int on)
++{
++    uint32_t k, i, j = 0;
++    if (on && !ref_c0) {
++        for (k = 0; k < cex_n; k++) if (REF_MALLA(cex_m + k)) ref_nc += cex_n0[cex_m[k].malla];
++        if (!(ref_c0 = malloc(ref_nc * sizeof(uint32_t) + 4))) { ref_nc = 0; return; }
++        for (k = 0; k < cex_n; k++) if (REF_MALLA(cex_m + k)) {
++            const malla_t *m = coche.mallas + cex_m[k].malla;
++            for (i = 0; i < cex_n0[cex_m[k].malla]; i++) ref_c0[j++] = coche.verts[m->v0 + i].c;
++        }
++        j = 0;
++    }
++    if (!ref_c0) return;
++    for (k = 0; k < cex_n; k++) if (REF_MALLA(cex_m + k)) {
++        const malla_t *m = coche.mallas + cex_m[k].malla; const uint32_t *q = cex_vd + cex_m[k].v0;
++        for (i = 0; i < cex_n0[cex_m[k].malla]; i++, j++) {
++            uint32_t c = ref_c0[j];
++            if (on) {                                           /* (las normales del fichero miran hacia dentro) */
++                float up = -(float)(int8_t)(q[i] >> 8) * (1.0f / 127.0f), g = REF_K0 + REF_K1 * (up > 0 ? up : 0);
++                uint32_t gi = (uint32_t)(g * 255.0f); if (gi > 255) gi = 255;
++                c = (c & 0xFF000000u) | gi << 16 | gi << 8 | gi;
++            }
++            coche.verts[m->v0 + i].c = c;
++        }
++    }
++}
++/* cada cuadro, antes de coche_entorno: 1 si la carroceria va con el cielo (y sus UV ya puestas) */
++static int coche_reflejo(matrix_t mc, int en_carrera)
++{
++    float ac[3], bc[3], A[NPZ][3], B[NPZ][3], u0, *a, *b; uint32_t k, i; int j, p, on, ti = -1;
++    on = REFLEJO_CIELO && en_carrera && cur_nodo >= 0 && cielo && (ti = ref_cielo_tex(cielo)) >= 0;
++    if (!on) {
++        if (ref_on) { ref_on = 0; ref_base(0); coche_cab_cex(); }
++        return 0;
++    }
++    if (!ref_on || ref_mo != cielo || ref_t != ti || ref_tv != cielo->tv[ti]) {
++        for (k = 0; k < cex_n; k++) {
++            int32_t t = coche.mallas[cex_m[k].malla].tex;
++            if (REF_MALLA(cex_m + k)) ref_cab((uint32_t)t, cielo, ti);
++        }
++        if (!ref_on) ref_base(1);
++        ref_on = 1; ref_mo = cielo; ref_t = ti; ref_tv = cielo->tv[ti];
++    }
++    u0 = -atan2f(ade[0], ade[2]) * (REF_REP / 6.28318548f); u0 -= floorf(u0);
++    for (j = 0; j < 3; j++) {
++        ac[j] = (mc[j][0] * der[0] + mc[j][1] * der[1] + mc[j][2] * der[2]) * (-REF_KU / 127.0f);
++        bc[j] = mc[j][1] * (-REF_VUP / 127.0f);                 /* (normal hacia dentro: arriba = -) */
++    }
++    for (p = 0; p < NPZ; p++)
++        for (j = 0; j < 3; j++) {
++            const float *r = ani.ok ? ani_m[p][j] : (const float[3]){ j == 0, j == 1, j == 2 };
++            A[p][j] = r[0] * ac[0] + r[1] * ac[1] + r[2] * ac[2]; B[p][j] = r[0] * bc[0] + r[1] * bc[1] + r[2] * bc[2];
++        }
++    for (k = 0; k < cex_n; k++) {
++        const cex_t *e = cex_m + k; const malla_t *m = coche.mallas + e->malla; vert_t *v = coche.verts + m->v0;
++        const uint32_t *q = cex_vd + e->v0; float a0, a1, a2, b0, b1, b2; uint32_t nv = m->n;
++        if (!REF_MALLA(e)) continue;
++        p = m->nodo < 0 ? 0 : (m->nodo >> 8) & 0xFF; if (p >= NPZ) p = 0;
++        a = A[p]; b = B[p]; a0 = a[0]; a1 = a[1]; a2 = a[2]; b0 = b[0]; b1 = b[1]; b2 = b[2];
++        for (i = 0; i < nv; i++) {
++            uint32_t w = q[i]; float x = (int8_t)w, y = (int8_t)(w >> 8), z = (int8_t)(w >> 16);
++            v[i].u = u0 + x * a0 + y * a1 + z * a2;
++            v[i].v = REF_V0 + x * b0 + y * b1 + z * b2;
++        }
++    }
++    return 1;
++}
++
+ /* coche parado (seleccion, salida): ruedas, volante, faros y carroceria en reposo */
+ static void coche_anima_reposo(void)
+ {
+@@ -11170,6 +11330,16 @@ int or_programa_lanza(void)
      arch_exec(img, tam);
  }
  
@@ -198,7 +375,7 @@ index 2e885cc..f36fc27 100644
  int main(int argc, char **argv)
  {
      /* bufer de parametros de TA_VB_BYTES (x2); opacos con bloques de 32 (el suelo cercano toca muchas teselas) y 4
-@@ -11403,6 +11430,12 @@ int main(int argc, char **argv)
+@@ -11403,6 +11573,12 @@ int main(int argc, char **argv)
          if (estado != TITULO && manual_) {                      /* cambio manual: cruceta arriba sube, abajo baja */
              if (nuevo & CONT_DPAD_UP) pide_cambio = 1;
              if (nuevo & CONT_DPAD_DOWN) pide_cambio = -1;
@@ -211,7 +388,7 @@ index 2e885cc..f36fc27 100644
          }
          if (st) {
              /* volante: el eje y la cruceta van a or2_volante en cada paso (zona muerta 0,25, rampa de la cruceta y
-@@ -11416,8 +11449,13 @@ int main(int argc, char **argv)
+@@ -11416,8 +11592,13 @@ int main(int argc, char **argv)
              if (giro < -1) giro = -1;
              /* pedales: volumenes 1 y 2 del original, 0..255 tal cual (el original lee la presion de los botones
                 sin curva); A y B/X a fondo */
@@ -225,7 +402,16 @@ index 2e885cc..f36fc27 100644
          }
          mando.nivel = etapa_n;
  
-@@ -12235,7 +12273,7 @@ int main(int argc, char **argv)
+@@ -12223,7 +12404,7 @@ int main(int argc, char **argv)
+ #else
+         if (cex_n || cex_taxi) coche_luces(ani.ban, estado != TITULO && (meta_pas ? meta.freno != 0 : fis_ok ? fis.freno_op != 0 : yo.freno_ant > 0.0f), estado != TITULO && ani.caliente);   /* car+38 != 0 (con la fisica del original coche_paso no toca freno_ant: los pilotos del freno no se encendian nunca) */
+ #endif
+-        if (cex_n) coche_entorno(mod_coche);
++        if (cex_n) { coche_reflejo(mod_coche, estado != TITULO); coche_entorno(mod_coche); }
+         if (cex_n) coche_luz(mod_coche, estado != TITULO);     /* la luz del entorno 2 en la pintura */
+         rc_chr.listo = rc_band.listo = 0; chr_vtx_ult = chr_vtx; chr_us_ult = chr_us; chr_vtx = chr_us = 0;
+         if (fin24 && chr_ok == 1) robot_matrices(&rc_chr, &mod_coche, 0);   /* la pareja del final */
+@@ -12235,7 +12416,7 @@ int main(int argc, char **argv)
          tri_enviados = 0; vtx_ult = vtx_env; vtx_env = 0; ta_inicia_cuadro(); vtx_et_ult = vtx_et; vtx_et = 0;
          en_cuenta = estado == CUENTA;                           /* (el precalentamiento manda hasta el semaforo) */
          arranque_hold = estado == CARRERA && t_estado < REPARTO_ARRANQUE;   /* (suelo del arranque, ver arriba) */
@@ -234,7 +420,7 @@ index 2e885cc..f36fc27 100644
          prf_v0 = 0;
  #endif
          PRF(0);
-@@ -12470,6 +12508,10 @@ int main(int argc, char **argv)
+@@ -12470,6 +12651,10 @@ int main(int argc, char **argv)
          diag_dib_us = (uint32_t)(timer_us_gettime64() - c0);
  #endif
          tcpu += timer_us_gettime64() - c0;
@@ -245,7 +431,7 @@ index 2e885cc..f36fc27 100644
  #ifdef DIAG_PICO
          dg_ult_dib = timer_us_gettime64() - c0;
  #endif
-@@ -12490,6 +12532,16 @@ int main(int argc, char **argv)
+@@ -12490,6 +12675,16 @@ int main(int argc, char **argv)
          if (++cuadro % 30 == 0) {
              uint64_t t1 = timer_ms_gettime64();
              fps = 30000.0f / (float)(t1 - t0); ms = tcpu / 30000.0f; ms_log = t_log / 30000.0f; t0 = t1; tcpu = 0; t_log = 0;
