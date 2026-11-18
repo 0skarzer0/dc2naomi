@@ -46,6 +46,17 @@ def replaced_disc(folder):
             data = open(full, "rb").read()
             if len(data) > size:
                 raise SystemExit(f"{name}: el nuevo ({len(data)} bytes) es mayor que el original ({size})")
+            # the image keeps only the sectors that held data on the original disc (build_image.nonzero_runs, worked
+            # out from the disc as it was): a new file that runs past the original's last non-zero sector loses its
+            # tail in the image. Seen with OutRun C2C (2026-11-18): a 1 MB 1ST_READ.BIN slot padded with zeros after
+            # 358 sectors; a 362-sector 1ST_READ.BIN came out cut and the board stayed on "starting...". Pad such
+            # slots with non-zero bytes (0xFF) when building the disc
+            used = (size + 2047) // 2048
+            while used and raw(lba + used - 1).count(0) == 2048:
+                used -= 1
+            if (len(data) + 2047) // 2048 > used:
+                raise SystemExit(f"{name}: el nuevo ocupa {(len(data) + 2047) // 2048} sectores y el original solo tenia datos "
+                                 f"en {used}: la imagen lo cortaria (rellena el original con bytes que no sean cero)")
             sizes[name] = len(data)
             data += bytes(-len(data) % 2048)
             for k in range(len(data) // 2048):

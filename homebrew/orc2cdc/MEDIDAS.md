@@ -183,3 +183,16 @@ cargarlo. En la versión normal el coche se carga en el hueco de la unión prest
 montón (`compacta_modelo_de`): la memoria está repartida sin holgura. Ahora `coche_sombra` no guarda copia: rehace la
 pintura con `coche_color` cuando cambia la sombra. `h-orc2c6` (RL4, sin el OPB mayor), md5 `.gz`
 `1ba29f48ef6753d5440a5f5690af6478`, en `otros/orc3/gdi5img/`, **sin probar**.
+
+### Por qué no arrancaban la c4, la c5 y la c6: la imagen cortaba el `1ST_READ.BIN` (2026-11-19, 00:15)
+
+No era el código. El GDI de `gdi5` se hizo con `1ST_READ_pad.BIN` (1 MB, con datos solo en sus 358 primeros sectores y
+ceros detrás), y la imagen de NAOMI solo guarda los sectores que tenían datos en el disco tal y como era
+(`build_image.nonzero_runs`): un `1ST_READ.BIN` de 362 sectores salía cortado (la c6 coincidía con el bueno hasta el
+byte 734830) y la placa se quedaba en "starting..." (también en la otra NAOMI). La RC4 (358 sectores) cabía justo; la
+RL perdía lo mismo y arrancaba de suerte. Arreglo: el GDI se rehace con un relleno de 1 MB de 0xFF (`gdi.escribe` con
+`~/pad_ff.bin`), y `tools/withfiles.py` ahora se niega a sustituir un fichero si el nuevo pasa del último sector con
+datos del original. **`h-orc2c7_dc2naomict`** = la c6 (RL4: rayas, reflejo del escenario, sombras sin copia de la
+pintura, cristales, sin el OPB mayor) en ese GDI, 504,5 MB, md5 `.gz` `8dc76a08fa4ebdffee41a27cd55aed52`, comprobado
+que lleva el `1ST_READ.BIN` entero; en la Pi .60 y en el CSV (copia `romsinfo.csv.bak_orc2c7`).
+La c4 (con el OPB mayor) quizá también arrancaba: no se llegó a probar bien.
