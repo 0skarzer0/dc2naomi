@@ -2007,3 +2007,10 @@ pasos, parches de KallistiOS `d81aa3f` y de ORC2CDC, `zck.py`, `adp22.c`).
   **491,6 MB**, mismo nombre `h-orc2c3_dc2naomict` (md5 `.gz` `86c214c54795d0cb9185292225441bb0`). En placa (live.py
   `0x8c0bf488`): `VOZ: VOCES.DAT, 34 muestras, 207 KB en el AICA` (antes no cabía), sin "Out of memory". Detalle en
   `homebrew/orc2cdc/README.md`. No se creó fork de ORC2CDC (el usuario no contestó): sigue como parche.
+- **2026-11-18 01:30-03:30, trabajo desatendido (el usuario: medir en la demo, "estable a 30 mejor que subidas y
+  bajadas", toda la música a 22 kHz y 8 largas: MUS0-7):** medidas con `homebrew/orc2cdc/med.py` desde la Pi .60
+  (`/root/med.py`, `corre.sh` / `lanza.sh`: envía una imagen, espera al arranque y mide; `resumen.py` resume un CSV).
+  Resultados en **`homebrew/orc2cdc/MEDIDAS.md`**: la CPU no llega a 45 fps (~30 ms por cuadro); tope a 30 fps,
+  lecturas en trozos de 4 sectores (`GD_TROZO`) y por DMA del G1 (`DIMM_DMA`, ahora en el perfil `orc3`). Imagen nueva
+  con el mismo nombre (`h-orc2c3`, md5 `.gz` `654c485f8b03d8ded6534ba244ecdc7c`), base ORC2CDC `a689a9a`.
+  Imágenes de prueba `h-orcp{B,D,E,F,G,H,P}` subidas a la Pi .60 para medir (sin fila en el CSV).

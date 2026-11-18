@@ -1,5 +1,17 @@
 # OutRun 2006 Coast 2 Coast (demo de ArkRetro) compilado para NAOMI
 
+> **Versión actual (2026-11-18 de madrugada, `h-orc2c3_dc2naomict`, 504 MB):** ORC2CDC **`a689a9a`** ("FINAL7") con
+> `orc2cdc-a689a9a-naomi.patch` y compilada con `KOS_CFLAGS="$KOS_CFLAGS -DFPS_OBJETIVO=30 -DCPU_MS_CORTA=29.0f
+> -DCPU_MS_ALARGA=25.0f -DGD_TROZO=4"`; perfil `orc3` con `DIMM_DMA`. Por qué, con las medidas en la placa:
+> [MEDIDAS.md](MEDIDAS.md). En resumen: **30 fps fijos** (la CPU de la NAOMI no llega a los 45 del port y el juego
+> acortaba la distancia de dibujo hasta 600 m: el popping), **lecturas del disco troceadas y por DMA** (los tirones
+> de 60-120 ms venían de leer la etapa siguiente y la música con el residente parado copiando), y la **música a
+> 22 kHz** entera (`MUSn.A22`, `comun/musica.c`): 8 canciones largas propias (MUS0-MUS7: Splash Wave, Magical Sound
+> Shower, Passing Breeze, Risky Ride, Shiny World, Night Flight, Life Was a Bore, Radiation) y las otras 21 suenan como
+> una de esas 8 (`~/orc3data3.py`: copias que `tools/gdi.py` guarda una vez); las 35 cortas también a 22 kHz.
+> El parche añade además `naomi_med` (medidas cada 30 cuadros) para `med.py`, y con `-DNAOMI_PRF` el tiempo de cada
+> parte del cuadro. `-ffast-math` y `-O3` probados y descartados.
+
 > **Versión actual (2026-11-18, `h-orc2c3_dc2naomict`, 491,6 MB, sin comprimir nada):** elección del usuario tras la
 > primera prueba en placa (faltaban los sonidos de carrera: `VOCES.DAT` no cabía en los 16 MB, "Out of memory" de
 > 212 KB). KallistiOS con `-D__KOS_GCC_32MB__` (el gcc de Ubuntu no lo define y `arch.h` fijaba la RAM en 16 MB):
