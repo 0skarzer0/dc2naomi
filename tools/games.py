@@ -502,6 +502,11 @@ GAMES["lb2fe"] = _katana_joy("GEKKA NO KENSHI2 FINAL EDITION", 0, 0, [
     (0x8C132B7E, 2, mov_imm0(4)),   # cable: mov.w @r3,r4 (PDTRA) -> mov #0,r4
     (0x8C15588A, 2, mov_imm0(0)),   # cable: mov.w @r0,r0 (PDTRA, the VGA patch's own check) -> mov #0,r0
     (0x8C14ADD8, 4, HOOK),          # maple: to-physical 0x8c14c426
+    # Bug in the VGA patch's own mode code: it stores VO_STARTY field 1 shifted (0x00280000) in the variable the
+    # game adds its vertical offset to every frame; in 320x240 mode the offset is -8 -> VO_STARTY 0x0027fff8,
+    # field 1 = line 1016 and the screen stays black after the SNK logo (attract and music go on). shll16 r0 ->
+    # extu.w r1,r0 stores 0x28.
+    (0x8C1557D2, 2, 0x601D),
 ])
 # Street Fighter III: 3rd Strike (USA). 1ST_READ.BIN is 14 MB (up to 0x8cdeaa00).
 GAMES["sf3ts"] = _katana_joy("SF3 THIRD STRIKE DC", 1, 1, [
