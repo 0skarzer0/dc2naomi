@@ -124,10 +124,44 @@ index 02a06c4..5933b86 100644
  # el HUD y los menus dibujan con pvr_prim: pasan por ta_prim (demo/main.c) para contar sus vertices en el presupuesto
  # del TA (docs/DREAMCAST.md)
 diff --git a/demo/main.c b/demo/main.c
-index 2e885cc..8b5af3b 100644
+index 2e885cc..f36fc27 100644
 --- a/demo/main.c
 +++ b/demo/main.c
-@@ -816,7 +816,7 @@ static void pon_vista(const float *o, const float *mira, float bal)
+@@ -290,6 +290,20 @@ static inline int malla_de_cartel(const modelo_t *m, const malla_t *ma)
+    entradas del libro - 1. Una
+    VQ con libro reducido (N < 256 entradas, las ultimas) se direcciona 2048 - 8 N bytes antes de sus datos: la PowerVR
+    lee el libro en la direccion de la textura y los indices 2 KB despues, y nunca toca las entradas que faltan. */
++/* Rayas de la calzada a lo lejos (NAOMI, 2026-11-18; video del usuario en el mueble): las texturas del suelo con
++   mipmaps (0x200: las cuadradas, asfalto y marcas) a lo lejos se ven con el nivel que la PowerVR elige por la mayor de
++   las dos derivadas, y la calzada vista de canto (casi paralela a la mirada) cae varios niveles: las rayas finas se
++   funden con el asfalto a 30-60 m y parecen pintarse delante del coche; las texturas rectangulares (sin mipmaps) las
++   dejan ver lejos, con centelleo. Sin coste de CPU:
++   SUELO_SS 1: supermuestreo de la textura (bit 12 de la palabra TSP, "Super-Sample Texture": 4 muestras por pixel y
++   el nivel de mip de la resolucion doble), solo en esas texturas; gasta tiempo de la PowerVR, no de la SH-4.
++   SUELO_MIPBIAS: el ajuste D de la PowerVR (PVR_MIPBIAS_0_50: un nivel mas nitido; centellea mas). */
++#ifndef SUELO_SS
++#define SUELO_SS 0
++#endif
++#ifndef SUELO_MIPBIAS
++#define SUELO_MIPBIAS PVR_MIPBIAS_NORMAL
++#endif
+ static void compila_cab(modelo_t *m, uint32_t i, int especular)   /* especular: 1 desplazamiento, 2 ademas sumada */
+ {
+     pvr_poly_cxt_t cx; tex_t *t = m->texs + i; uint32_t f, fb = t->fmt & 0xff, vq = t->fmt & 0x100, n = ((t->fmt >> 16) & 0xff) + 1;
+@@ -310,10 +324,11 @@ static void compila_cab(modelo_t *m, uint32_t i, int especular)   /* especular:
+            bilineal en el nivel mas cercano, como MMIN 4 del GS) */
+         if (t->fmt & 0x800) { cx.depth.comparison = PVR_DEPTHCMP_GEQUAL; if (t->lista == 2) cx.txr.env = PVR_TXRENV_MODULATEALPHA; }
+         if ((t->fmt & 0x400) && t->lista == 2) { cx.blend.src = PVR_BLEND_SRCALPHA; cx.blend.dst = PVR_BLEND_ONE; }
+-        if (t->fmt & 0x200) cx.txr.mipmap = true;
++        if (t->fmt & 0x200) { cx.txr.mipmap = true; cx.txr.mipmap_bias = SUELO_MIPBIAS; }
+         /* 0x1000 / 0x2000: CLAMP del GS en u / v (la sombra plana del coche, tools/conv_coche.py sombra_clamp) */
+         if (t->fmt & 0x3000) cx.txr.uv_clamp = ((t->fmt & 0x1000) ? PVR_UVCLAMP_U : 0) | ((t->fmt & 0x2000) ? PVR_UVCLAMP_V : 0);
+         pvr_poly_compile(&m->cabs[f][i], &cx);
++        if ((t->fmt & 0x200) && SUELO_SS) m->cabs[f][i].m2.supersampling = 1;
+     }
+ }
+ static int sube_modelo(modelo_t *m)
+@@ -816,7 +831,7 @@ static void pon_vista(const float *o, const float *mira, float bal)
  }
  
  typedef struct { float x, y, w, u, v; uint32_t c, o; } pt_t;   /* o: color de desplazamiento */
@@ -136,7 +170,7 @@ index 2e885cc..8b5af3b 100644
  static uint64_t prf_t; static unsigned prf_us[10], prf_v[10], prf_v0;   /* medida: us y vertices por parte del cuadro */
  #define PRF(i) do { uint64_t t_ = timer_us_gettime64(); prf_us[i] += (unsigned)(t_ - prf_t); prf_t = t_; prf_v[i] += vtx_env - prf_v0; prf_v0 = vtx_env; } while (0)
  #else
-@@ -848,8 +848,10 @@ static uint32_t vtx_et, vtx_et_ult;                      /* los de la etapa */
+@@ -848,8 +863,10 @@ static uint32_t vtx_et, vtx_et_ult;                      /* los de la etapa */
                         coche + 3 coches de trafico con LOD 0)
     Lo que la etapa no puede gastar lo reparte nodos_visibles_todos (quita primero lo que el LOD del original quitaria
     antes); si aun asi una tira no cabe, no se envia (ta_corto). */
@@ -147,7 +181,7 @@ index 2e885cc..8b5af3b 100644
  #define TA_MARGEN (64 * 1024)                            /* cabeceras vacias de fin de lista y prudencia */
  #define TA_RESERVA_2D (64 * 1024)                        /* minimo para lo 2D (medido: unos 450 vertices) */
  #define TA_BPV_MIN 56                                    /* bytes por vertice 2D (1,3 x 42,5 medidos en la consola) */
-@@ -11170,6 +11172,16 @@ int or_programa_lanza(void)
+@@ -11170,6 +11187,16 @@ int or_programa_lanza(void)
      arch_exec(img, tam);
  }
  
@@ -164,7 +198,7 @@ index 2e885cc..8b5af3b 100644
  int main(int argc, char **argv)
  {
      /* bufer de parametros de TA_VB_BYTES (x2); opacos con bloques de 32 (el suelo cercano toca muchas teselas) y 4
-@@ -11403,6 +11415,12 @@ int main(int argc, char **argv)
+@@ -11403,6 +11430,12 @@ int main(int argc, char **argv)
          if (estado != TITULO && manual_) {                      /* cambio manual: cruceta arriba sube, abajo baja */
              if (nuevo & CONT_DPAD_UP) pide_cambio = 1;
              if (nuevo & CONT_DPAD_DOWN) pide_cambio = -1;
@@ -177,7 +211,7 @@ index 2e885cc..8b5af3b 100644
          }
          if (st) {
              /* volante: el eje y la cruceta van a or2_volante en cada paso (zona muerta 0,25, rampa de la cruceta y
-@@ -11416,8 +11434,13 @@ int main(int argc, char **argv)
+@@ -11416,8 +11449,13 @@ int main(int argc, char **argv)
              if (giro < -1) giro = -1;
              /* pedales: volumenes 1 y 2 del original, 0..255 tal cual (el original lee la presion de los botones
                 sin curva); A y B/X a fondo */
@@ -191,7 +225,7 @@ index 2e885cc..8b5af3b 100644
          }
          mando.nivel = etapa_n;
  
-@@ -12235,7 +12258,7 @@ int main(int argc, char **argv)
+@@ -12235,7 +12273,7 @@ int main(int argc, char **argv)
          tri_enviados = 0; vtx_ult = vtx_env; vtx_env = 0; ta_inicia_cuadro(); vtx_et_ult = vtx_et; vtx_et = 0;
          en_cuenta = estado == CUENTA;                           /* (el precalentamiento manda hasta el semaforo) */
          arranque_hold = estado == CARRERA && t_estado < REPARTO_ARRANQUE;   /* (suelo del arranque, ver arriba) */
@@ -200,7 +234,7 @@ index 2e885cc..8b5af3b 100644
          prf_v0 = 0;
  #endif
          PRF(0);
-@@ -12470,6 +12493,10 @@ int main(int argc, char **argv)
+@@ -12470,6 +12508,10 @@ int main(int argc, char **argv)
          diag_dib_us = (uint32_t)(timer_us_gettime64() - c0);
  #endif
          tcpu += timer_us_gettime64() - c0;
@@ -211,7 +245,7 @@ index 2e885cc..8b5af3b 100644
  #ifdef DIAG_PICO
          dg_ult_dib = timer_us_gettime64() - c0;
  #endif
-@@ -12490,6 +12517,16 @@ int main(int argc, char **argv)
+@@ -12490,6 +12532,16 @@ int main(int argc, char **argv)
          if (++cuadro % 30 == 0) {
              uint64_t t1 = timer_ms_gettime64();
              fps = 30000.0f / (float)(t1 - t0); ms = tcpu / 30000.0f; ms_log = t_log / 30000.0f; t0 = t1; tcpu = 0; t_log = 0;

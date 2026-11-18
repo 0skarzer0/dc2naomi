@@ -80,3 +80,21 @@ medidas no lo ven.
 
 Conclusión: no entra en la versión de la Pi sin que lo pruebe el usuario; si se quiere, lo razonable sería encenderlo
 solo en las zonas abiertas (por zona, con la lista de arriba).
+
+## Vídeo del mueble (2026-11-18): rayas de la calzada y reflejos
+
+El usuario grabó 23 min del recorrido automático (CB0) en el mueble (`PXL_20261118_113920908.mp4`, 1080p a 60 fps)
+con `med.py` a la vez (`/root/med_VID.csv` en la Pi; el vídeo empieza 6,6 s antes que la medida).
+
+- **Rayas que "se pintan delante del coche"**: no son nodos que quite el LOD ni el reparto del TA; van pintadas en la
+  textura del asfalto (BEAC: la 11 de SEG17, 256x256 con mipmaps). Vista de canto, la PowerVR elige el nivel de mip
+  por la mayor derivada y las rayas finas se funden con el gris a 30-60 m. Donde se ven lejos, la calzada usa texturas
+  rectangulares (sin mipmaps en la PowerVR: llegan lejos, centelleando). Arreglo sin CPU (`demo/main.c compila_cab`,
+  solo en las texturas con mipmaps): `-DSUELO_SS=1` supermuestreo de la textura (bit 12 de la palabra TSP) o
+  `-DSUELO_MIPBIAS=PVR_MIPBIAS_0_50` (ajuste D: un nivel más nítido). Variantes `h-orcpSS` y `h-orcpMB` (piloto
+  automático) en la Pi .60, para que el usuario las compare en el mueble.
+- **Reflejos de la carrocería**: el mapa de entorno del coche (`COCHEnn.DAT`, texturas de 256x256 del bloque del coche)
+  es una vista fija oscura (media 35/255; el centro, nubes vistas desde abajo; los bordes, edificios), indexada por la
+  normal en el espacio de la cámara: con la cámara detrás, el capó coge casi siempre la misma zona negra y nunca refleja
+  la etapa. El PC dibuja un cubo dinámico con `cs_ENV_<zona>` (race_env_model_44cd30); propuesta barata pendiente de
+  decidir: reflejar el cielo de la etapa girado por el rumbo del coche.
