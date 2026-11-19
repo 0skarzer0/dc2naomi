@@ -92,6 +92,11 @@
 #define DIMM_BLACKBOX   0x20000u      /* (debug) black box at 0x8dda0000: exceptions (through VBR + 0x100), maple and
                                          VMU counters, sampled PCs; read over the NetDIMM after a crash */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
+#define DIMM_CDDA       0x100000u     /* CD audio (2026-11-19): the drive's PLAY / PAUSE / RELEASE / STOP commands play the
+                                         disc's audio tracks, stored in the archive (cdda_*), on two AICA channels (a ring
+                                         per channel in AICA RAM, refilled from the maple hook and the GD-ROM syscalls).
+                                         On a Dreamcast the drive itself plays them into the AICA's CD input; the NAOMI has
+                                         neither (see "CD-DA" in HANDOFF.md) */
 
 /* Patch kinds. The list is read in order every time a program starts (and
    once at boot). A CHECK opens a group: if the word at addr is not `value`
@@ -152,7 +157,11 @@ struct dimm_header {
                                          that does not hold a formatted card is ignored). The netbooter fills it
                                          from the game's .vmu file while sending (wipi/dc2naomi_send.py) */
     uint32_t read_chunk;              /* sectors a DMA read copies per GD-ROM EXEC_SERVER call (0 = 32) */
-    uint32_t reserved[5];
+    /* DIMM_CDDA: the disc's CD audio as 2352-byte sectors (16-bit stereo, 44.1 kHz) from FAD cdda_fad on, cdda_count
+       of them, at cdda_offset in the archive (sectors not there play as silence). cdda_cfg: AICA channel of the left
+       (bits 0-5) and right (8-13) side, 0 = 62 and 63. cdda_ring: AICA RAM offset of the two rings (2 x 32 KB, left
+       first), 0 = 0x1f0000 (the top of the 2 MB a Dreamcast program knows about) */
+    uint32_t cdda_offset, cdda_fad, cdda_count, cdda_cfg, cdda_ring;
     struct dimm_patch patches[DIMM_PATCHES];
 };
 

@@ -186,6 +186,21 @@ class Cdi(Gdi):
         t = self.hd_tracks()[0]
         return t[1] + t[5]
 
+    def cd_tracks(self):
+        """For a game that plays the CD's audio tracks (DIMM_CDDA): the whole TOC with the tracks' own numbers, as a
+        CD drive gives it (KallistiOS finds its ISO9660 session as the last data track of it)."""
+        return list(self.tracks)
+
+    def audio_sector(self, lba):
+        """2352 bytes of CD audio (16-bit little-endian stereo, as DiscJuggler keeps it) at lba, or None."""
+        for num, start, ctrl, ss, fn, n in reversed(self.tracks):
+            if start <= lba < start + n:
+                if ctrl == 4 or ss != 2352:
+                    return None
+                self._f.seek(self._where[num][6] + (lba - start) * ss)
+                return self._f.read(2352)
+        return None
+
     def data_tracks(self):
         return [t for t in self.tracks if t[2] == 4]
 

@@ -247,6 +247,12 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
   predicción a partir del filtro, fórmula de decodificación) que siguen `tools/adxmono.c` y `afsmono.py` sale de su
   código y documentación; no se ha copiado código. El resultado se comprobó decodificándolo con **ffmpeg**
   (`adpcm_adx`), cuyo propio codificador ADX sirvió de referencia de calidad.
+- **RoboCop para Neo Geo CD en DreamNeo CD 4.0** (perfil `robocop_dncd`, con música en CD-DA): **Teo Tormo**
+  ([RoboCop for Neo Geo](https://teo-tormo.itch.io/robocop-neogeo), su conversión del arcade de Data East), **Ian
+  Michael / IMR Technology** ([DreamNeo CD](https://github.com/ianmicheal/DREAMNEO-CD-1.0), el emulador de Neo Geo
+  CD para Dreamcast; el código de la 1.0 sirvió para entender cómo toca la música), **DubCity** (IP.BIN y arte del
+  disco) y **Adam / Enfilade** (arte del menú). La reproducción de CD-DA del residente imita el HLE del GD-ROM de
+  **Flycast** (`gdrom_hle.cpp`) y lee la posición del AICA como lo hace KallistiOS. El disco no se incluye.
 - Proyectos hermanos de los que viene buena parte de lo aprendido:
   [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-games) y
   [mame4all-naomi](https://github.com/0skarzer0/mame4all-naomi) (incluido su parche MIE para Flycast).

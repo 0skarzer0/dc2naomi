@@ -55,8 +55,9 @@ def nonzero_runs(gdi, gap=256, skip=()):
 
 
 class GdiDisc:
-    def __init__(self, path, boot_name="1ST_READ.BIN", blank=(), alias=None, disc_patches=()):
+    def __init__(self, path, boot_name="1ST_READ.BIN", blank=(), alias=None, disc_patches=(), cdda=False):
         self.gdi = open_disc(path)
+        self.cdda = cdda                    # DIMM_CDDA: the whole TOC, and the audio tracks go in the image
         self.boot_name = boot_name          # the boot file IP.BIN names (Windows CE discs: 0WINCEOS.BIN)
         self.override = {}                  # lba -> sector data (patched directory sectors)
         # files left out of the image (to fit 512 MB): they read as zeros
@@ -145,9 +146,27 @@ class GdiDisc:
         return lba + 150, size
 
     def toc(self):
-        tracks = self.gdi.hd_tracks()
+        tracks = self.gdi.cd_tracks() if self.cdda else self.gdi.hd_tracks()
         entries = [((0x41 if ctrl == 4 else 0x01) << 24) | (lba + 150) for num, lba, ctrl, ss, fn, n in tracks]
+        if self.cdda:
+            last = tracks[-1]
+            return tracks[0][0], entries, last[1] + last[5] + 150
         return tracks[0][0], entries, self.gdi.leadout() + 150
+
+    def audio_span(self):
+        """(first FAD, sectors) holding every audio track of the TOC, or None."""
+        aud = [t for t in (self.gdi.cd_tracks() if self.cdda else ()) if t[2] != 4]
+        if not aud:
+            return None
+        a = min(t[1] for t in aud)
+        b = max(t[1] + t[5] for t in aud)
+        return a + 150, b - a
+
+    def write_audio(self, out):
+        fad, n = self.audio_span()
+        silence = bytes(2352)
+        for i in range(0, n, 256):
+            out.write(b"".join(self.gdi.audio_sector(fad - 150 + i + j) or silence for j in range(min(256, n - i))))
 
     def ranges(self):
         return [(lba + 150, n) for lba, n in self.runs]
@@ -388,7 +407,8 @@ def build(name, game, source, work, image, out, log=print):
     print = log  # noqa: A001
     if work:
         os.makedirs(work, exist_ok=True)
-    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN"), game.get("blank", ()), game.get("alias"), game.get("disc_patches", ())) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
+    cdda = bool(game.get("cdda"))
+    disc = GdiDisc(source, game.get("boot", "1ST_READ.BIN"), game.get("blank", ()), game.get("alias"), game.get("disc_patches", ()), cdda) if game["layout"] == "gdi" else RebuiltDisc(source, work, game)
 
     boot_fad, boot_size = disc.boot()
     first_track, tracks, leadout = disc.toc()
@@ -413,6 +433,11 @@ def build(name, game, source, work, image, out, log=print):
     image += b"\0" * (base - len(image))
 
     flags = game["flags"] | (0x40000 if getattr(disc, "wince", False) else 0)   # DIMM_WINCE
+    audio = disc.audio_span() if cdda else None
+    if audio:
+        flags |= 0x100000                                                          # DIMM_CDDA
+        print(f"  CD audio: FAD {audio[0]}+{audio[1]} ({audio[1] * 2352 / 1048576:.1f} MB), channels "
+              f"{game.get('cdda_channels', (62, 63))}, ring at AICA {game.get('cdda_ring', 0x1f0000):#x}")
     hdr = struct.pack("<10I", 0x47434459, 0x32474d49, 2, 0, flags, FLASH_OFFSET,
                       boot_fad, boot_size, getattr(disc, "ip_lba", BASE_LBA) + 150, len(rtab))
     for i in range(DIMM_RANGES):
@@ -422,7 +447,12 @@ def build(name, game, source, work, image, out, log=print):
     hook = list(game.get("hook_pc", [])) + [0, 0]
     # the Visual Memory slot (128 KB after the sectors): empty here, filled by the netbooter from JUEGO.vmu
     vmu_offset = offset if game["flags"] & 0x8000 else 0
-    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5, "plane": 6, "ab2": 7, "mk64": 8}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + struct.pack("<I", game.get("read_chunk", 0)) + b"\0" * 20
+    # the CD audio after the Visual Memory slot
+    audio_offset = offset + (VMU_SIZE if vmu_offset else 0) if audio else 0
+    chl, chr_ = game.get("cdda_channels", (62, 63))
+    cdda = struct.pack("<5I", audio_offset, audio[0] if audio else 0, audio[1] if audio else 0,
+                       (chl | chr_ << 8) if audio else 0, game.get("cdda_ring", 0x1f0000) if audio else 0)
+    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5, "plane": 6, "ab2": 7, "mk64": 8}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + struct.pack("<I", game.get("read_chunk", 0)) + cdda
     for p in patches:
         hdr += struct.pack("<4I", *p)
     hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))
@@ -433,7 +463,7 @@ def build(name, game, source, work, image, out, log=print):
     archive += b"\0" * (DATA_OFFSET - len(archive))
 
     slot = b"\0" * VMU_SIZE if vmu_offset else b""
-    total = len(image) + len(archive) + sum(n for _f, n in ranges) * 2048 + len(slot)
+    total = len(image) + len(archive) + sum(n for _f, n in ranges) * 2048 + len(slot) + (audio[1] * 2352 if audio else 0)
     if hasattr(out, "set_total"):
         out.set_total(total)
     if isinstance(out, str):
@@ -442,6 +472,8 @@ def build(name, game, source, work, image, out, log=print):
             o.write(archive)
             disc.write_sectors(o)
             o.write(slot)
+            if audio:
+                disc.write_audio(o)
         total = os.path.getsize(out)
         print(f"{out}: archive at 0x{base:08x}, {total} bytes ({total / 1048576:.1f} MB)")
         if total > 512 * 1048576:
@@ -451,6 +483,8 @@ def build(name, game, source, work, image, out, log=print):
         out.write(archive)
         disc.write_sectors(out)
         out.write(slot)
+        if audio:
+            disc.write_audio(out)
     return total
 
 

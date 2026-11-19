@@ -360,6 +360,255 @@ static void multi_xfer(u32 dest, u32 size, int dma) {
     }
 }
 
+/* ------------------------------------------------------------------ */
+/* CD audio (DIMM_CDDA, 2026-11-19)                                    */
+/* On a Dreamcast, PLAY makes the GD-ROM drive read the audio sectors itself and feed them, as digital audio, to the
+   AICA's CD input (mixed in with EFSDL/EFPAN of outputs 16 and 17, which KallistiOS's spu_cdda_volume/pan and Katana
+   set). The NAOMI has no drive and nothing on that input. Here the drive's commands are answered as the drive would
+   (Flycast's HLE BIOS, gdrom_hle.cpp, is the model: PLAY = tracks first..last inclusive, PLAY2 = FADs, repeat 0 = once,
+   15 = for ever) and the sectors, stored in the archive, are played on two AICA channels of our own: a looping ring of
+   CDDA_RING 16-bit samples per channel in AICA RAM, kept ahead of the play position (read through MSLC/CA, the way
+   KallistiOS's streams read it) from the maple hook (every frame) and from every GD-ROM syscall. The volume and pan
+   of each channel follow the game's EFSDL/EFPAN for the CD input, so the game's CD volume works as on a Dreamcast.
+   No divisions here (no libgcc): positions are kept as (sector, sample in sector). */
+#define AICA_CHR(ch, r)  (0xa0700000u + ((ch) << 7) + (r))
+#define AICA_RAMW(a)     (0xa0800000u + (a))
+#define CDDA_RING        16384u              /* samples per channel (32 KB); the play position (CA) is 16 bits */
+#define CDDA_SPS         588u                /* stereo samples in a 2352-byte sector */
+#define CDDA_GUARD       512u                /* samples kept between the write position and the play position */
+#define CDDA_BUDGET      (3 * CDDA_SPS)      /* most samples written per call (a frame plays ~735) */
+
+static struct {
+    int state;              /* 0 stopped, 1 playing, 2 paused, 3 finished */
+    u32 start, end;         /* FADs [start, end) */
+    u32 repeat;             /* times left to start again (15 = for ever) */
+    u32 fad, sub;           /* the next sample to write: sector, sample in it */
+    int armed;              /* channels keyed on */
+    int ending;             /* the end was reached: the rest of the ring is silence */
+    u32 end_at;             /* value of `written` where the sound ended */
+    u32 written, played;    /* samples written to / played from the rings (they wrap) */
+    u32 last_ca;
+    u32 chl, chr, ring;
+    u32 buf_fad;            /* sector in buf (0xffffffff = none) */
+    u32 stats[6];           /* plays, pumps, sectors read, rings re-armed, underruns, finished */
+} cd = { .buf_fad = 0xffffffffu };
+static u32 cdda_buf[2352 / 4];
+static volatile int cdda_busy;
+
+static void g2_idle(void) {
+    for (u32 t = 0; t < 100000u && (REG32(0xa05f688c) & 0x11); t++) {}
+}
+
+/* n / d and n % d by shifts (no libgcc). */
+static u32 udivmod(u32 n, u32 d, u32 *rem) {
+    u32 q = 0, r = 0;
+    for (int i = 31; i >= 0; i--) {
+        r = r << 1 | ((n >> i) & 1);
+        if (r >= d) { r -= d; q |= 1u << i; }
+    }
+    if (rem) *rem = r;
+    return q;
+}
+
+static u32 cdda_track_fad(u32 track, int end) {
+    u32 first = H.first_track, n = H.ntracks > DIMM_TRACKS ? DIMM_TRACKS : H.ntracks;
+    if (track < first) track = first;
+    if (track >= first + n) track = first + n - 1;
+    u32 i = track - first;
+    if (!end) return H.tracks[i] & 0xffffff;
+    return i + 1 < n ? H.tracks[i + 1] & 0xffffff : H.leadout;
+}
+
+static u32 cdda_track_of(u32 fad) {
+    u32 first = H.first_track, n = H.ntracks > DIMM_TRACKS ? DIMM_TRACKS : H.ntracks, t = first;
+    for (u32 i = 0; i < n; i++)
+        if ((H.tracks[i] & 0xffffff) <= fad) t = first + i;
+    return t;
+}
+
+/* The game's CD input level and pan (outputs 16/17 of the AICA's direct mixer), for our two channels. */
+static u32 cdda_mix(int right) {
+    u32 v = REG32(0xa0702040u + (right ? 4 : 0));
+    return (v & 0x0f00u) | (v & 0x1fu);          /* EFSDL (11-8) -> DISDL, EFPAN (4-0) -> DIPAN */
+}
+
+static void cdda_keyoff(void) {
+    g2_idle();
+    REG32(AICA_CHR(cd.chl, 0)) = REG32(AICA_CHR(cd.chl, 0)) & 0x3fffu;
+    REG32(AICA_CHR(cd.chr, 0)) = (REG32(AICA_CHR(cd.chr, 0)) & 0x3fffu) | 0x8000u;   /* KYONEX: both off */
+    cd.armed = 0;
+}
+
+static void cdda_channel(u32 ch, u32 sa, u32 mix) {
+    g2_idle();
+    REG32(AICA_CHR(ch, 0x00)) = 1u << 9 | ((sa >> 16) & 0x7f);  /* key off, loop, 16-bit PCM, SA high */
+    REG32(AICA_CHR(ch, 0x04)) = sa & 0xffff;
+    REG32(AICA_CHR(ch, 0x08)) = 0;                              /* LSA */
+    REG32(AICA_CHR(ch, 0x0c)) = CDDA_RING;                      /* LEA */
+    REG32(AICA_CHR(ch, 0x10)) = 0x1f;                           /* AR fastest, no decay */
+    REG32(AICA_CHR(ch, 0x14)) = 0x1f;                           /* RR fastest, DL 0 */
+    REG32(AICA_CHR(ch, 0x18)) = 0;                              /* OCT 0, FNS 0: 44100 Hz */
+    g2_idle();
+    REG32(AICA_CHR(ch, 0x1c)) = 0;                              /* no LFO */
+    REG32(AICA_CHR(ch, 0x20)) = 0;                              /* nothing to the DSP */
+    REG32(AICA_CHR(ch, 0x24)) = mix;                            /* DISDL, DIPAN */
+    REG32(AICA_CHR(ch, 0x28)) = 0x24;                           /* TL 0, filter off (LPOFF), Q 4 */
+    g2_idle();
+}
+
+/* The play position of the left channel, 0..CDDA_RING-1. MSLC is the program's too (KallistiOS reads its stream
+   positions the same way): put back what it had, so that a read of the program's we interrupted is not upset. */
+static u32 cdda_ca(void) {
+    g2_idle();
+    u32 r = REG32(0xa070280c);
+    REG32(0xa070280c) = (r & 0xffff00ffu) | cd.chl << 8;
+    g2_idle();
+    u32 ca = REG32(0xa0702814) & 0xffff;
+    REG32(0xa070280c) = r;
+    return ca;
+}
+
+/* The next two stereo samples: left pair in *l, right pair in *r (low half = first). */
+static void cdda_next2(u32 *l, u32 *r) {
+    if (!cd.ending && cd.fad >= cd.end) {
+        if (cd.repeat) {
+            if (cd.repeat != 15) cd.repeat--;
+            cd.fad = cd.start;
+            cd.sub = 0;
+        } else {
+            cd.ending = 1;
+            cd.end_at = cd.written;
+        }
+    }
+    if (cd.ending) { *l = *r = 0; return; }
+    if (cd.buf_fad != cd.fad) {
+        u32 i = cd.fad - H.cdda_fad;
+        if (cd.fad >= H.cdda_fad && i < H.cdda_count) {
+            cart_read(cdda_buf, H.archive_base + H.cdda_offset + i * 2352, 2352);
+            cd.stats[2]++;
+        } else
+            mset(cdda_buf, 0, sizeof cdda_buf);
+        cd.buf_fad = cd.fad;
+    }
+    u32 a = cdda_buf[cd.sub], b = cdda_buf[cd.sub + 1];   /* L0 R0, L1 R1 */
+    *l = (a & 0xffff) | b << 16;
+    *r = a >> 16 | (b & 0xffff0000u);
+    cd.sub += 2;
+    if (cd.sub >= CDDA_SPS) { cd.sub = 0; cd.fad++; }
+}
+
+static void cdda_write(u32 n) {
+    u32 rl = cd.ring, rr = cd.ring + CDDA_RING * 2, k = 0;
+    for (; n >= 2; n -= 2) {
+        u32 l, r, o = (cd.written & (CDDA_RING - 1)) * 2;
+        cdda_next2(&l, &r);
+        if ((k++ & 3) == 0) g2_idle();
+        REG32(AICA_RAMW(rl + o)) = l;
+        REG32(AICA_RAMW(rr + o)) = r;
+        cd.written += 2;
+    }
+}
+
+static void cdda_pump(void) {
+    if (!(H.flags & DIMM_CDDA) || cd.state != 1) return;
+    u32 sr = irq_off();
+    if (cdda_busy) { irq_restore(sr); return; }
+    cdda_busy = 1;
+    irq_restore(sr);
+    cd.stats[1]++;
+    if (cd.armed && !(REG32(AICA_CHR(cd.chl, 0)) & 0x4000u)) {    /* keyed off by the program (all channels reset) */
+        cd.armed = 0;
+        cd.stats[3]++;
+    }
+    if (!cd.armed) {
+        /* silence in both rings, the first sectors, then both channels on together (KYONEX) */
+        g2_idle();
+        for (u32 o = 0; o < CDDA_RING * 4; o += 4) {
+            if ((o & 15) == 0) g2_idle();
+            REG32(AICA_RAMW(cd.ring + o)) = 0;
+        }
+        cd.written = cd.played = cd.last_ca = 0;
+        cdda_write(CDDA_BUDGET);
+        cdda_channel(cd.chl, cd.ring, cdda_mix(0));
+        cdda_channel(cd.chr, cd.ring + CDDA_RING * 2, cdda_mix(1));
+        REG32(AICA_CHR(cd.chr, 0)) = REG32(AICA_CHR(cd.chr, 0)) | 0x4000u;
+        REG32(AICA_CHR(cd.chl, 0)) = REG32(AICA_CHR(cd.chl, 0)) | 0xc000u;
+        cd.armed = 1;
+    } else {
+        u32 ca = cdda_ca();
+        cd.played += ca >= cd.last_ca ? ca - cd.last_ca : ca + CDDA_RING - cd.last_ca;
+        cd.last_ca = ca;
+        if ((s32)(cd.played - cd.written) > 0) {      /* fell a whole ring behind: go on from where it plays */
+            cd.written = cd.played & ~1u;
+            cd.stats[4]++;
+        }
+        u32 ahead = cd.written - cd.played, room = CDDA_RING - CDDA_GUARD;
+        if (ahead < room) {
+            u32 n = room - ahead;
+            cdda_write(n > CDDA_BUDGET ? CDDA_BUDGET : n);
+        }
+        g2_idle();
+        REG32(AICA_CHR(cd.chl, 0x24)) = cdda_mix(0);
+        REG32(AICA_CHR(cd.chr, 0x24)) = cdda_mix(1);
+        if (cd.ending && (s32)(cd.played - cd.end_at) >= 0) {
+            cdda_keyoff();
+            cd.state = 3;
+            cd.stats[5]++;
+        }
+    }
+    cdda_busy = 0;
+}
+
+static void cdda_start(u32 start, u32 end, u32 repeat) {
+    if (!(H.flags & DIMM_CDDA)) return;
+    if (cd.armed) cdda_keyoff();
+    cd.chl = H.cdda_cfg ? H.cdda_cfg & 0x3f : 62;
+    cd.chr = H.cdda_cfg ? (H.cdda_cfg >> 8) & 0x3f : 63;
+    cd.ring = H.cdda_ring ? H.cdda_ring : 0x1f0000u;
+    cd.start = start;
+    cd.end = end > start ? end : start + 1;
+    cd.repeat = repeat > 15 ? 15 : repeat;
+    cd.fad = start;
+    cd.sub = 0;
+    cd.ending = 0;
+    cd.state = 1;
+    cd.stats[0]++;
+    dlog(0x43444441u, start, end, repeat);  /* "CDDA" */
+    cdda_pump();
+}
+
+static void cdda_stop(int pause) {
+    if (cd.armed) cdda_keyoff();
+    if (cd.state == 1 || cd.state == 2) cd.state = pause ? 2 : 0;
+    else if (!pause) cd.state = 0;
+}
+
+/* Subcode Q (GETSCD), as Flycast's HLE BIOS: [1] audio status, [3] length, then Q: control/adr, track, index,
+   relative and absolute MSF of the position. */
+static void cdda_bcd_msf(u8 *d, u32 frames) {
+    u32 f, s, m = udivmod(frames, 75 * 60, &f);
+    s = udivmod(f, 75, &f);
+    d[0] = (u8)m; d[1] = (u8)s; d[2] = (u8)f;
+}
+
+static void cdda_subcode(u32 format, u32 size, u32 dest) {
+    u8 q[100];
+    mset(q, 0, sizeof q);
+    q[1] = cd.state == 1 ? 0x11 : cd.state == 2 ? 0x12 : cd.state == 3 ? 0x13 : 0x15;
+    q[3] = format == 0 ? 100 : 0x0e;
+    u32 pos = cd.state ? cd.fad : gd.cur_sector, t = cdda_track_of(pos);
+    u8 *e = format == 0 ? q + 4 : q + 4;
+    e[0] = cd.state ? 0x01 : 0x41;
+    e[1] = (u8)t;
+    e[2] = 1;
+    u32 ts = cdda_track_fad(t, 0);
+    cdda_bcd_msf(e + 3, pos > ts ? pos - ts : 0);
+    cdda_bcd_msf(e + 7, pos);
+    if (!in_ram(dest)) return;
+    if (size > 100) size = 100;
+    for (u32 i = 0; i < size; i++) ((volatile u8 *)dest)[i] = q[i];
+}
+
 static void gd_command(void) {
     u32 *p = gd.params;
     switch (gd.command) {
@@ -369,6 +618,7 @@ static void gd_command(void) {
     case GDCC_INIT:
         gd.callback = 0;
         gd.multi_count = 0;
+        if (H.flags & DIMM_CDDA) cdda_stop(0);   /* (a real drive stops its audio too) */
         break;
     case GDCC_PIOREAD:
         read_sectors(p[2], p[0] & 0xffffff, p[1], 0);
@@ -427,9 +677,15 @@ static void gd_command(void) {
         break;
     }
     case GDCC_REQ_STAT:
+        if ((H.flags & DIMM_CDDA) && (cd.state == 1 || cd.state == 2)) {
+            put32(p[0], cd.state == 1 ? 3 : 1);  /* playing / paused */
+            put32(p[1], cdda_track_of(cd.fad));
+            put32(p[2], 0x01000000u | cd.fad);   /* fad, adr/control of an audio track */
+        } else {
         put32(p[0], 1);                          /* paused */
         put32(p[1], 3);                          /* track */
         put32(p[2], 0x41000000u | gd.cur_sector); /* fad, adr/control */
+        }
         put32(p[3], 1);                          /* index */
         gd.result[2] = 0xa;
         break;
@@ -439,8 +695,35 @@ static void gd_command(void) {
         gd.result[3] = 0;
         gd.pio_ended = 1;
         break;
+    case GDCC_PLAY:                               /* tracks p[0]..p[1], p[2] repeats */
+        if (!(H.flags & DIMM_CDDA)) goto other;
+        cdda_start(cdda_track_fad(p[0], 0), cdda_track_fad(p[1], 1), p[2]);
+        break;
+    case GDCC_PLAY2:                              /* FADs p[0]..p[1] */
+        if (!(H.flags & DIMM_CDDA)) goto other;
+        cdda_start(p[0] & 0xffffff, p[1] & 0xffffff, p[2]);
+        break;
+    case GDCC_PAUSE:
+        if (!(H.flags & DIMM_CDDA)) goto other;
+        cdda_stop(1);
+        break;
+    case GDCC_RELEASE:                            /* go on from where it was paused */
+        if (!(H.flags & DIMM_CDDA)) goto other;
+        if (cd.state == 2) { cd.state = 1; cdda_pump(); }
+        break;
+    case GDCC_STOP:
+    case GDCC_SEEK:
+        if (!(H.flags & DIMM_CDDA)) goto other;
+        cdda_stop(gd.command == GDCC_SEEK);
+        break;
+    case GDCC_GETSCD:
+        if (!(H.flags & DIMM_CDDA)) goto other;
+        cdda_subcode(p[0], p[1], p[2]);
+        gd.result[2] = 0;
+        break;
     default:
-        /* PLAY, PAUSE, SEEK, STOP, GETSCD, REQ_SES...: nothing to do */
+    other:
+        /* PLAY, PAUSE, SEEK, STOP, GETSCD, REQ_SES...: nothing to do (without DIMM_CDDA) */
         dlog(0x47430000u | gd.command, p[0], p[1], p[2]);
         break;
     }
@@ -564,6 +847,7 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     }
     gd_inside = 1;
     gd_va = 1;
+    cdda_pump();
 #ifdef GDTRACE
     if (dbg_val[0] < 200) dlog(dbg_val[0], r7 << 8 | (r4 & 0xff), r5, r15_now());
 #endif
@@ -644,8 +928,10 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         gd_reset_state();
         return 0;
     case 4: /* GET_DRV_STAT */
-        put32(r4, gd.status == GDC_CONTINUE ? 3 : 1); /* play / pause */
-        put32(r4 + 4, 0x80);                          /* GD-ROM */
+        put32(r4, gd.status == GDC_CONTINUE || cd.state == 1 ? 3 : 1); /* play / pause (CD audio playing: play) */
+        /* GD-ROM; a CD (DIMM_CDDA with the whole TOC of a CD image from track 1): CD-ROM XA, as the drive says of a
+           self-booting CD-R */
+        put32(r4 + 4, (H.flags & DIMM_CDDA) && H.first_track == 1 ? 0x20 : 0x80);
         return 0;
     case 5: /* G1_DMA_END */
         if (H.flags & DIMM_DMAIRQ) REG32(0xa05f6900) = 1u << 14;  /* ISTNRM GD DMA end (Flycast's HLE cancels it here) */
@@ -1393,6 +1679,7 @@ u32 maple_hook(u32 list) {
        inputs at all on the board (Flycast does not check it). 0x6155407f = 0x0c000000-0x0fffffff, as Ikaruga. */
     REG32(0xa05f6c8c) = 0x6155407fu;
     dimm_service();
+    cdda_pump();
     hook_calls++;
     dbg_val[2]++;
     dbg_draw();

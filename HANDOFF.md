@@ -121,6 +121,14 @@ vídeo), y mete en el programa un contestador de peeks propio con log y excepci�
 (`pi/live.py` de [naomi-pi-tools](https://github.com/0skarzer0/naomi-pi-tools), bloque `LIVE`). Se aplica a la 680d1862; para otra versión de KOS, los cambios son pequeños y están todos
 bajo `#ifdef NAOMI_HOST`. Detalle en la sección "Mario Kart 64".
 
+**16. Música en CD-DA (`DIMM_CDDA`, 2026-11-19):** en el perfil, `"cdda": True` (y opcionales `"cdda_channels": (62,
+63)`, `"cdda_ring": 0x1F0000`). `build_image.py` mete entonces la TOC entera (CD: pistas 1..N con su número) y las
+pistas de audio (2352 bytes/sector, desde la primera FAD de audio) detrás de la ranura de la VMU, y el residente toca
+PLAY/PLAY2/PAUSE/RELEASE/STOP en dos canales del AICA. Antes de elegir canales y anillo, mirar qué usa el juego (sección
+"RoboCop"). Para un programa de KallistiOS cerrado: `tools/kosexports.py 1ST_READ_descifrado.bin` lista su tabla de
+exportaciones (nombre → dirección) y da `cdrom_cdda_play`, `g2_*`, `vid_check_cable`... sin desensamblar a ciegas.
+CHD: el audio `cdfl` aún se lee como silencio (`chd.py`), así que de momento solo `.cdi` y `.gdi`.
+
 ## Objetivo
 
 Arrancar juegos de **Dreamcast** en una **NAOMI / NAOMI 2** por netboot (NetDIMM), sustituyendo la BIOS de
@@ -2138,3 +2146,46 @@ estado). Ahora cada vigilante sale si el fichero de estado ya no lleva su PID. I
 
 Herramientas de prueba en `tools/flycast/`: `img_mkbin.py` (descomprime e inyecta la .vmu como el netbooter),
 `img_setpad.py`, `img_setflag.py`, `img_hdr.py` (tabla de parches), `img_box.py` (caja negra de un volcado de Flycast).
+
+
+## ⭐ CD-DA en NAOMI + RoboCop (DreamNeo CD 4.0), 2026-11-19 — perfil `robocop_dncd`, Pi .250 — **sin probar (ni Flycast ni placa)**
+
+**Cómo toca la música DreamNeo CD** (CDI `[DNCD - 4.0 ROBOCOP][RELEASE]`, 21-10-2026, de IMR Technology / Ian Michael;
+juego de Teo Tormo). Sesión 1: 16 pistas de audio (1 y 2 son relleno de 7 s; música 3-16, 194 MB). Sesión 2: pista de
+datos de 7,7 MB con `1ST_READ.BIN` (cifrado MIL-CD; KallistiOS git del 28-07-2026, compilado para 16 MB: no pisa el
+residente) y los ficheros del juego (`RC.PRG/.SPR/.PCM/.Z80/.FIX`). El código de la 1.0 (público) lo cuenta y la 4.0 hace
+lo mismo: el 68000 pide a la BIOS de Neo Geo CD "pista N" (BCD), el emulador lo intercepta y desde un hilo (`cdda_thread`,
+cola de 16 órdenes en `0x8c50f548`) llama a `cdrom_cdda_play(N, N+1, 0, CDDA_TRACKS)` = orden **PLAY** del GD-ROM: el
+**lector** lee la pista y la manda en digital a la entrada de CD del AICA (volumen con `spu_cdda_volume` = EFSDL de las
+salidas 16/17). Para repetir, cuenta la duración que saca de la TOC (`0x8c025922`: (entrada N+1 − N) × 60 / 75
+fotogramas, 3600 si no sale) y vuelve a pedirla. **En NAOMI no hay lector ni nada en esa entrada**: por eso dc2naomi
+nunca tuvo música CD-DA.
+
+**Lo nuevo (genérico, `DIMM_CDDA` 0x100000):**
+- `resident.c`, sección "CD audio": PLAY (pistas, fin inclusivo), PLAY2 (FAD), PAUSE, RELEASE, STOP/SEEK, INIT para la
+  música; REQ_STAT, GET_DRV_STAT (3 = sonando) y GETSCD (subcódigo Q) la cuentan, como el HLE de Flycast. Repetición 0 =
+  una vez, 15 = siempre. Sonido: dos canales del AICA (por defecto 62/63, PCM 16 bits, 44,1 kHz) con un anillo de
+  16384 muestras (32 KB) cada uno en `0x1f0000`/`0x1f8000`, rellenado desde el gancho maple (cada fotograma) y cada
+  llamada GD; posición por MSLC/CA (`0x280c`/`0x2814`) devolviendo MSLC a lo que tenía. Si el programa apaga los canales
+  (reset del AICA), se vuelven a armar. Volumen y panorama de cada canal = EFSDL/EFPAN que el juego pone al CD
+  (`0xa0702040/44`). `cd.stats[6]` = órdenes de play, bombeos, sectores leídos, rearmes, desbordes, finales (para peeks).
+  Disco de tipo CD-ROM XA (`0x20`) en GET_DRV_STAT si es un CD con CDDA.
+- Cabecera: los 5 `reserved` pasan a ser `cdda_offset, cdda_fad, cdda_count, cdda_cfg, cdda_ring` (mismo tamaño: las
+  imágenes viejas leen 0 = sin CDDA).
+- `build_image.py`, `gdi.py`, `cdi.py`: `cd_tracks()` y `audio_sector()`; las pistas van detrás de la VMU.
+
+**Lo que usa DNCD del AICA** (desensamblado): su sonido va en los canales **0 y 1** (anillos de 16 KB en `0x11000` y
+`0x16000`, `0x8c027f5c`), escritos por sus propias rutinas (`0x8c02760c` arranca un canal, `0x8c02786c` lee CA por
+MSLC). El menú usa `snd_sfx_play` de KallistiOS (`0x8c01e520`): puede pasar por cualquier canal; si los 62/63 se
+oyeran raros solo en el menú, sería eso.
+
+**Parches** (`tools/games.py`, direcciones de la tabla de exportaciones de KOS): `maple_dma_addr` (`0x8c09c678`) →
+`HOOKST`; `cdrom_init` sin desbloqueo del bus G1 (`0x8c094832` nop, `0x8c094834` `bra`); `vid_check_cable`
+(`0x8c0a6c50`) = `rts; mov #0,r0` (VGA, sin PCTRA); las 34 esperas de `g2_lock` a SB_FFST bit 5 (`and #32` → `and #0`) y
+la del emulador en `0x8c02766a`. No hace falta techo de RAM (16 MB). Flags `0x1404` + VMU + CDDA, mandos `joy`.
+
+**Imagen:** `dc-robocop_dncd_dc2naomi.bin.gz` (197 MB sin comprimir, 120 MB en gz): `./build.sh robocop_dncd
+DNCD4.0[ROBOCOP].cdi OUT.bin`. Comprobado aquí solo: la cabecera (flags `0x109404`, audio en `+0x62f000`, FAD 150 +
+85001 sectores) y que los sectores de audio de la imagen son idénticos a los del CDI. **Sin Flycast ni BIOS de NAOMI
+en esta sesión**: falta probarla en Flycast antes que en placa (receta 2). Si no suena: peek de `cd` (`sh-elf-nm` del
+residente) para ver si llegan órdenes PLAY (`stats[0]`) y si el anillo avanza (`played`).

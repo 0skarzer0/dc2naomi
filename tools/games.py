@@ -750,3 +750,45 @@ GAMES["mk64"] = {
 # The same with CONSOLE=1: the game's own printf drawn on the screen as text. Its loader prints the
 # asset it is reading and a progress bar, and KallistiOS prints its init, so a hang says where it is.
 GAMES["mk64_dbg"] = dict(GAMES["mk64"], title="MARIO KART 64 DBG", flags=0x1C0C)  # + DIAG: restores the loader's 31 kHz timings
+
+# RoboCop for Neo Geo CD (Teo Tormo's port of Data East's arcade game, https://teo-tormo.itch.io/robocop-neogeo) running
+# in IMR Technology's DreamNeo CD 4.0 (Ian Michael), the release "[DNCD - 4.0 ROBOCOP][RELEASE]" (2026-10-21): a
+# self-booting CDI, session 1 = 16 CD audio tracks (the music), session 2 = the emulator and the game's files. The
+# emulator is KallistiOS (git master of 2026-07-28, a 16 MB build), closed source, so it is patched like the OutRun
+# demos (or2006/or37), with the NAOMI lessons of Mario Kart 64's KallistiOS (HANDOFF "Mario Kart 64"). Addresses found
+# in the descrambled 1ST_READ.BIN through KallistiOS's export table (name -> address, rc/tools/exports.py in HANDOFF).
+# The music is CD audio played by the drive (cdrom_cdda_play(track, track + 1, 0, CDDA_TRACKS) from the emulator's
+# CD thread, its length taken from the TOC): "cdda": True puts the audio tracks in the image and the whole TOC in the
+# header, and the resident plays them (DIMM_CDDA) on AICA channels 62/63 (the emulator uses 0 and 1 for its stream,
+# rings at 0x11000/0x16000) from 0x1f0000. Standard cabinet (Pi .250), 2 players.
+GAMES["robocop_dncd"] = {
+    "title": "ROBOCOP NEOGEO CD DNCD",
+    "region": 1,
+    "language": 1,
+    "layout": "gdi",
+    "pads": "joy",
+    "flags": 0x1404,       # GD DMA reads in one call, no IP.BIN bootstrap, no user break
+    "vmu": True,           # the Neo Geo CD BIOS saves go to the VMU
+    "cdda": True,
+    "cdda_channels": (62, 63),
+    "cdda_ring": 0x1F0000,
+    "hook_pc": [],
+    "groups": [
+        {"file": "1ST_READ.BIN", "base": 0x8C010000, "patches": [
+            (0x8C09C684, 4, HOOKST),       # maple_dma_addr() (0x8c09c678): literal 0x1fffffff -> maple_hook_mdstar
+            (0x8C09C67A, 2, 0x412B),       #   mov.l (SB_MDSTAR),r2 -> jmp @r1
+            (0x8C09C67C, 2, 0x0009),       #   and r4,r1 -> nop (delay slot)
+            (0x8C094832, 2, 0x0009),       # cdrom_init: no G1 bus unlock (mov.l r2,@(0xa05f74e4) -> nop,
+            (0x8C094834, 2, 0xA004),       #   and the 2 MB read of the BIOS -> bra 0x8c094840)
+            (0x8C0A6C50, 2, 0x000B),       # vid_check_cable(): rts / mov #0,r0 = VGA, no PCTRA write (it kills the
+            (0x8C0A6C52, 2, 0xE000),       #   NAOMI 2's TA)
+            (0x8C02766A, 2, 0xC900),       # the emulator's channel start: wait for SB_FFST bit 5 -> no wait
+        ] + [(a, 2, 0xC900) for a in (     # g2_lock() in KallistiOS's g2_read/write: and #32,r0 -> and #0,r0 (SB_FFST bit 5
+            0x8C0984CA, 0x8C098516, 0x8C09855E, 0x8C0985AA, 0x8C0985F2, 0x8C09863E,   # never clears on the NAOMI: the
+            0x8C09868E, 0x8C0986EE, 0x8C09874E, 0x8C0987AE, 0x8C09880E, 0x8C09886E,   # wait, with the interrupts off,
+            0x8C0A9ED6, 0x8C0A9FA4, 0x8C0AA080, 0x8C0AA15C, 0x8C0AA240, 0x8C0AA272,   # freezes the board: Mario Kart
+            0x8C0AA330, 0x8C0AA3FC, 0x8C0AA4C8, 0x8C0AA58C, 0x8C0AA654, 0x8C0AA6A2,   # 64, point 6)
+            0x8C0AA6F2, 0x8C0AA7BC, 0x8C0AA84C, 0x8C0AA95E, 0x8C0AA9AC, 0x8C0AAA5C,
+            0x8C0AAB22, 0x8C0AAC44, 0x8C0AFA08)]},
+    ],
+}

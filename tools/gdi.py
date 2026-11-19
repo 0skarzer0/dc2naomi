@@ -43,6 +43,21 @@ class Gdi:
     def sectors(self, lba, n):
         return b"".join(self.sector(lba + i) for i in range(n))
 
+    def cd_tracks(self):
+        """The TOC a game that plays CD audio needs (DIMM_CDDA): the high-density area with its audio tracks."""
+        return self.hd_tracks()
+
+    def audio_sector(self, lba):
+        """2352 bytes of CD audio (16-bit little-endian stereo) at lba, or None if no audio track holds it."""
+        for num, start, ctrl, ss, fn, n in reversed(self.tracks):
+            if start <= lba < start + n:
+                if ctrl == 4 or ss != 2352:
+                    return None
+                f = self.files[fn]
+                f.seek((lba - start) * ss)
+                return f.read(2352)
+        return None
+
     def _dir(self, lba, size):
         data = self.sectors(lba, (size + 2047) // 2048)
         i = 0
@@ -168,6 +183,16 @@ class ChdGdi(Gdi):
         num, start, ctrl, ss, fn, n = track
         for i in range(n):
             yield start + i, self.sector(start + i)
+
+    def audio_sector(self, lba):
+        """(chd.py reads the FLAC-coded audio of a CHD, codec cdfl, as silence: CD audio from a CHD is not there yet)"""
+        for t in reversed(self.tracks):
+            num, start, ctrl, ss, fn, n = t
+            if start <= lba < start + n:
+                if ctrl == 4:
+                    return None
+                return self.chd.frame(self._start[num] + lba - start)[:2352]
+        return None
 
 
 def open_disc(path):
