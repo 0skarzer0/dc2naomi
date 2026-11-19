@@ -94,6 +94,7 @@
 #define DIMM_BLACKBOX   0x20000u      /* (debug) black box at 0x8dda0000: exceptions (through VBR + 0x100), maple and
                                          VMU counters, sampled PCs; read over the NetDIMM after a crash */
 #define DIMM_DMA        0x0040u      /* game reads from the NetDIMM by G1 DMA (as the NAOMI library does), not PIO */
+#define DIMM_BFONT      0x200000u     /* FONTROM_ADDRESS gives a font with the BIOS's narrow characters (KallistiOS bfont) */
 #define DIMM_CDDA       0x100000u     /* CD audio (2026-11-19): the drive's PLAY / PAUSE / RELEASE / STOP commands play the
                                          disc's audio tracks, stored in the archive (cdda_*), on two AICA channels (a ring
                                          per channel in AICA RAM, refilled from the maple hook and the GD-ROM syscalls).

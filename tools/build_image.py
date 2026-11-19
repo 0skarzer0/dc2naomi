@@ -284,7 +284,8 @@ def crc_block(b):
 
 def make_flash(region, language):
     fl = bytearray(b"\xff" * 0x20000)
-    sysinfo = b"00" + bytes([0x30 + region]) + b"00Dreamcast  "  # (region digit: 0 Japan, 1 USA, 2 Europe)
+    # the codes of real consoles (KallistiOS's flashrom_get_region knows only these three; "00100" was "unknown")
+    sysinfo = (b"00000", b"00110", b"00211")[region] + b"Dreamcast  "
     fl[0x1a000:0x1a010] = sysinfo
     fl[0x1a0a0:0x1a0b0] = sysinfo
     fl[0x1a056:0x1a05e] = bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0])  # system id

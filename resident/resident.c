@@ -821,8 +821,13 @@ static int pio_cb_running;
 
 static void patch_poll(void);
 
+/* who called the last GD-ROM syscall: its return address and stack pointer (for peeks, tools/board/pk.py) */
+u32 gd_caller[2];
+
 static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     s32 r0;
+    gd_caller[0] = (u32)__builtin_return_address(0);
+    { u32 sp; __asm__ volatile("mov r15,%0" : "=r"(sp)); gd_caller[1] = sp; }
     stage(1, r7 << 8 | (r4 & 0xff));
     dimm_service();
     stage(2, r5);
@@ -1028,10 +1033,24 @@ static s32 sys_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
 }
 
 static u8 font_dummy[64];
+#include "biosfont12x24.h"
+/* DIMM_BFONT (2026-11-19): a font in the BIOS's layout for the narrow characters, so that KallistiOS's bfont (DreamNeo
+   CD's video-mode menu) draws text. 288 * 36 bytes: index 288, where bfont maps unknown characters and the space, is
+   the first wide character, blank here; wide (Japanese) characters beyond it are not there. */
+static u8 font_bios[289 * 36] __attribute__((aligned(4)));
 
 s32 font_syscall(u32 r1) {
     switch (r1) {
-    case 0: return (s32)font_dummy; /* FONTROM_ADDRESS (no font: the game draws none) */
+    case 0:                         /* FONTROM_ADDRESS */
+        if (H.flags & DIMM_BFONT) {
+            static int ready;
+            if (!ready) {
+                for (u32 i = 0; i < sizeof bios_font_narrow; i++) font_bios[i] = bios_font_narrow[i];
+                ready = 1;
+            }
+            return (s32)font_bios;
+        }
+        return (s32)font_dummy;     /* no font: the game draws none */
     case 1: return 0;               /* LOCK */
     case 2: return 0;               /* UNLOCK */
     }

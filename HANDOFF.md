@@ -2212,3 +2212,21 @@ residente) para ver si llegan órdenes PLAY (`stats[0]`) y si el anillo avanza (
 Subidas a la .251 ese día: Wacky Races reconvertido (md5 `7898e31f…`), MSR v2 (otros programas + `DIMM_DMAIRQ`,
 `85d9581c…`), Test Drive Le Mans (otros programas, `312db8a9…`), TD6 (arriba), y el vigilante de la VMU nuevo
 (copia `dc2naomi_vmu.py.bak_20261119`).
+**Primera prueba en placa (Pi .250, 2026-11-19):** cuadraditos (las filas de diagnóstico del residente) y nada más; con
+`CONSOLE=1` solo `flashrom_get_region: unknown code '00100'`. Diagnóstico con peeks (`pk.py`), sin Flycast:
+- la región de la flash emulada era `00100`, que no es de ninguna consola: ahora `make_flash` escribe los códigos reales
+  (`00000` Japón, `00110` EE. UU., `00211` Europa). (Aviso inocuo, pero era real.)
+- **cómo ver qué hace un programa de KallistiOS cerrado en la placa:** la variable `irq_srt_addr` (literal de la rutina
+  de guardado de registros, aquí `0x8c095d20`) apunta al contexto del hilo interrumpido (r0-r15, spc `+0x40`, pr `+0x44`
+  en esta versión de KOS); la lista de hilos sale de `thd_init` (cabeza `0x8c5bb03c`, siguiente `+0`, tid `+0x18`,
+  estado `+0x24`, mensaje de espera `+0x2c`, nombre `+0x3c`, contexto `+0x23c`). El residente guarda también en
+  `gd_caller` la dirección de retorno y el r15 de la última llamada GD. Así salió: hilo `[kernel]` en `thd_sleep`, desde
+  `0x8c0173c0` = el **menú de modo de vídeo** de DreamNeo CD 4.0 (tabla `0x8c0bf1e0`: nombre, modo de KOS, ...), que
+  espera al botón A (= botón 1 del mueble) y que no se veía porque dibuja con **bfont** y el residente daba una fuente
+  vacía. Pulsando el botón 1 arranca.
+- **`DIMM_BFONT` (0x200000):** `FONTROM_ADDRESS` da una fuente con el formato de la BIOS (12x24, 1 bpp, 2 filas cada 3
+  bytes; índice 1-94 = ASCII 33-126, 288 = espacio) hecha de `font8x16.h` escalada 1,5 (`resident/biosfont12x24.h`).
+  Solo con el flag, porque los caracteres japoneses (más allá) no están.
+- Con el cable VGA que damos, el menú ofrece **VGA 640x480 (31 kHz)**, NTSC 640x480, NTSC 640x480 IL, PAL 640x480 y PAL
+  640x480 IL (15 kHz). KallistiOS programa el vídeo él mismo y no mira el interruptor de la NAOMI: se elige la frecuencia
+  en el menú (monitor trifrecuencia de la .250).

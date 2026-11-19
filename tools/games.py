@@ -767,7 +767,9 @@ GAMES["robocop_dncd"] = {
     "language": 1,
     "layout": "gdi",
     "pads": "joy",
-    "flags": 0x1404,       # GD DMA reads in one call, no IP.BIN bootstrap, no user break
+    "flags": 0x201404,     # GD DMA reads in one call, no IP.BIN bootstrap, no user break, BIOS font (DIMM_BFONT:
+                           # the emulator's video-mode menu is drawn with bfont: VGA 640x480 = 31 kHz, NTSC/PAL 640x480
+                           # (IL) = 15 kHz; it waits there for button 1 = A)
     "vmu": True,           # the Neo Geo CD BIOS saves go to the VMU
     "cdda": True,
     "cdda_channels": (62, 63),
