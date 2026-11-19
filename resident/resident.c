@@ -285,6 +285,7 @@ static struct {
     int dma_ended;
     int pio_ended;      /* a REQ_PIO_TRANS finished: call the PIO callback once out of the syscall */
     int dma_kick;       /* a REQ_DMA_TRANS finished under Windows CE: raise a G1 DMA end interrupt out of the syscall */
+    int dma_cb;         /* DMAIRQ: G1_DMA_END's callback, to call once out of the syscall */
     u32 mode[4];
 } gd;
 
@@ -548,6 +549,13 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
     stage(3, dbg_val[0]);
     if (gd_inside) {
         dlog(0x4e455354u, r7, r4, 0);
+        if (r6 == 0 && r7 == 5 && (H.flags & DIMM_DMAIRQ)) { /* G1_DMA_END from the DMA end interrupt */
+            REG32(0xa05f6900) = 1u << 14;                       /* ISTNRM: the GD DMA end, as the BIOS clears it */
+            gd.callback = r4;
+            gd.callback_arg = r5;
+            if (gd.dma_ended) { gd.dma_ended = 0; gd.dma_cb = 1; }   /* called when the outer call ends */
+            return 0;
+        }
         if (r6 == 0 && r7 == 1) { /* GET_CMD_STAT */
             for (int i = 0; i < 4; i++) put32(r5 + i * 4, gd.result[i]);
             return GDC_BUSY;
@@ -575,6 +583,10 @@ static s32 gd_syscall(u32 r4, u32 r5, u32 r6, u32 r7) {
            the syscalls again. */
         gd.dma_kick = 0;
         cart_dma(PHYS(RES_SCRATCH) + 0x800, H.archive_base & ~31u, 32);
+    }
+    if (gd.dma_cb) {
+        gd.dma_cb = 0;
+        if (gd.callback) ((callback_t)gd.callback)(gd.callback_arg);
     }
     if (!pio_cb_running) {          /* (the callback's own syscalls leave the next call to this loop) */
         pio_cb_running = 1;
@@ -636,10 +648,14 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         put32(r4 + 4, 0x80);                          /* GD-ROM */
         return 0;
     case 5: /* G1_DMA_END */
+        if (H.flags & DIMM_DMAIRQ) REG32(0xa05f6900) = 1u << 14;  /* ISTNRM GD DMA end (Flycast's HLE cancels it here) */
         gd.callback = r4;
         gd.callback_arg = r5;
         if (gd.callback && gd.dma_ended) {
             gd.dma_ended = 0;
+            /* DMAIRQ: called from inside, the callback's own GET_CMD_STAT calls come back "busy" (nested) for
+               ever (MSR.BIN); out of the syscall they get the real status */
+            if (H.flags & DIMM_DMAIRQ) { gd.dma_cb = 1; return 0; }
             return ((callback_t)gd.callback)(gd.callback_arg);
         }
         return 0;
@@ -651,7 +667,7 @@ static s32 gd_syscall_body(u32 r4, u32 r5, u32 r6, u32 r7) {
         gd.result[2] = 2048;
         gd.result[3] = gd.multi_count ? 1 : 0;
         gd.dma_ended = 1;
-        if (REG32(0xff000010) & 1) gd.dma_kick = 1; /* Windows CE: see gd_syscall */
+        if ((REG32(0xff000010) & 1) || (H.flags & DIMM_DMAIRQ)) gd.dma_kick = 1; /* Windows CE, DMAIRQ: see gd_syscall */
         if (gd.multi_count == 0) gd.status = GDC_COMPLETE;
         dlog(0x444d4154u, gd.params[0], gd.params[1], gd.multi_count); /* (no DMA interrupt to give) */
         return 0;

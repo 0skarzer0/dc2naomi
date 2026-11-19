@@ -5,6 +5,7 @@ made with an older one, keeping its title, header, patch table and disc data (no
 For images that miss later fixes of the resident: Super Puzzle Fighter II X (made 2026-11-09) hung on the board
 after the CAPCOM and ADX logos, as SSF2X did before the resident cleared the game's RAM before booting (6c95d60).
 The archive format (dimm_header) is the same; fields added later (read_chunk) read as 0 = the default.
+FLAGS=0x... in the environment: OR'ed into dimm_header.flags (MSR: FLAGS=0x80000, DIMM_DMAIRQ).
 GZIP_LEVEL as dc2naomi (default 6)."""
 import gzip
 import os
@@ -30,6 +31,10 @@ def main():
     new += b"\0" * (front(new) - len(new))
     assert front(new) == len(new) == old_base, "el cargador nuevo no ocupa lo mismo que el viejo"
     raw[:old_base] = new
+    if os.environ.get("FLAGS"):
+        f = struct.unpack_from("<I", raw, old_base + 16)[0] | int(os.environ["FLAGS"], 0)
+        struct.pack_into("<I", raw, old_base + 16, f)
+        print("flags = %#x" % f)
     with gzip.open(sys.argv[2], "wb", compresslevel=int(os.environ.get("GZIP_LEVEL", "6"))) as f:
         f.write(raw)
     print("%s -> %s: cargador y residente actuales" % (sys.argv[1], sys.argv[2]))
