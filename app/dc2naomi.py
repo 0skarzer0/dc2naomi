@@ -128,6 +128,42 @@ def auto_profile(ip, first_read, info, pads):
     return game, notes
 
 
+def other_programs(disc, ip):
+    """Groups for the other SH-4 programs of the disc that 1ST_READ.BIN loads at 0x8c010000 over itself (Wacky
+    Races: 1ST_READ.BIN is a small loader, the game is WACKY.BIN and the intro MOVIE.BIN, each with its own maple
+    driver; with only 1ST_READ.BIN patched the game talked to the MIE instead and asked for a controller in port A).
+    A file counts when it is 64 KB-8 MB, it has many 0x8cXXXXXX literals, nearly all at or above 0x8c010000, and
+    findpatch finds a maple hook in it (the "to physical" call before SB_MDSTAR): that is a Katana program."""
+    import struct as _st
+    from collections import Counter
+    out = []
+    for path, lba, size in disc.walk():
+        name = path.upper()
+        if name in ("1ST_READ.BIN", "IP.BIN") or not 0x10000 <= size <= 8 << 20:
+            continue
+        if not name.endswith((".BIN", ".EXE", ".ELF", ".PRG", ".SYS")):
+            continue
+        try:
+            b = disc.read_file(path)
+        except Exception:  # noqa: BLE001
+            continue
+        hi = Counter()
+        for i in range(0, min(len(b), 1 << 20) - 3, 4):
+            w = _st.unpack_from("<I", b, i)[0]
+            if w >> 24 == 0x8C:
+                hi[w >= 0x8C010000] += 1
+        if hi[True] < 200 or hi[True] < 4 * hi[False]:
+            continue
+        r = findpatch.analyze(ip, b)
+        if not r["hook"]:
+            continue
+        p = [(a, 2, games.mov_imm0(reg)) for a, reg in r["cable"]]
+        p += [(a, 2, games.mov_imm0(0)) for a in r["aica"]]
+        p.append((r["hook"][0], 4, games.HOOK))
+        out.append({"file": path, "base": 0x8C010000, "patches": p})
+    return out
+
+
 class Progress(io.RawIOBase):
     """The gzip output, with a percentage on screen."""
 
@@ -192,6 +228,11 @@ def convert(path, cab, interactive, vmu=None):
             say("\nNo encuentro 1ST_READ.BIN en el disco.")
             return 1
         game, notes = auto_profile(ip, first, info, pads)
+        extra = other_programs(disc, ip)
+        if extra:
+            game["groups"] += extra
+            notes.append("Otros programas del disco parcheados igual que 1ST_READ.BIN: " +
+                         ", ".join(g["file"] for g in extra) + ".")
         notes.insert(0, "Juego no probado (o versión distinta de la probada): parches localizados automáticamente.")
     if path.lower().endswith(".cdi"):
         notes.append("CD de autoarranque (.cdi): datos en la LBA %d%s." % (
