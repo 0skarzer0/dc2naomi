@@ -844,9 +844,9 @@ Queda abierto: qué tiene el "Now Loading" que en la placa no se ve (paleta ARGB
 subida por DMA ch2, cambio de framebuffer en la interrupción de vblank...). Hace falta el diag del punto 1 de abajo
 para ver si en ese tramo el juego está vivo.
 
-### Alternativa encontrada: Dream 4.0.4 (2026-11-08)
+### Alternativa encontrada: DreamShell 4.0.4 (2026-11-08)
 
-[Dream](https://github.com/DC-SWAT/DreamShell) 4.0.4 (julio de 2026, de SWAT) **arranca imágenes GD-ROM de Dreamcast en
+[DreamShell](https://github.com/DC-SWAT/DreamShell) 4.0.4 (julio de 2026, de SWAT) **arranca imágenes GD-ROM de Dreamcast en
 NAOMI y NAOMI 2 desde IDE o SD**, y también ROMs de cartucho NAOMI. Su ISO Loader (isoldr) hace lo mismo que nuestro
 residente, pero es un proyecto maduro: emula todas las syscalls de la BIOS, lee de forma asíncrona con interrupciones,
 emula CDDA en NAOMI, parchea el cable de vídeo, carga un volcado de la flash de Dreamcast y gestiona la EEPROM.
@@ -855,15 +855,15 @@ Para los mandos trae un **firmware propio de la MIE con puente JVS → mando de 
 este proyecto para el mueble de Crazy Taxi.
 
 Cómo arranca en NAOMI: con la BIOS **HollySH** (`firmware/hollysh`, imagen `.bios` que sustituye a la BIOS de la placa),
-que carga Dream desde SD (adaptador SD por SPI en el puerto serie, conector CN1, CS por RTS) o IDE. En el código
+que carga DreamShell desde SD (adaptador SD por SPI en el puerto serie, conector CN1, CS por RTS) o IDE. En el código
 no hay imagen de netboot para NetDIMM. Falta confirmar en el foro (http://www.dc-swat.ru/forum/thread-4297.html) qué
 hardware hace falta exactamente y qué juegos de Dreamcast funcionan.
 
-Lo que dice el hilo "Dream on NAOMI" del foro de dc-swat (oct. 2025 - oct. 2026, autor SWAT):
-- Arranca Dream con una **BIOS propia grabada en la EPROM de la BIOS** (programador + borrador UV; las 27C160 viejas
+Lo que dice el hilo "DreamShell on NAOMI" del foro de dc-swat (oct. 2025 - oct. 2026, autor SWAT):
+- Arranca DreamShell con una **BIOS propia grabada en la EPROM de la BIOS** (programador + borrador UV; las 27C160 viejas
   "mueren como moscas", mejor comprar otras). La BIOS de serie bloquea la interfaz ATA; la HollySH la desbloquea.
 - Lee los juegos de **SD** (adaptador al conector CN1, conectores OMRON que recomienda sacar de un cartucho barato o de
-  la placa óptica) o de **IDE/CF** (CF de 128 GB con LBA48). "**For Dream, NETDIMM is a useless thing**": no lee de
+  la placa óptica) o de **IDE/CF** (CF de 128 GB con LBA48). "**For DreamShell, NETDIMM is a useless thing**": no lee de
   la NetDIMM.
 - Juegos de Dreamcast en NAOMI: sí, salvo probablemente Windows CE. Worms World Party "funciona a la perfección".
 - Puertos maple: A y D de NAOMI se usan para otras cosas; B y C valen para periféricos de Dreamcast; el ISO Loader
@@ -874,11 +874,11 @@ Lo que dice el hilo "Dream on NAOMI" del foro de dc-swat (oct. 2025 - oct. 2026,
 Fuentes del isoldr para NAOMI: `firmware/isoldr/loader/{main.c,syscalls.c,utils.c,cdda.c,naomi.c}` (ramas
 `!is_dreamcast()`); MIE: `firmware/mie`; mapeo JVS: `modules/isoldr/mie_pad.c`.
 
-### Dream por netboot (perfil `ds`, 2026-11-08) — paso 1: llega al menú en Flycast
+### DreamShell por netboot (perfil `ds`, 2026-11-08) — paso 1: llega al menú en Flycast
 
-Idea: Dream 4.0.4 ya resuelve lo difícil (syscalls, sonido, IRQ, puente JVS). Su KallistiOS (compilado como
+Idea: DreamShell 4.0.4 ya resuelve lo difícil (syscalls, sonido, IRQ, puente JVS). Su KallistiOS (compilado como
 Dreamcast "pristine") **también monta `/cd` en NAOMI** y lee el disco con las syscalls GD de la BIOS, que nuestro
-residente ya imita leyendo de la NetDIMM. Así Dream arranca por netboot sin BIOS HollySH ni SD/IDE.
+residente ya imita leyendo de la NetDIMM. Así DreamShell arranca por netboot sin BIOS HollySH ni SD/IDE.
 
 Construcción: carpeta fuente con `IP.BIN` (uno estándar de SEGA; se usa el del disco del usuario con los parches de
 Virtua Tennis), `1ST_READ.BIN` = `DS_CORE.BIN` de la release y la carpeta `DS/` de la release.
@@ -893,17 +893,17 @@ Cambios necesarios:
 En Flycast (con dos ajustes locales en `tools/flycast/flycast-dc2naomi-debug.patch`: SCI que contesta como puerto
 síncrono sin nada conectado, porque el sondeo de SD por SCI espera RDRF sin límite; y `FC_SYSM_RAM=1`, modo de sistema
 NAOMI `0xa1` en `0xa05f74b0` para código en RAM, como la placa real): "Root directory is /cd/DS", detecta la MIE
-("JVS I/O 315-6149") y llega al menú "Dream 4.0.4 NAOMI".
+("JVS I/O 315-6149") y llega al menú "DreamShell 4.0.4 NAOMI".
 **En placa (2026-11-08): se cuelga tras el logo de SEGA.** Sospechoso principal: el sondeo de IDE por el bus G1
 (registros ATA `0xa05f7018`/`0xa05f7080-9c`), que en NAOMI es el bus de la NetDIMM; también el sondeo de SD por
 SCIF/SCI. Siguiente prueba: `EMU_DS_CORE.BIN` de la release (compilado con `DS_EMU`: se salta `InitIDE()` e
 `InitSDCard()`; mismo parche `0x8c25d4c4`), imágenes `dreamshell_emu` y `dreamshell_emu_diag` (`DIAG=1`). Ojo: el
 constructor reutiliza `WORK/track3.iso`; con otra carpeta fuente usar otro WORK o `REBUILD=1`.
 `dreamshell_emu_diag` en placa: filas vivas (las llamadas GD siguen) pero negro, sin menú; con lecturas PIO lentas en
-Flycast llega igual al menú, así que no es lentitud. Hipótesis: `cdrom_init` del KallistiOS de Dream repite el
+Flycast llega igual al menú, así que no es lentitud. Hipótesis: `cdrom_init` del KallistiOS de DreamShell repite el
 desbloqueo de la protección del bus G1 (escribe `0x1fffff` en `0xa05f74e4` y lee los 2 MB de BIOS) si `0xa05f74ec`
 no vale 3; en NAOMI esas direcciones G1 son el puerto del cartucho (la NetDIMM) y, con un multibios, la verificación
-puede fallar y bloquear el bus: el residente leería basura y Dream no encontraría su carpeta. Perfil `ds_emu`:
+puede fallar y bloquear el bus: el residente leería basura y DreamShell no encontraría su carpeta. Perfil `ds_emu`:
 `cmp/eq #3,r0` en `0x8c15ba1e` (EMU_DS_CORE) → `sett`, se salta el desbloqueo. Imágenes `dreamshell_emu2(_diag)`.
 **`dreamshell_emu2_diag` en placa (2026-11-08): igual**, filas vivas durante minutos y negro. La protección del bus G1
 no era (o no era lo único). Sin forma de ver en placa qué devuelve cada lectura, el camino por netboot queda
@@ -916,22 +916,22 @@ Siguiente: lanzar un juego de Dreamcast desde el ISO Loader leyendo de la NetDIM
 **`dstest` en placa (2026-11-08, foto):** SYSMODE `0xa0`, protección G1 **ya superada** (`0x5f74ec = 3`; el multibios
 arranca con `0xe6ff`, el bootstrap "mágico"), TOC correcta, PIO y DMA de sectores bien (`CD001`), iso9660 lista
 `/cd/DS`, `startup.lua` se lee y `curl.klf` (946 KB) a **2,4 MB/s**. Forzar a mano el desbloqueo G1 pone el estado en 2
-y la NetDIMM devuelve solo `ff`: el desbloqueo sí rompe el bus, pero Dream no lo hace porque el estado ya es 3.
-Conclusión: el camino de lectura de Dream funciona en placa; se para en algo posterior.
+y la NetDIMM devuelve solo `ff`: el desbloqueo sí rompe el bus, pero DreamShell no lo hace porque el estado ya es 3.
+Conclusión: el camino de lectura de DreamShell funciona en placa; se para en algo posterior.
 
 **Consola en pantalla (`DIMM_CONSOLE` 0x0800, `CONSOLE=1`):** el residente se hace pasar por dcload (`0xdeadbeef`
 en `0x8c004004`, función en `0x8c004008`) y dibuja en el frame buffer todo el dbglog/printf de KallistiOS (fuente
 8x16 de `tools/dstest/font.h`). Imagen `dreamshell_con` (EMU core). En Flycast se ve el registro hasta
-"Initializing Dream Core...".
-**`dreamshell_con` en placa: se queda en "Initializing Dream Core..."** (último mensaje del core normal antes del
+"Initializing DreamShell Core...".
+**`dreamshell_con` en placa: se queda en "Initializing DreamShell Core..."** (último mensaje del core normal antes del
 menú). Después vienen, sin mensajes: SDL (vídeo + joystick: MIE/JVS), TTF, GUI, consola, módulos, apps y Lua.
 Siguiente: `dreamshell_dbg` = `DEBUG_DS_CORE.BIN` (perfil `ds_dbg`, parche `0x8c25d504`) + consola: en Flycast muestra
 "Loading module vkb", "Installing apps", "DS_OK: ..." y "Initializing time".
-**`dreamshell_dbg` en placa (foto): Dream arranca entero.** "DreamShell 4.0.4 NAOMI 2", "Base path: /cd/DS",
+**`dreamshell_dbg` en placa (foto): DreamShell arranca entero.** "DreamShell 4.0.4 NAOMI 2", "Base path: /cd/DS",
 módulo vkb, todas las apps `DS_OK`, "App Launch App opened", "Startup time: 6833 ms". Pero la pantalla sigue mostrando
-el texto de la consola: lo que Dream dibuja con el PVR (3D) no llega a la pantalla. La placa es una **NAOMI 2**
+el texto de la consola: lo que DreamShell dibuja con el PVR (3D) no llega a la pantalla. La placa es una **NAOMI 2**
 (SWAT: "en NAOMI 2 aún no hay vídeo, la salida hay que configurarla aparte"; su BIOS HollySH inicializa ELAN). Flycast
-no puede emular NAOMI 2 sin su BIOS. Siguiente: `tools/pvrtest` (imagen `pvrtest`): los pasos de vídeo de Dream
+no puede emular NAOMI 2 sin su BIOS. Siguiente: `tools/pvrtest` (imagen `pvrtest`): los pasos de vídeo de DreamShell
 (`pvr_init_defaults`, `pvr_dma_init`, textura por SQ y por DMA ch2, fotogramas con límite de tiempo) con texto.
 **`pvrtest` en placa (vídeo):** pvr_init_defaults, pvr_dma_init, textura por SQ y por DMA ch2: todo bien. El fotograma
 0 se envía pero **el 1 nunca está listo** ("NOT READY after 3 s" sin fin). `ISTNRM = 0x40000030` en cada lectura:
@@ -959,7 +959,7 @@ La tabla de inicialización del IP.BIN no toca el PVR/TA. KallistiOS normal (Can
 (`tools/pvrnaomi`): `pvrtest_nb` (imagen NAOMI directa, como Cannonball) y `pvrtest_np` (por loader + residente +
 IP.BIN, con un salto de 64 KB delante porque KallistiOS NAOMI enlaza en `0x8c020000`).
 **Resultado en placa: `pvrtest_nb` dibuja (cuadrado rojo), `pvrtest_np` no (texto).** El TA se queda sin
-responder por algo de **nuestro camino de arranque**, no por KallistiOS ni Dream. Sospechosos y flags nuevos del
+responder por algo de **nuestro camino de arranque**, no por KallistiOS ni DreamShell. Sospechosos y flags nuevos del
 residente: `DIMM_NOIPBOOT` 0x1000 (saltar a 1ST_READ sin el bootstrap del IP.BIN), `DIMM_NOPCTRA` 0x2000 (no escribir
 PCTRA `0x000a03f0`), `DIMM_NOBIOSHW` 0x4000 (no escribir AICA SCI*, DMAOR ni PCTRA). Imágenes
 `pvrtest_np_noipboot`, `pvrtest_np_nopctra`, `pvrtest_np_nobioshw`.
@@ -970,12 +970,12 @@ En placa: `pvrtest_np_nopctra` y `pvrtest_np_nobioshw` dibujan (cuadrado rojo); 
 escribía en `boot()` el valor que deja la BIOS de Dreamcast en el control del puerto A del SH4 (`PCTRA`,
 `0xff80002c`). En la NAOMI 2 esos pines se usan para otra cosa y con ese valor **el TA deja de responder**
 (`TA_LIST_INIT` ignorado, `TA_OPB_POS` congelado, nunca "lista terminada" ni "render terminado"): el 3D no dibuja
-nada. Era la causa de que Dream arrancara entero sin verse, y probablemente de la pantalla negra tras el logo de
+nada. Era la causa de que DreamShell arrancara entero sin verse, y probablemente de la pantalla negra tras el logo de
 SEGA en casi todos los juegos de Katana (Virtua Tennis sería la excepción por cómo inicializa el TA o porque reescribe
 PCTRA). **Arreglo:** el residente ya no escribe `PCTRA` (el flag `0x2000` ahora sirve para volver a escribirlo en
 pruebas). Imágenes con el arreglo: `dreamshell2`, `ct2h2`, `daytona2`.
 
-**Resultados en placa con el arreglo (2026-11-08):** Dream muestra su menú y se maneja con los mandos del mueble.
+**Resultados en placa con el arreglo (2026-11-08):** DreamShell muestra su menú y se maneja con los mandos del mueble.
 **Crazy Taxi 2 funciona**: "Now Loading", pantalla de VMU y, en el mueble de Crazy Taxi, volante y pedales responden
 bien con el hook de mandos. Daytona USA 2001 sigue en negro tras el logo de SEGA.
 
@@ -1001,7 +1001,7 @@ CT2: probado en el mueble y **terminado** (2026-11-08). Yu Suzuki: ya arranca y 
 
 El driver G2 DMA de Linux (`arch/sh/drivers/dma/dma-g2.c`) escribe `SB_G2DSTO` (`0xa05f7890`) = 27 y `SB_G2APRO` =
 `0x4659404f`; KallistiOS escribe `0x4659007F` ("0x0C000000-0x0CFFFFFF", es decir solo 16 MB: en NAOMI, con 32 MB, una
-DMA G2 desde `0x0Dxxxxxx` daría error de overrun; a tener en cuenta para Dream en modo 32 MB con streaming).
+DMA G2 desde `0x0Dxxxxxx` daría error de overrun; a tener en cuenta para DreamShell en modo 32 MB con streaming).
 Los juegos Katana calculan y escriben su propio G2APRO con **la misma función de Shinobi en la versión Dreamcast y en
 la NAOMI** (Ikaruga, Virtua Athlete: idéntica, literales `0x07f00000`, `0x46590000`, `0xa05f78bc`), así que G2APRO
 no explica por qué la DMA G2 de Ikaruga no termina en placa con nuestro loader.
@@ -1137,7 +1137,7 @@ VMU activada (el juego guarda licencias). Mandos `wheel`.
 ## OutRun 2006 Coast 2 Coast, demo para Dreamcast v24 (homebrew KallistiOS, 2026-11-09) — perfil `or2006`
 
 Demo hecha por fans (textos en español, "OUTRUN DC DEMO", IP.BIN casero con fecha 2026-11-09), GDI con `track03.iso`
-de 2048 bytes/sector. **No es Katana sino KallistiOS 2.x**, así que se trata como Dream:
+de 2048 bytes/sector. **No es Katana sino KallistiOS 2.x**, así que se trata como DreamShell:
 - flags `0x1404`: `DIMM_SYNCREAD` (KOS espera la IRQ de fin de DMA G1 si la lectura sigue "procesando"),
   `DIMM_NOIPBOOT` (su IP.BIN no es el de SEGA: la tabla G1 no está en `0x5ab4`) y sin user break.
 - `arch_stack_32m` (`0x8c0862f4`, `0x8e000000`) → `0x8dc00000`: es `_arch_mem_top`, techo de pila y montículo.
@@ -1170,7 +1170,7 @@ El usuario enlazó su PC y dio acceso a las dos Raspberry del WiPi (SSH; credenc
 `10.0.0.4` (NAOMI 2, mueble Crazy Taxi). Firmware 3.17, 512 MB. El WiPi lleva las herramientas de DragonMinded en
 `/sbin/piforce/dm_netboot` (`netdimm.NetDimm(ip).info()/peek()/poke()`), que se usan desde la Raspberry.
 - `peek` con un juego de NAOMI normal: contesta al momento. **Con nuestro residente: 17-30 s y basura** (nadie
-  atendía la petición; era la "interrupción externa bit 3 siempre pendiente" de las pruebas de Dream).
+  atendía la petición; era la "interrupción externa bit 3 siempre pendiente" de las pruebas de DreamShell).
 - **`dimm_service()` en el residente** (protocolo de `dimmcomms.c` de libnaomi): contesta peek/poke 8/16/32 y la
   dirección base, solo sobre memoria segura (RAM, Holly, AICA, VRAM, registros del SH4). Se sondea desde el gancho
   maple, cada syscall GD y el tick de TMU2 (con `DIMM_PCSAMPLE` 0x0200, que además deja los últimos PC en `pcs_ring`).
@@ -1900,7 +1900,7 @@ la NAOMI 2, por orden de aparición en placa:
 | # | Dónde | Qué pasaba | Arreglo |
 |---|---|---|---|
 | 1 | `hardware/video.c` `vid_check_cable()` | escribe PCTRA para leer el cable: **mata el TA** (sección "CAUSA ENCONTRADA") → pantalla negra con ruido | devuelve VGA sin escribir nada (el residente ya pone VGA en el AICA `0x2c00`) |
-| 2 | `kernel/stack.c` | la NAOMI 2 no hace espejo de `0xadffffff` → KOS cree 32 MB y pone la cima en `0x8e000000`, **encima del residente** | `arch_stack_32m` = `0x8dc00000` (lo mismo que Dream y or2006) |
+| 2 | `kernel/stack.c` | la NAOMI 2 no hace espejo de `0xadffffff` → KOS cree 32 MB y pone la cima en `0x8e000000`, **encima del residente** | `arch_stack_32m` = `0x8dc00000` (lo mismo que DreamShell y or2006) |
 | 3 | `maple/maple_utils.c` `maple_dma_addr()` | sin el gancho de maple no hay mandos (ni VMU) | lee el gancho de la **tabla del residente** (`0x8dc00000`: `"DCLR"`, +8 `maple_hook`) y escribe su resultado en `SB_MDSTAR`; sin tabla (Dreamcast real) hace lo normal. **Mejor que el parche `HOOKST`:** no depende de direcciones y sobrevive a recompilar el residente |
 | 4 | `hardware/cdrom.c` `cdrom_init()` | desbloqueo del bus G1 leyendo la BIOS entera (con multibios puede bloquearlo) | no lo intenta |
 | 5 | `hardware/g2bus.c` `g2_fifo_wait()` | espera sin límite a que bajen los bits 0/4 de `SB_FFST` (`0xa05f688c`): los mismos que `G2CHK0`/`G2CHK4` | 3.000.000 vueltas como el residente, luego sigue; tras el primer fallo solo 1024 (`g2_fifo_stuck` lo cuenta) |
@@ -1909,7 +1909,7 @@ la NAOMI 2, por orden de aparición en placa:
 | 8 | `kernel/startup.S` + `kernel/exec.c` | **el fallo de fondo, descubierto leyendo la RAM:** la primera instrucción guarda el SR de quien lo lanza en `_arch_old_sr` y tres instrucciones después reescribe el CCR con OCI (invalida la caché de datos **sin escribirla**). El loader de dc2naomi (KallistiOS) deja la caché en copy-back y el residente no la toca: el SR se queda en una línea sucia que se tira, en RAM queda 0. Al saltar del cargador de Mario Kart al juego (`arch_exec`), `ldc r0,sr` con SR = 0 = **modo usuario**: error de dirección en la siguiente instrucción (`EXPEVT 0x0e0`), excepción contra la tabla del residente rellena de `0xff`, reinicio, y la NetDIMM vuelve a cargar: **logo de Nintendo en bucle, sonido y tembleque** | guardar el SR por P2 (sin caché); y `arch_exec` nunca carga un SR sin el bit MD (usa `0x400000f0`, el del residente) |
 
 Los puntos 5, 6 y 7 eran cosas que ya habíamos medido en placa con juegos comerciales (`G2CHK0/4`, `G2CPU`): KallistiOS
-tropieza igual. Dream no lo había destapado porque dibuja en 2D y casi no usa el AICA. El 8 afecta a cualquier
+tropieza igual. DreamShell no lo había destapado porque dibuja en 2D y casi no usa el AICA. El 8 afecta a cualquier
 programa de KallistiOS que encadene otro (`arch_exec`) lanzado por el loader de dc2naomi; también a or2006/or37 si
 alguna vez lo hacen.
 
@@ -1951,7 +1951,7 @@ tiempos de 31 kHz del cargador restaurados) y Flycast con la BIOS de NAOMI 2 del
   de `data/course_player_selection.o`). Con `make -j` se ensambla antes de que exista. `build_mk64.sh` compila primero
   los 52 objetos que nombran esos `.mk` y luego todo.
 - **No usar el `.cdi`/`.iso` que circulan** (el usuario trajo tres): el de diciembre de 2025 lleva 640 MB de relleno
-  delante de los datos y no cabe en la NetDIMM; el `.iso` es para Dream; el CDI de BootDreams es de agosto de 2025.
+  delante de los datos y no cabe en la NetDIMM; el `.iso` es para DreamShell; el CDI de BootDreams es de agosto de 2025.
   Además ninguno lleva los arreglos de arriba.
 - **gitlab.com no es accesible** desde el entorno de la IA: `mkdcdisc` no hace falta (dc2naomi hace el ISO con
   genisoimage).
