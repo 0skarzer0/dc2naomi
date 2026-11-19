@@ -804,4 +804,8 @@ GAMES["robocop_dncd15"] = _copy.deepcopy(GAMES["robocop_dncd"])
 GAMES["robocop_dncd15"]["title"] = "ROBOCOP NEOGEO CD DNCD 15K"
 GAMES["robocop_dncd15"]["groups"][0]["patches"] = [
     (a, n, 0xE002) if (a, n, v) == (0x8C0A6C52, 2, 0xE000) else (a, n, v)   # vid_check_cable: mov #2,r0 = RGB
-    for a, n, v in GAMES["robocop_dncd"]["groups"][0]["patches"]]
+    for a, n, v in GAMES["robocop_dncd"]["groups"][0]["patches"]] + [
+    # the menu's RGB list (table entries 5 and 6) has only 480i: "RGB 640x480" is KOS mode 4 = 640x480 NTSC interlaced,
+    # like "RGB 640x480 IL" (read on the board: SPG_CONTROL 0x150, 525 lines). Entry 6 becomes "RGB 320x240", KOS
+    # mode 2 = 320x240 NTSC progressive (240p, near the Neo Geo's 320x224): no interlace flicker on the monitor
+    (0x8C0BF240, 4, 0x8C0BF4E4), (0x8C0BF244, 4, 2)]

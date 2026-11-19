@@ -2242,3 +2242,7 @@ Subidas a la .251 ese día: Wacky Races reconvertido (md5 `7898e31f…`), MSR v2
   `dc-robocop_dncd15_dc2naomi.bin.gz` (`c6686a59…`). La música CD-DA **suena en la placa** (confirmado por el usuario).
   Receta general: en un programa de KallistiOS, la frecuencia de la NAOMI la decide el cable que devuelva el parche de
   `vid_check_cable` (0 VGA = 31 kHz, 2 RGB = 15 kHz).
+- **15 kHz sin entrelazar:** la versión RGB salía a 480i (leído en placa: SPG_CONTROL `0x150`, SPG_LOAD `0x020c0359`
+  = 525 líneas), porque las dos entradas RGB del menú usan el modo 4 de KOS (640x480 NTSC IL). En `robocop_dncd15` la
+  entrada "RGB 640x480" pasa a ser **"RGB 320x240"** (modo 2, 320x240 NTSC progresivo, 240p). Imagen md5 `68c34a1d…`.
+  En la .250 quedan solo "RoboCop 31kHz" y "RoboCop 15kHz" (la DIAG borrada; copia del CSV `romsinfo.csv.bak_robodiag`).
