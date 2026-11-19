@@ -1,0 +1,97 @@
+diff -urN a/compat.h b/compat.h
+--- a/compat.h	2026-11-20 00:37:55.361431395 +0100
++++ b/compat.h	2026-11-20 00:37:55.361431395 +0100
+@@ -0,0 +1,13 @@
++#ifndef NDC_COMPAT_H
++#define NDC_COMPAT_H
++#include <stdint.h>
++#include <string.h>
++#include <stdio.h>
++#include <stdlib.h>
++#ifndef htonl
++#define htonl(x) __builtin_bswap32((uint32_t)(x))
++#define htons(x) __builtin_bswap16((uint16_t)(x))
++#define ntohl(x) __builtin_bswap32((uint32_t)(x))
++#define ntohs(x) __builtin_bswap16((uint16_t)(x))
++#endif
++#endif
+diff -urN a/debug/debug.h b/debug/debug.h
+--- a/debug/debug.h	2026-11-20 00:37:55.344939109 +0100
++++ b/debug/debug.h	2026-11-20 00:37:55.346203956 +0100
+@@ -37,14 +37,14 @@
+ #    define ASSERT(EXPR)
+ #  endif
+ #else
+-#  include "dc_utils.h"
++#  include <stdio.h>
+ #  define LOG(MSG)
+ #  define LOGHEX(X)
+-#  define ERROR(MSG) { dc_pvr_font_output_message(NULL, MSG, NULL, NULL); }
++#  define ERROR(MSG) { printf("[ERROR] %s\n", MSG); }
+ #  define CRASH_POINT() \
+   { \
+     char hoge[128]; \
+-    timer_spin_sleep (*((int *)(hoge + 1))); \
++    *((volatile int *)(hoge + 1)) = 0;  \
+   }
+ #  define ASSERT(EXPR)
+ #endif
+diff -urN a/nes/apu/nes_apu.c b/nes/apu/nes_apu.c
+--- a/nes/apu/nes_apu.c	2026-11-20 00:37:55.358355551 +0100
++++ b/nes/apu/nes_apu.c	2026-11-20 00:37:55.359910323 +0100
+@@ -1350,9 +1350,9 @@
+       
+       /* signed 16-bit output, unsigned 8-bit */
+       if (16 == apu->sample_bits)
+-        *((int16 *) buffer)++ = (int16) accum;
++        { *((int16 *) buffer) = (int16) accum; buffer = (void *)((int16 *) buffer + 1); }
+       else
+-        *((uint8 *) buffer)++ = (accum >> 8) ^ 0x80;
++        { *((uint8 *) buffer) = (accum >> 8) ^ 0x80; buffer = (void *)((uint8 *) buffer + 1); }
+     }
+   }
+   
+diff -urN a/nes/nes.h b/nes/nes.h
+--- a/nes/nes.h	2026-11-20 00:37:55.351512448 +0100
++++ b/nes/nes.h	2026-11-20 00:37:55.352890813 +0100
+@@ -31,6 +31,7 @@
+ #include <stdio.h>
+ 
+ #include "types.h"
++class NES_mapper;
+ #include "nes_6502.h"
+ #include "mapper/nes_mapper_decl.h"
+ #include "nes_rom.h"
+diff -urN a/nester.h b/nester.h
+--- a/nester.h	2026-11-20 00:37:55.338036399 +0100
++++ b/nester.h	2026-11-20 00:37:55.339339067 +0100
+@@ -1,8 +1,3 @@
+ #ifndef __NESTER_H
+ #define __NESTER_H
+-
+-#ifdef __DREAMCAST__
+-#include "dc_utils.h"
+-#endif
+-
+ #endif
+diff -urN a/types.h b/types.h
+--- a/types.h	2026-11-20 00:37:55.330459807 +0100
++++ b/types.h	2026-11-20 00:37:55.331950210 +0100
+@@ -36,7 +36,7 @@
+ /* Define this if running on little-endian (x86, Dreamcast) systems */
+ #define  HOST_LITTLE_ENDIAN
+ 
+-#ifndef __DREAMCAST__
++#if !defined(NDC_USE_KOS_TYPES)
+ /* These should be changed depending on the platform */
+ typedef unsigned long uint32; // KF 05/31/2001 changed the typedef for Dreamcast
+ typedef unsigned short uint16; // KF 05/31/2001 changed the typedef for Dreamcast
+@@ -44,8 +44,6 @@
+ typedef signed long int32; // KF 05/31/2001 changed the typedef for Dreamcast
+ typedef signed short int16; // KF 05/31/2001 changed the typedef for Dreamcast
+ typedef signed char int8; // KF 05/31/2001 changed the typedef for Dreamcast
+-#else
+-#include <kos.h>
+ #endif
+ typedef uint8 boolean;
+ 

@@ -2246,3 +2246,29 @@ Subidas a la .251 ese día: Wacky Races reconvertido (md5 `7898e31f…`), MSR v2
   = 525 líneas), porque las dos entradas RGB del menú usan el modo 4 de KOS (640x480 NTSC IL). En `robocop_dncd15` la
   entrada "RGB 640x480" pasa a ser **"RGB 320x240"** (modo 2, 320x240 NTSC progresivo, 240p). Imagen md5 `68c34a1d…`.
   En la .250 quedan solo "RoboCop 31kHz" y "RoboCop 15kHz" (la DIAG borrada; copia del CSV `romsinfo.csv.bak_robodiag`).
+
+## NesterDC (emulador de NES, `homebrew/nesterdc/`) — perfil `nesterdc`. ⚠️ SIN PROBAR EN PLACA (2026-11-20)
+
+**Qué es.** [NesterDC](https://github.com/pqrs-org/NesterDC) (pqrs-org / tekezo; núcleo Nester GPL2, código de
+Dreamcast BSD) es un emulador de NES para Dreamcast hecho con KallistiOS 1.1.8 y gcc 3.2. Lo hemos llevado a la
+KallistiOS actual (`680d1862` + el parche `NAOMI_HOST` de `homebrew/mk64/`) **solo el núcleo** (CPU, PPU, APU, mappers:
+136 ficheros compilan con sh-elf-gcc 15). El frontend original (menús, AICA con firmware propio ARM, VMU, mandos de
+KOS 1.1.8) **no se usa**: `ndc_main.cpp` es uno nuevo y mínimo (vídeo PVR 640x480 estirado, audio `snd_stream`
+mono 44,1 kHz con el mismo protocolo de dos mitades del núcleo, mandos maple).
+
+```sh
+homebrew/nesterdc/build_nesterdc.sh JUEGO.nes   # -> build/nesterdc_dc2naomict.bin(.gz)
+```
+
+La ROM se enlaza dentro del programa (`fs_ramdisk`, `/ram/game.nes`): **una imagen por juego**, hecha con tu `.nes`.
+No hay nada con copyright en el repositorio. `nester-kos-modern.patch` es el cambio a los fuentes de NesterDC
+(tipos `uint8…` sin `kos.h`, `htonl` propio, `*((T*)p)++` ilegal en gcc moderno, un `class NES_mapper;`).
+
+**Estado:** compila, enlaza y empaqueta (1,5 MB; comprobado de cero con `WORK` nuevo). **No se ha arrancado:** no hay BIOS de
+NAOMI 2 en la sesión de la IA para Flycast y la Raspberry/.251 no es alcanzable desde la nube (IP privada). Probado solo
+con una ROM de prueba mínima hecha a mano (fondo de un color, no es un juego).
+
+**Pendiente / dudas:** que arranque; el audio (la posición de reproducción se saca de lo consumido por el callback, que
+va adelantado respecto a lo que suena); mandos (volante = joyx ±48, A→A, X/B→B, Y/Z→SELECT, START); VMU y partidas
+guardadas (no están); menú de selección de ROM (no hay); FDS (necesita `disksys.rom`). No sirve para el volante: la NES
+tiene pocos juegos de conducción.

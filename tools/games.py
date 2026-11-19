@@ -809,3 +809,20 @@ GAMES["robocop_dncd15"]["groups"][0]["patches"] = [
     # like "RGB 640x480 IL" (read on the board: SPG_CONTROL 0x150, 525 lines). Entry 6 becomes "RGB 320x240", KOS
     # mode 2 = 320x240 NTSC progressive (240p, near the Neo Geo's 320x224): no interlace flicker on the monitor
     (0x8C0BF240, 4, 0x8C0BF4E4), (0x8C0BF244, 4, 2)]
+
+# NesterDC (pqrs-org/NesterDC, NES emulator for Dreamcast; core Nester GPL2), ported by us to the current
+# KallistiOS (680d1862 + NAOMI_HOST patch) with a new minimal frontend. Same layout as Mario Kart 64: a
+# KallistiOS program on a rebuilt disc (IP.BIN + 1ST_READ.BIN = the program itself, unscrambled). The ROM
+# is linked into the program (fs_ramdisk), so the user builds one image per game with their own .nes.
+GAMES["nesterdc"] = {
+    "title": "NESTERDC",
+    "pads": "menu",
+    "region": 1,
+    "language": 1,
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "NESTERDC",
+    "flags": 0x1404,      # same as mk64: no user break, GD DMA reads in one call, no IP.BIN bootstrap
+    "hook_pc": [],
+    "groups": [],
+}

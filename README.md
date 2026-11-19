@@ -266,3 +266,7 @@ juegos, direcciones de memoria y huellas SHA-1. Necesitas **tu propio volcado** 
 los juegos citados son marcas de sus propietarios.
 
 Parte del proyecto [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-games).
+
+- **NesterDC** (`homebrew/nesterdc/`, sin probar en placa): emulador de NES. Núcleo Nester (GPL2, Darren Ranalli y
+  colaboradores) y su port a Dreamcast [NesterDC](https://github.com/pqrs-org/NesterDC) de **tekezo** (pqrs-org); aquí
+  solo se aprovecha el núcleo, con un frontend nuevo. Su código no se incluye: `build_nesterdc.sh` lo descarga.
