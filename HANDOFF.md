@@ -2131,7 +2131,25 @@ Si alguna se cuelga igual, `newloader.py`.
 CAUTION 51 si SYSTEM ASSIGNMENTS → CABINET TYPE no coincide. Arreglo: ponerlo a 1 PLAYER(S) en el test de la .60. Los
 controles para volante y pedales: pendiente.
 
-**TD6:** con mando estándar llega en Flycast al menú principal con los créditos de la VMU: el cuelgue es solo de la
+**TD6 — resuelto en placa (2026-11-19 13:39, el usuario: "llega al menú!").** Con la caja negra en la placa (Pi .251,
+`tools/board/pk.py`): tras START el juego lee `FRONTEND/FRONTEND.TEX` entero (DMAREAD de 0x635 sectores, 3,2 MB, hasta
+0x8d000000); la lectura acaba bien (estado del residente: COMPLETE consumido, 0x31a800 bytes) pero el juego no pide nada
+más: la música del título sigue y el icono de carga queda quieto; sus hilos (tareas por cuadro a 0x8c0ce5a8, que miden
+tiempo con el TMU2) siguen vivos. En Flycast la misma imagen sigue (la siguiente lectura es el sector 0x4951e).
+Con `read_chunk` = 4 (cada EXEC_SERVER copia 8 KB con las interrupciones cortadas, no 64 KB) puesto en vivo con
+`tools/board/pp.py 10.0.0.4 0x8dc05174=4` (dirección de `_read_chunk` en `resident.elf` del mismo cargador), llega al
+menú. Igual que SF3 Double Impact. Imagen definitiva: `tools/newloader.py` con `READ_CHUNK=4 PAD=9` (md5
+`0adb2a72…`), subida a la .251 con la VMU de la sesión de pruebas (copia de la anterior en
+`/boot/td6_vmu_backup_20261119.vmu`).
+**Mandos de TD6 (elección del usuario):** palanca = arriba/abajo (cambio de marcha), START + palanca = B/A: nuevo
+`DIMM_PAD_WHEELUD` (9; `"pads": "wheelud"` en un perfil, `PAD=9` en newloader). El resto como `DIMM_PAD_WHEEL`.
+Ojo al muestrear el PC (`DIMM_PCSAMPLE`): TD6 usa el TMU2 como contador libre (TCOR2 = -1), las muestras no valen.
+Ojo con `piapp.py`: sale con 0 aunque acabe en PAUSE (subida a medias); comprobar "done" antes de renombrar.
+Para cargar desde la Pi por SSH sin que el envío muera al cerrar la sesión: `/root/load.sh IP IMAGEN` lanzado con
+`setsid nohup ... &` (mata timehack, envía, arranca timehack; el vigilante de la VMU lo arranca el propio envío).
+`pkill -f timehack.py` dentro de un `sh -c` que también contiene "timehack.py" mata ese mismo shell.
+
+**TD6 (lo anterior):** con mando estándar llega en Flycast al menú principal con los créditos de la VMU: el cuelgue es solo de la
 placa. Pendiente: cargarlo con la caja negra (flags 0x20000) y que el usuario pulse START. En Flycast el modo de mandos
 del mueble no sirve para probar START: sin pedales los ejes de Flycast quedan a media escala y START + freno cuenta
 como X (`tools/flycast` sin mapa de pedales; `tools/flycast/img_setpad.py IMAGEN 2` lo pasa a mando estándar para probar).
@@ -2189,3 +2207,8 @@ DNCD4.0[ROBOCOP].cdi OUT.bin`. Comprobado aquí solo: la cabecera (flags `0x1094
 85001 sectores) y que los sectores de audio de la imagen son idénticos a los del CDI. **Sin Flycast ni BIOS de NAOMI
 en esta sesión**: falta probarla en Flycast antes que en placa (receta 2). Si no suena: peek de `cd` (`sh-elf-nm` del
 residente) para ver si llegan órdenes PLAY (`stats[0]`) y si el anillo avanza (`played`).
+
+**IP nueva de la Raspberry del mueble Crazy Taxi: 192.168.68.251** (antes .60; cambiada por el usuario el 2026-11-19).
+Subidas a la .251 ese día: Wacky Races reconvertido (md5 `7898e31f…`), MSR v2 (otros programas + `DIMM_DMAIRQ`,
+`85d9581c…`), Test Drive Le Mans (otros programas, `312db8a9…`), TD6 (arriba), y el vigilante de la VMU nuevo
+(copia `dc2naomi_vmu.py.bak_20261119`).
