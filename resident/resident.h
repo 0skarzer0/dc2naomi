@@ -59,6 +59,8 @@
                                          brake = X (N64 B), lever forward = R trigger (N64 R, hop/drift), lever back =
                                          L trigger (N64 Z, use item); wheel 2.5x faster around the centre */
 #define DIMM_PAD_AB2    7             /* After Burner II on its own: DIMM_PAD_PLANE with its own buttons and throttle (resident.c) */
+#define DIMM_PAD_WHEELUD 9            /* DIMM_PAD_WHEEL with the lever's two uses swapped: lever = up/down, START + lever =
+                                         B/A (Test Drive 6, gears on the d-pad: the user's choice, 2026-11-19) */
 #define DIMM_PAD_WHEEL  4             /* Crazy Taxi cabinet default (games not tuned yet): START sent on release, only
                                          if nothing else was used while held; held START: lever = up/down, brake = X,
                                          gas = Y; otherwise lever = B/A, gas/brake = R/L triggers; wheel = analog

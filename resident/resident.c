@@ -1213,6 +1213,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         x = (p & 0x0800) ? 0 : (p & 0x0400) ? 255 : 128;
         y = (p & 0x2000) ? 0 : (p & 0x1000) ? 255 : 128;
     } else if (jvs.valid && (H.pad_map == DIMM_PAD_WHEEL || H.pad_map == DIMM_PAD_CT || H.pad_map == DIMM_PAD_YSGW ||
+                             H.pad_map == DIMM_PAD_WHEELUD ||
                              PLANE_PADS)) {
         /* Crazy Taxi cabinet default for games not tuned yet (2026-11-09). START is sent on release, and only if
            nothing else was used while it was held; while held it shifts the controls: lever = up/down, brake = X,
@@ -1252,8 +1253,9 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             start_frames = 1;
             acc = brk = 0;
         } else if (start) {
-            if (fwd) b |= DC_UP;
-            if (back) b |= DC_DOWN;
+            u32 ud = H.pad_map != DIMM_PAD_WHEELUD;     /* WHEELUD: START + lever = B/A */
+            if (fwd) b |= ud ? DC_UP : DC_B;
+            if (back) b |= ud ? DC_DOWN : DC_A;
             if (brk > 64) b |= DC_X;
             if (acc > 64) b |= DC_Y;
             if (fwd || back || brk > 64 || acc > 64) start_used = 1;
@@ -1293,6 +1295,9 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                 } else rapid_count = 0;
                 if (brk > 64) trig |= plane_cfg[1];
                 acc = brk = 0;
+            } else if (H.pad_map == DIMM_PAD_WHEELUD) {
+                if (fwd) b |= DC_UP;                /* lever = up/down (Test Drive 6: gear up / down) */
+                if (back) b |= DC_DOWN;
             } else {
                 if (fwd) b |= DC_B;
                 if (back) b |= DC_A;
