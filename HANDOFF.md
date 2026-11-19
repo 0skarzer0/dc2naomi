@@ -2079,3 +2079,62 @@ El usuario la da por buena. Detalle en `homebrew/orc2cdc/README.md` (cabecera) y
 - **La SD de la Pi .60 dio errores de FAT** ("invalid cluster chain") y pasó `/boot` a solo lectura; tras reiniciar
   escribe, pero **falta un `fsck.vfat`** (pendiente del usuario). Imágenes de prueba en `/boot/roms/h-orcp*`,
   `h-orcRL*`, `h-orc2c4..7*` (se pueden borrar).
+
+## Fallos del 2026-11-19 (TD6, Airline Pilots, Wacky Races, SPF2X, Rush 2049, MSR)
+
+El usuario probó en placa y avisó: TD6 se queda con la música sonando tras START; Airline Pilots (NAOMI original, pasado
+de la .250 a la .60) dice "CAUTION 51 game assignments are incorrect"; Wacky Races pide un mando en el puerto A; SPF2X
+se cuelga tras los logos de CAPCOM y ADX; Rush 2049 (las dos) deja de responder y va lento tras START; MSR, pantalla
+negra tras el vídeo.
+
+**Programas cargados encima de 1ST_READ (Wacky Races, Test Drive Le Mans, MSR).** En esos discos `1ST_READ.BIN` es un
+cargador y el juego otro programa en 0x8c010000 (Wacky Races: `WACKY.BIN` + `MOVIE.BIN`; Le Mans: `FMV.BIN` +
+`LEMANS24.BIN`; MSR: `MSR.BIN`). El perfil automático solo parcheaba `1ST_READ.BIN`: el programa siguiente usaba su
+propio driver de maple contra el MIE (caja negra: 0 llamadas al gancho). Cómo verlo: `hdr.py` del perfil + volcado de
+RAM en Flycast (`DUMP=1`): las palabras de comprobación ya no están y `findpatch` sobre la RAM da otro gancho.
+- `app/dc2naomi.py other_programs()`: el perfil automático añade un grupo por cada `.BIN/.EXE/...` de 64 KB-8 MB con
+  muchos literales 0x8cXXXXXX ≥ 0x8c010000 en el que findpatch encuentra gancho de maple (cable y gancho, como 1ST_READ).
+- `tools/addprograms.py IMAGEN.bin.gz DISCO [SALIDA]`: añade esos grupos a una imagen ya hecha (no toca los ficheros
+  sustituidos: vídeos recodificados, audio mono). Hechas en `otros/fix/` del PC: msr, rush2049, rush2049_9, tdlemans.
+- Ojo: `2_DP.BIN` (Rush 2049, MSR, SW Racer, TXR2, Net de Tennis, Vampire Chronicle) y `DP_BEXP3.BIN` (TNN) son el
+  navegador DreamPassport, no el juego: parchearlo no cambia nada.
+- Wacky Races reconvertido con el perfil nuevo (`dreamcastisos/Wacky Races (USA)_dc2naomict.bin.gz`): en Flycast ve el
+  mando y la VMU y llega a los menús y a elegir piloto.
+- Escaneo de todos los CHD de `dreamcastisos` (`~/scanall.py` en la VM): solo los citados tienen otro programa del juego.
+
+**MSR: lectura en streaming del vídeo (`DIMM_DMAIRQ`, 0x80000).** Con `MSR.BIN` ya enganchado seguía negro: pedía
+`DMA_READ_REQ` (0x1c) de 0x2e sectores de `MOVIES/MSR.SFD`, recibía un `REQ_DMA_TRANS` de un sector y volvía a empezar.
+Espera la interrupción de fin de DMA del GD (ISTNRM bit 14), que nuestra copia no daba. Como el HLE de Flycast
+(`core/reios/gdrom_hle.cpp`: `asic_RaiseInterrupt(holly_GDROM_DMA)` en REQ_DMA_TRANS, `asic_CancelInterrupt` en
+G1_DMA_END): con la bandera, cada REQ_DMA_TRANS hace una DMA G1 de 32 bytes real al salir de la llamada (lo que ya se
+hacía con Windows CE), G1_DMA_END borra el bit 14 y su callback se llama al salir de la llamada (llamado dentro, o desde
+la interrupción anidada, sus GET_CMD_STAT recibían "ocupado" para siempre: tormenta de interrupciones). Sin la bandera
+no cambia nada para los demás juegos. En Flycast MSR llega al reloj, la zona horaria y "PRESS START BUTTON".
+`tools/newloader.py` con `FLAGS=0x80000` → `otros/fix/dc-msr_dc2naomict_v2.bin.gz` (falta subirla a la .60).
+
+**SPF2X: residente viejo.** La imagen de la .250 (2026-11-09) era anterior a la limpieza de RAM (6c95d60) que arregló el
+mismo síntoma en SSF2X. `tools/newloader.py VIEJA NUEVA` pone el cargador y residente actuales conservando título,
+cabecera y datos (no hace falta el disco). En Flycast: menú principal. **Subida a la .250** (md5 `0725d92c…`; la vieja en
+`/boot/spf2x_old.bin.gz.bak`). En la .250 hay más imágenes con cargadores anteriores (md5 de la zona del cargador):
+dcop_es, kof02, motw, rcotton_en, sf3ts, soulcal, ysgw (grupo más viejo); buzz_es, ikaruga; ssf2x_en, toystory2_es.
+Si alguna se cuelga igual, `newloader.py`.
+
+**Airline Pilots (NAOMI original):** la cabecera del juego (0x429 = 0x01) solo admite mueble de 1 jugador; la BIOS da
+CAUTION 51 si SYSTEM ASSIGNMENTS → CABINET TYPE no coincide. Arreglo: ponerlo a 1 PLAYER(S) en el test de la .60. Los
+controles para volante y pedales: pendiente.
+
+**TD6:** con mando estándar llega en Flycast al menú principal con los créditos de la VMU: el cuelgue es solo de la
+placa. Pendiente: cargarlo con la caja negra (flags 0x20000) y que el usuario pulse START. En Flycast el modo de mandos
+del mueble no sirve para probar START: sin pedales los ejes de Flycast quedan a media escala y START + freno cuenta
+como X (`tools/flycast` sin mapa de pedales; `t/setpad.py IMAGEN 2` lo pasa a mando estándar para probar).
+
+**Rush 2049:** el menú tras START (en 1ST_READ, no en 2_DP) responde poco y va a ~5 llamadas de maple por segundo en
+Flycast (la demo, ~48): el juego dibuja (muestras de PC en su código de texto y del TA), sin llamadas al GD. Sin
+resolver; mirar en placa.
+
+**Vigilante de la VMU:** en la .60 seguía uno de TD6 corriendo bajo Rush (el `stop` solo mata el PID del fichero de
+estado). Ahora cada vigilante sale si el fichero de estado ya no lleva su PID. Instalado en la .250 (copia
+`dc2naomi_vmu.py.bak_20261119`); falta la .60.
+
+Herramientas sueltas de prueba (scratchpad `t/`): `mkbin.py` (descomprime e inyecta la .vmu como el netbooter),
+`setpad.py`, `setflag.py`, `hdr.py` (tabla de parches), `box.py` (caja negra de un volcado de Flycast).
