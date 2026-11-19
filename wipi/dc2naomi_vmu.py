@@ -141,6 +141,15 @@ def write_state(ip, path, synced):
         f.write('%d\n%d\n%s\n' % (os.getpid(), synced, path))
 
 
+def owner(ip):
+    """True while the state file names this process (the newest watcher for the board)."""
+    try:
+        with open(state_file(ip)) as f:
+            return int(f.read().split('\n')[0]) == os.getpid()
+    except (OSError, ValueError):
+        return True
+
+
 def watch(ip, path, wait):
     write_state(ip, path, 0)
     log('watching', ip, path)
@@ -149,6 +158,12 @@ def watch(ip, path, wait):
     synced, seen, misses = 0, 0, 0
     first = True
     while True:
+        if not owner(ip):
+            # another watcher took over this board (a game sent while this one was still running): leaving now
+            # keeps this game's file from getting the next game's card (seen on the Crazy Taxi cabinet, 2026-11-19:
+            # a Test Drive 6 watcher still running under SF Rush 2049)
+            log('another watcher took over', ip, '- leaving', path)
+            return
         try:
             board.check()
             if first:
