@@ -6,6 +6,8 @@ For images that miss later fixes of the resident: Super Puzzle Fighter II X (mad
 after the CAPCOM and ADX logos, as SSF2X did before the resident cleared the game's RAM before booting (6c95d60).
 The archive format (dimm_header) is the same; fields added later (read_chunk) read as 0 = the default.
 FLAGS=0x... in the environment: OR'ed into dimm_header.flags (MSR: FLAGS=0x80000, DIMM_DMAIRQ).
+READ_CHUNK=n: dimm_header.read_chunk, sectors a DMA read copies per EXEC_SERVER call (Test Drive 6: READ_CHUNK=4;
+with the default 32 the 3 MB FRONTEND.TEX read after START left the board stuck with the title music playing).
 GZIP_LEVEL as dc2naomi (default 6)."""
 import gzip
 import os
@@ -31,6 +33,9 @@ def main():
     new += b"\0" * (front(new) - len(new))
     assert front(new) == len(new) == old_base, "el cargador nuevo no ocupa lo mismo que el viejo"
     raw[:old_base] = new
+    if os.environ.get("READ_CHUNK"):
+        struct.pack_into("<I", raw, old_base + 177 * 4, int(os.environ["READ_CHUNK"], 0))
+        print("read_chunk = %s" % os.environ["READ_CHUNK"])
     if os.environ.get("FLAGS"):
         f = struct.unpack_from("<I", raw, old_base + 16)[0] | int(os.environ["FLAGS"], 0)
         struct.pack_into("<I", raw, old_base + 16, f)
