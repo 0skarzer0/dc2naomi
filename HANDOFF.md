@@ -2230,3 +2230,7 @@ Subidas a la .251 ese día: Wacky Races reconvertido (md5 `7898e31f…`), MSR v2
 - Con el cable VGA que damos, el menú ofrece **VGA 640x480 (31 kHz)**, NTSC 640x480, NTSC 640x480 IL, PAL 640x480 y PAL
   640x480 IL (15 kHz). KallistiOS programa el vídeo él mismo y no mira el interruptor de la NAOMI: se elige la frecuencia
   en el menú (monitor trifrecuencia de la .250).
+- Menú en placa (foto del usuario): detecta "VGA (RGB HiRes)" y lista VGA, NTSC y PAL. Pero "NTSC 640x480" y "PAL
+  640x480" son el modo 3 de KOS = 640x480 VGA otra vez (31 kHz): esas dos entradas de la tabla pasan a ser
+  **NTSC 320x240** (modo 2, 240p a 15 kHz, la resolución nativa de la Neo Geo) y **PAL 320x240** (modo 11). Quedan:
+  VGA 640x480 (31 kHz), NTSC 320x240 y NTSC 640x480 IL (15 kHz, 60 Hz), PAL 320x240 y PAL 640x480 IL (15 kHz, 50 Hz).
