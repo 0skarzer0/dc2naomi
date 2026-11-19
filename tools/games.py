@@ -762,7 +762,7 @@ GAMES["mk64_dbg"] = dict(GAMES["mk64"], title="MARIO KART 64 DBG", flags=0x1C0C)
 # header, and the resident plays them (DIMM_CDDA) on AICA channels 62/63 (the emulator uses 0 and 1 for its stream,
 # rings at 0x11000/0x16000) from 0x1f0000. Standard cabinet (Pi .250), 2 players.
 GAMES["robocop_dncd"] = {
-    "title": "ROBOCOP NEOGEO CD DNCD",
+    "title": "ROBOCOP NEOGEO CD DNCD",   # 31 kHz: vid_check_cable says VGA (see robocop_dncd15 for 15 kHz)
     "region": 1,
     "language": 1,
     "layout": "gdi",
@@ -785,12 +785,6 @@ GAMES["robocop_dncd"] = {
             (0x8C0A6C50, 2, 0x000B),       # vid_check_cable(): rts / mov #0,r0 = VGA, no PCTRA write (it kills the
             (0x8C0A6C52, 2, 0xE000),       #   NAOMI 2's TA)
             (0x8C02766A, 2, 0xC900),       # the emulator's channel start: wait for SB_FFST bit 5 -> no wait
-            # video-mode menu (table 0x8c0bf1e0: name, KOS mode, pixel mode, interlace; with our VGA cable it offers
-            # entries 0-4): "NTSC 640x480" and "PAL 640x480" are mode 3 = 640x480 VGA again (31 kHz), so they become
-            # the native low-resolution 15 kHz modes, 320x240 NTSC (240p, mode 2) and PAL (mode 11), for the
-            # tri-frequency monitor (the user's choice: 31 kHz VGA or 15 kHz from the menu, no NAOMI switch)
-            (0x8C0BF1F0, 4, 0x8C0BF4F0), (0x8C0BF1F4, 4, 2),
-            (0x8C0BF210, 4, 0x8C0BF500), (0x8C0BF214, 4, 0x0B),
         ] + [(a, 2, 0xC900) for a in (     # g2_lock() in KallistiOS's g2_read/write: and #32,r0 -> and #0,r0 (SB_FFST bit 5
             0x8C0984CA, 0x8C098516, 0x8C09855E, 0x8C0985AA, 0x8C0985F2, 0x8C09863E,   # never clears on the NAOMI: the
             0x8C09868E, 0x8C0986EE, 0x8C09874E, 0x8C0987AE, 0x8C09880E, 0x8C09886E,   # wait, with the interrupts off,
@@ -800,3 +794,14 @@ GAMES["robocop_dncd"] = {
             0x8C0AAB22, 0x8C0AAC44, 0x8C0AFA08)]},
     ],
 }
+
+# The same at 15 kHz (2026-11-19). KallistiOS forces VGA timing (31 kHz) whenever vid_check_cable() says VGA, whatever
+# mode is asked for, and the NAOMI's monitor switch is not read by it: so the frequency is chosen by the cable we
+# report. Here it says RGB (2, a Dreamcast with a SCART cable): KallistiOS and the emulator's video menu (RGB 640x480
+# IL / RGB 640x480) then work as on a console at 15 kHz. One image per monitor, no switch to move.
+import copy as _copy
+GAMES["robocop_dncd15"] = _copy.deepcopy(GAMES["robocop_dncd"])
+GAMES["robocop_dncd15"]["title"] = "ROBOCOP NEOGEO CD DNCD 15K"
+GAMES["robocop_dncd15"]["groups"][0]["patches"] = [
+    (a, n, 0xE002) if (a, n, v) == (0x8C0A6C52, 2, 0xE000) else (a, n, v)   # vid_check_cable: mov #2,r0 = RGB
+    for a, n, v in GAMES["robocop_dncd"]["groups"][0]["patches"]]

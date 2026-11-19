@@ -2234,3 +2234,11 @@ Subidas a la .251 ese día: Wacky Races reconvertido (md5 `7898e31f…`), MSR v2
   640x480" son el modo 3 de KOS = 640x480 VGA otra vez (31 kHz): esas dos entradas de la tabla pasan a ser
   **NTSC 320x240** (modo 2, 240p a 15 kHz, la resolución nativa de la Neo Geo) y **PAL 320x240** (modo 11). Quedan:
   VGA 640x480 (31 kHz), NTSC 320x240 y NTSC 640x480 IL (15 kHz, 60 Hz), PAL 320x240 y PAL 640x480 IL (15 kHz, 50 Hz).
+- **Corrección (mismo día): no salía a 15 kHz.** KallistiOS fuerza la sincronía VGA (31 kHz) siempre que
+  `vid_check_cable()` diga VGA, pida el modo que pida (y no lee el interruptor de la NAOMI). Se quitan los cambios de la
+  tabla del menú y del escalado, y quedan **dos perfiles**: `robocop_dncd` (cable VGA, 31 kHz) y `robocop_dncd15`
+  (`vid_check_cable` = `mov #2,r0`, cable RGB: KOS y el menú del emulador, "RGB 640x480 IL / RGB 640x480", a 15 kHz
+  como una Dreamcast con euroconector). Imágenes `dc-robocop_dncd_dc2naomi.bin.gz` (md5 `302fcdc1…`) y
+  `dc-robocop_dncd15_dc2naomi.bin.gz` (`c6686a59…`). La música CD-DA **suena en la placa** (confirmado por el usuario).
+  Receta general: en un programa de KallistiOS, la frecuencia de la NAOMI la decide el cable que devuelva el parche de
+  `vid_check_cable` (0 VGA = 31 kHz, 2 RGB = 15 kHz).
