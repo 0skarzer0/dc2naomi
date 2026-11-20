@@ -2272,3 +2272,10 @@ con una ROM de prueba mínima hecha a mano (fondo de un color, no es un juego).
 va adelantado respecto a lo que suena); mandos (volante = joyx ±48, A→A, X/B→B, Y/Z→SELECT, START); VMU y partidas
 guardadas (no están); menú de selección de ROM (no hay); FDS (necesita `disksys.rom`). No sirve para el volante: la NES
 tiene pocos juegos de conducción.
+
+### NesterDC — correcciones tras la primera prueba en placa (2026-11-20)
+Probado en la placa: arranca, menú responde. Arreglado en la iteración siguiente (pendiente de probar):
+- **Menú ilegible**: `bfont` no sirve sobre la textura RGB565 de 512x256; ahora se dibuja con `font8x16.h` (copia de `resident/font8x16.h`, DejaVu Sans Mono), 64 columnas x 16 filas.
+- **Sin sonido**: el callback de `snd_stream` recibe y devuelve **bytes** (se estaban duplicando); ahora un FIFO alimentado con las mitades de 4 KB del APU.
+- **Volver al menú**: el resident (`DIMM_PAD_NES`) enviaba `0x0800` con START + volante derecha; ahora envía START+RIGHT mantenidos y el programa los detecta 300 ms (`timer_ms_gettime64`). START solo se envía al soltarlo si no se usó ningún otro control.
+- **Carpetas**: `build_nesterdc.sh` genera `ROMS.TXT` con líneas `d|f<TAB>id<TAB>padre<TAB>nombre` y los ROMs como `/cd/ROMS/<id>.NES`; el menú navega carpetas (`[carpeta]`, `..`).

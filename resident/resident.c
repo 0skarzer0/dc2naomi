@@ -1245,24 +1245,33 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         brk = brk < 15 ? 0 : brk;
         u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000, brk_raw = brk;
         if (H.pad_map == DIMM_PAD_NES) {
-            /* NesterDC (2026-11-20): START is START while held, unless it is used as a shift (gas/brake/lever);
-               START + wheel at its end = the ROM menu (the program looks for START + right). */
+            /* NesterDC (2026-11-20, the user's scheme): START is sent when it is released, and only if nothing else
+               was used while it was held. Held, it shifts: gas = X, brake = Y, lever forward = L trigger, back =
+               R trigger, wheel at its right end = START+RIGHT held (the program's ROM menu). */
             if (start) {
-                if (acc > 64) { b |= DC_X; }
-                if (brk > 64) { b |= DC_Y; }
                 u32 ltr = fwd ? 255 : 0, rtr = back ? 255 : 0;
-                if (!(acc > 64 || brk > 64 || fwd || back)) b |= DC_START;
+                if (acc > 64) { b |= DC_X; start_used = 1; }
+                if (brk > 64) { b |= DC_Y; start_used = 1; }
+                if (fwd || back) start_used = 1;
+                if (x > 239) { b |= DC_START | DC_RIGHT; start_used = 1; }   /* the program's ROM-menu combo */
+                if (x < 16) start_used = 1;
+                start_frames = 1;
                 acc = rtr; brk = ltr;
             } else {
+                if (start_frames && !start_used) start_pulse = 30;
+                start_frames = 0;
+                start_used = 0;
                 if (acc > 64) b |= DC_A;
                 if (brk > 64) b |= DC_B;
                 if (fwd) b |= DC_UP;
                 if (back) b |= DC_DOWN;
                 acc = brk = 0;
             }
-            if (x < 16) b |= DC_LEFT;
-            if (x > 239) b |= DC_RIGHT;
-            start_pulse = 0;
+            if (start_pulse) { start_pulse--; b |= DC_START; }
+            if (!start) {
+                if (x < 16) b |= DC_LEFT;
+                if (x > 239) b |= DC_RIGHT;
+            }
             goto nes_done;
         }
         if (PLANE_PADS) plane_mode = 1;     /* After Burner II / Space Harrier on their own */

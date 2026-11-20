@@ -50,7 +50,7 @@ PADS_TEXT = {
              "START + volante a tope a la derecha = modo avión (After Burner II, Space Harrier):",
              "  palanca adelante = arriba, atrás = abajo; acelerador = disparo (A), freno = misil (B)",
              "START + volante a tope a la izquierda = vuelta al modo coche (OutRun, Hang-On, Power Drift)"],
-    "nes": ["NesterDC: START = START (mientras se mantiene), volante a tope = izquierda/derecha",
+    "nes": ["NesterDC: START = START al soltarlo (si no has usado otro control), volante a tope = izquierda/derecha",
             "Acelerador = A, freno = B, palanca = arriba/abajo",
             "Con START apretado: acelerador = X, freno = Y, palanca adelante = L, atrás = R",
             "START + volante a la derecha = menú de ROMs"],

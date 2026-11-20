@@ -65,7 +65,7 @@ done
 
 # 4. frontend + ROM + link
 say "frontend and ROM"
-APP=$WORK/app; rm -rf "$APP"; mkdir -p "$APP"; cp "$HERE/ndc_main.cpp" "$APP/"
+APP=$WORK/app; rm -rf "$APP"; mkdir -p "$APP"; cp "$HERE/ndc_main.cpp" "$HERE/font8x16.h" "$APP/"
 cd "$APP"
 $SHBIN/sh-elf-g++ $KOS_CFLAGS -std=gnu++14 -fpermissive -w -fno-exceptions -fno-rtti $INC -c ndc_main.cpp -o ndc_main.o
 kos-c++ -o ndc.elf $KOS_START ndc_main.o "$OBJ"/*.o $KOS_LIBS
@@ -74,11 +74,32 @@ kos-c++ -o ndc.elf $KOS_START ndc_main.o "$OBJ"/*.o $KOS_LIBS
 DISC=$WORK/disc; rm -rf "$DISC"; mkdir -p "$DISC"
 $SHBIN/sh-elf-objcopy -R .stack -O binary ndc.elf "$DISC/1ST_READ.BIN"
 # the ROMs go on the disc as files (read when chosen), not inside the program: 1ST_READ.BIN is read by PIO at boot
-mkdir -p "$DISC/ROMS"; : > "$DISC/ROMS.TXT"; i=0
-while read -r r; do
-    n=$(basename "$r" .nes | sed -E 's/ ?\([^)]*\)//g; s/ ?\[[^]]*\]//g' | sed "s/[^A-Za-z0-9 ._!'+-]/_/g")
-    cp "$r" "$DISC/ROMS/$(printf %03d $i).NES"; echo "$n" >> "$DISC/ROMS.TXT"; i=$((i+1))
-done <<< "$LIST"
+mkdir -p "$DISC/ROMS"
+# ROMS.TXT keeps the folder structure of the collection: "d|f <TAB> id <TAB> parent id (-1 = root) <TAB> name"
+python3 -I - "$ROMS" "$DISC" <<'PY'
+import os, re, shutil, sys
+root, disc = sys.argv[1], sys.argv[2]
+def clean(n):
+    n = re.sub(r" ?\([^)]*\)", "", n); n = re.sub(r" ?\[[^\]]*\]", "", n)
+    return re.sub(r"[^A-Za-z0-9 ._!'+-]", "_", n)[:54]
+rows = []; nid = [0]
+def walk(d, parent):
+    for e in sorted(os.listdir(d), key=str.lower):
+        p = os.path.join(d, e)
+        if os.path.isdir(p):
+            i = nid[0]; nid[0] += 1; rows.append("d\t%d\t%d\t%s" % (i, parent, clean(e))); walk(p, i)
+        elif e.lower().endswith(".nes"):
+            i = nid[0]; nid[0] += 1
+            shutil.copy(p, os.path.join(disc, "ROMS", "%03d.NES" % i))
+            rows.append("f\t%d\t%d\t%s" % (i, parent, clean(os.path.splitext(e)[0])))
+if os.path.isdir(root): walk(root, -1)
+else:
+    for p in root.split(","):
+        i = nid[0]; nid[0] += 1
+        shutil.copy(p, os.path.join(disc, "ROMS", "%03d.NES" % i))
+        rows.append("f\t%d\t-1\t%s" % (i, clean(os.path.splitext(os.path.basename(p))[0])))
+open(os.path.join(disc, "ROMS.TXT"), "w").write("\n".join(rows) + "\n")
+PY
 "$KOS/utils/makeip/makeip" "$HERE/ip.txt" "$DISC/IP.BIN" 2>/dev/null || /opt/toolchains/dc/kos/utils/makeip/makeip "$HERE/ip.txt" "$DISC/IP.BIN"
 say "dc2naomi: nesterdc -> $OUT"
 cd "$D2N"; mkdir -p "$(dirname "$OUT")"
