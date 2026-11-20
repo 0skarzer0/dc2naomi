@@ -826,3 +826,16 @@ GAMES["nesterdc"] = {
     "hook_pc": [],
     "groups": [],
 }
+# NesterDC SE v1.1 (Christuserloeser, 2008, a modified build of NesterDC SE; binary, NOT in this repo): same pads and flags.
+GAMES["nesterse"] = {
+    "title": "NESTERSE",
+    "pads": "nes",
+    "region": 1,
+    "language": 1,
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "NESTERSE",
+    "flags": 0x1404,      # same as mk64: no user break, GD DMA reads in one call, no IP.BIN bootstrap
+    "hook_pc": [],
+    "groups": [],
+}

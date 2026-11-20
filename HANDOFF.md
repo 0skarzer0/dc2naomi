@@ -2280,3 +2280,6 @@ Probado en la placa: arranca, menú responde. Arreglado en la iteración siguien
 - **Volver al menú**: el resident (`DIMM_PAD_NES`) enviaba `0x0800` con START + volante derecha; ahora envía START+RIGHT mantenidos y el programa los detecta 300 ms (`timer_ms_gettime64`). START solo se envía al soltarlo si no se usó ningún otro control.
 - **Carpetas**: `build_nesterdc.sh` genera `ROMS.TXT` con líneas `d|f<TAB>id<TAB>padre<TAB>nombre` y los ROMs como `/cd/ROMS/<id>.NES`; el menú navega carpetas (`[carpeta]`, `..`).
 - Zona muerta del volante en el perfil `nes` reducida al mínimo: izquierda x<116, derecha x>140 (centro 128; antes 16/239, luego 124/132 que el rebote del volante activaba solo).
+
+### NesterDC SE v1.1 (2026-11-20) — perfil `nesterse`
+El usuario aportó NesterDC SE v1.1 (Christuserloeser, 2008-12-09; build modificada de NesterDC SE, binario + scripts .js; **no está en el repo**). Imagen sin recompilar: `1ST_READ.BIN` + `IP.BIN` del paquete tal cual, carpeta `NES/` con las ROMs del usuario (nombres ≤46+3 caracteres, sin paréntesis; estructura de carpetas conservada) y `REBUILD=1 ./build.sh nesterse DISCO SALIDA.bin`. Mismo perfil de mandos `nes` (START+acelerador = X = subir de carpeta; B = volver al menú principal). ⚠️ Sin probar en placa: es un binario KOS 1.1.8 sin parche NAOMI_HOST, puede no arrancar.
