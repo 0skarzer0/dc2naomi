@@ -1253,8 +1253,8 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
                 if (acc > 64) { b |= DC_X; start_used = 1; }
                 if (brk > 64) { b |= DC_Y; start_used = 1; }
                 if (fwd || back) start_used = 1;
-                if (x > 239) { b |= DC_START | DC_RIGHT; start_used = 1; }   /* the program's ROM-menu combo */
-                if (x < 16) start_used = 1;
+                if (x > 132) { b |= DC_START | DC_RIGHT; start_used = 1; }   /* the program's ROM-menu combo */
+                if (x < 124) start_used = 1;
                 start_frames = 1;
                 acc = rtr; brk = ltr;
             } else {
@@ -1269,8 +1269,8 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             }
             if (start_pulse) { start_pulse--; b |= DC_START; }
             if (!start) {
-                if (x < 16) b |= DC_LEFT;
-                if (x > 239) b |= DC_RIGHT;
+                if (x < 124) b |= DC_LEFT;
+                if (x > 132) b |= DC_RIGHT;
             }
             goto nes_done;
         }

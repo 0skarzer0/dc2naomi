@@ -2279,3 +2279,4 @@ Probado en la placa: arranca, menú responde. Arreglado en la iteración siguien
 - **Sin sonido**: el callback de `snd_stream` recibe y devuelve **bytes** (se estaban duplicando); ahora un FIFO alimentado con las mitades de 4 KB del APU.
 - **Volver al menú**: el resident (`DIMM_PAD_NES`) enviaba `0x0800` con START + volante derecha; ahora envía START+RIGHT mantenidos y el programa los detecta 300 ms (`timer_ms_gettime64`). START solo se envía al soltarlo si no se usó ningún otro control.
 - **Carpetas**: `build_nesterdc.sh` genera `ROMS.TXT` con líneas `d|f<TAB>id<TAB>padre<TAB>nombre` y los ROMs como `/cd/ROMS/<id>.NES`; el menú navega carpetas (`[carpeta]`, `..`).
+- Zona muerta del volante en el perfil `nes` reducida al mínimo: izquierda x<124, derecha x>132 (centro 128, antes 16/239).
