@@ -9,9 +9,10 @@
 
 KOS_INIT_FLAGS(INIT_DEFAULT);
 
+struct rom_ent { const char *name; const unsigned char *start; const unsigned char *end; };
 extern "C" {
-extern const unsigned char rom_start[];
-extern const unsigned char rom_end[];
+extern const struct rom_ent rom_table[];
+extern const int rom_count;
 }
 
 #define SAMPLE_RATE 44100
@@ -105,46 +106,114 @@ static void video_draw() {
 }
 
 // ---------------------------------------------------------------- input
+// Pads "ct" of dc2naomi (cabinet): short START = Y, START held >1 s = START, lever fwd = B, lever back = A,
+// wheel = analog X (and, at the ends, d-pad left+up / right+down), pedals = triggers, JVS 0x0200 = X.
+struct Pad { uint32 b; int jx, lt, rt; };
+static Pad read_pad(int n) {
+  Pad p = {0, 0, 0, 0};
+  maple_device_t *dev = maple_enum_type(n, MAPLE_FUNC_CONTROLLER);
+  if (dev) {
+    cont_state_t *st = (cont_state_t *)maple_dev_status(dev);
+    if (st) { p.b = st->buttons; p.jx = st->joyx; p.lt = st->ltrig; p.rt = st->rtrig; }
+  }
+  return p;
+}
+
 static void poll_input(NES *emu) {
   for (int n = 0; n < 4; n++) {
     NES_pad *pad = emu->get_pad(n);
-    maple_device_t *dev = maple_enum_type(n, MAPLE_FUNC_CONTROLLER);
-    uint32 b = 0; int jx = 0;
-    if (dev) {
-      cont_state_t *st = (cont_state_t *)maple_dev_status(dev);
-      if (st) { b = st->buttons; jx = st->joyx; }
+    Pad p = read_pad(n);
+    bool lock = (p.jx < -100 || p.jx > 100);          // wheel at its end: the cabinet also sends up/down
+    pad->nes_A      = (p.b & CONT_A) != 0 || p.rt > 128;
+    pad->nes_B      = (p.b & CONT_B) != 0 || p.lt > 128;
+    pad->nes_SELECT = (p.b & CONT_X) != 0;
+    pad->nes_START  = (p.b & CONT_Y) != 0;
+    pad->nes_UP     = ((p.b & CONT_DPAD_UP) != 0) && !lock;
+    pad->nes_DOWN   = ((p.b & CONT_DPAD_DOWN) != 0) && !lock;
+    pad->nes_LEFT   = ((p.b & CONT_DPAD_LEFT) != 0) || p.jx < -48;
+    pad->nes_RIGHT  = ((p.b & CONT_DPAD_RIGHT) != 0) || p.jx > 48;
+  }
+}
+
+// ---------------------------------------------------------------- ROM menu
+static void draw_stage() {
+  pvr_txr_load(stage, txr, sizeof(stage));
+  pvr_wait_ready();
+  pvr_scene_begin();
+  pvr_list_begin(PVR_LIST_OP_POLY);
+  pvr_prim(&hdr, sizeof(hdr));
+  pvr_vertex_t v;
+  v.argb = 0xffffffff; v.oargb = 0; v.z = 1.0f;
+  v.flags = PVR_CMD_VERTEX;     v.x = 0;   v.y = 0;   v.u = 0; v.v = 0; pvr_prim(&v, sizeof(v));
+  v.x = 640; v.y = 0;   v.u = 1; v.v = 0; pvr_prim(&v, sizeof(v));
+  v.x = 0;   v.y = 480; v.u = 0; v.v = 1; pvr_prim(&v, sizeof(v));
+  v.flags = PVR_CMD_VERTEX_EOL; v.x = 640; v.y = 480; v.u = 1; v.v = 1; pvr_prim(&v, sizeof(v));
+  pvr_list_finish();
+  pvr_scene_finish();
+}
+
+static void put_text(int line, const char *s) { bfont_draw_str(stage + line * 24 * 512, 512, 1, s); }
+
+// returns the chosen ROM index
+static int rom_menu(int cur) {
+  uint32 prev = 0xffffffff;       // ignore what is already pressed when the menu opens
+  int rep = 0;
+  for (;;) {
+    Pad p = read_pad(0);
+    uint32 pressed = p.b & ~prev;
+    if (pressed & CONT_DPAD_UP) { if (cur > 0) cur--; }
+    if (pressed & CONT_DPAD_DOWN) { if (cur < rom_count - 1) cur++; }
+    if (p.jx < -100 && !rep) { if (cur > 0) cur--; rep = 1; }
+    if (p.jx > 100 && !rep) { if (cur < rom_count - 1) cur++; rep = 1; }
+    if (p.jx > -60 && p.jx < 60) rep = 0;
+    if (pressed & (CONT_A | CONT_Y | CONT_START)) return cur;
+    prev = p.b;
+
+    memset(stage, 0, sizeof(stage));
+    put_text(0, "NESTERDC  -  JUEGOS");
+    int first = cur - 6; if (first < 0) first = 0;
+    for (int i = 0; i < 8 && first + i < rom_count; i++) {
+      char line[64];
+      snprintf(line, sizeof(line), "%c %.38s", (first + i == cur) ? '>' : ' ', rom_table[first + i].name);
+      put_text(2 + i, line);
     }
-    pad->nes_A      = (b & (CONT_A)) != 0;
-    pad->nes_B      = (b & (CONT_X | CONT_B)) != 0;
-    pad->nes_SELECT = (b & (CONT_Y | CONT_Z)) != 0;
-    pad->nes_START  = (b & CONT_START) != 0;
-    pad->nes_UP     = (b & CONT_DPAD_UP) != 0;
-    pad->nes_DOWN   = (b & CONT_DPAD_DOWN) != 0;
-    pad->nes_LEFT   = ((b & CONT_DPAD_LEFT) != 0) || jx < -48;
-    pad->nes_RIGHT  = ((b & CONT_DPAD_RIGHT) != 0) || jx > 48;
+    put_text(9, "VOLANTE=ELEGIR  START=JUGAR");
+    draw_stage();
   }
 }
 
 int main(int argc, char **argv) {
   video_init();
-  fs_ramdisk_attach("game.nes", (void *)rom_start, rom_end - rom_start);
-
+  for (int i = 0; i < rom_count; i++) {
+    char fn[16]; snprintf(fn, sizeof(fn), "r%d.nes", i);
+    fs_ramdisk_attach(fn, (void *)rom_table[i].start, rom_table[i].end - rom_table[i].start);
+  }
   ndc_sound_mgr *snd = new ndc_sound_mgr();
   snd->initialize();
-  NES *emu = new NES(snd);
-  strcpy(emu->disksys_rom_filename, "/ram/disksys.rom");
-  if (!emu->initialize("/ram/game.nes")) {
-    printf("NesterDC: cannot load ROM\n");
-    for (;;) { video_draw(); }
-  }
+
+  int cur = 0;
   for (;;) {
-    poll_input(emu);
-    emu->emulate_frame(nes_screen);
-    snd->poll();
-    video_draw();
+    cur = rom_menu(cur);
+    char path[24]; snprintf(path, sizeof(path), "/ram/r%d.nes", cur);
+    NES *emu = new NES(snd);
+    strcpy(emu->disksys_rom_filename, "/ram/disksys.rom");
+    snd->clear_buffer();
+    if (!emu->initialize(path)) { delete emu; continue; }
+    int hold = 0;
+    for (;;) {
+      Pad p = read_pad(0);
+      // START held (the cabinet sends START after 1 s of holding; one more second) = back to the menu
+      if (p.b & CONT_START) { if (++hold >= 60) break; } else hold = 0;
+      poll_input(emu);
+      emu->emulate_frame(nes_screen);
+      snd->poll();
+      video_draw();
+    }
+    delete emu;
+    snd->clear_buffer();
   }
   return 0;
 }
 
-// symbols the old frontend used (gun device)
+// symbol the old frontend defined (used by the light-gun device)
 extern "C++" uint16 get_nesscreen_pixel_color(int x, int y) { return nes_screen[y * 320 + x + 8]; }

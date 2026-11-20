@@ -2257,14 +2257,14 @@ KOS 1.1.8) **no se usa**: `ndc_main.cpp` es uno nuevo y mínimo (vídeo PVR 640x
 mono 44,1 kHz con el mismo protocolo de dos mitades del núcleo, mandos maple).
 
 ```sh
-homebrew/nesterdc/build_nesterdc.sh JUEGO.nes   # -> build/nesterdc_dc2naomict.bin(.gz)
+homebrew/nesterdc/build_nesterdc.sh CARPETA_O_JUEGO.nes   # -> build/nesterdc_dc2naomict.bin(.gz)
 ```
 
-La ROM se enlaza dentro del programa (`fs_ramdisk`, `/ram/game.nes`): **una imagen por juego**, hecha con tu `.nes`.
+Las ROMs se enlazan dentro del programa (`fs_ramdisk`, `/ram/rN.nes`), con un menú al arrancar (volante = cursor, START corto = jugar); en juego, **START mantenido ~2 s vuelve al menú**. Perfil de mandos `ct` (START corto = Y = START de NES; palanca atrás = A, adelante = B, pedales = A/B, X = SELECT).
 No hay nada con copyright en el repositorio. `nester-kos-modern.patch` es el cambio a los fuentes de NesterDC
 (tipos `uint8…` sin `kos.h`, `htonl` propio, `*((T*)p)++` ilegal en gcc moderno, un `class NES_mapper;`).
 
-**Estado:** compila, enlaza y empaqueta (1,5 MB; comprobado de cero con `WORK` nuevo). **No se ha arrancado:** no hay BIOS de
+**Estado (2026-11-20):** primera imagen de prueba (ROM mínima) **arrancó en la placa: pantalla roja** (el usuario lo confirmó). La imagen con menú y varias ROMs de prueba se acaba de generar y no se ha probado aún. Antes de eso: no hay BIOS de
 NAOMI 2 en la sesión de la IA para Flycast y la Raspberry/.251 no es alcanzable desde la nube (IP privada). Probado solo
 con una ROM de prueba mínima hecha a mano (fondo de un color, no es un juego).
 

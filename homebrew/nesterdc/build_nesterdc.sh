@@ -1,11 +1,12 @@
 #!/bin/bash
-# build_nesterdc.sh GAME.nes [OUT.bin]
+# build_nesterdc.sh ROMS [OUT.bin]      ROMS = one .nes, a folder of .nes, or several .nes separated by commas
 #
 # NesterDC (NES emulator, https://github.com/pqrs-org/NesterDC) for the NAOMI 2 (Crazy Taxi cabinet).
 # Nester's core (CPU, PPU, APU, mappers) is compiled with the current sh-elf-gcc; the Dreamcast frontend of
 # NesterDC (KallistiOS 1.1.8, its own AICA firmware, menus) is NOT used: ndc_main.cpp is a minimal new one
-# (PVR video, snd_stream audio, maple pads) written for KallistiOS 680d1862 + the NAOMI_HOST patch of
-# ../mk64. The ROM is linked into the program (fs_ramdisk), so this makes ONE image per game, from your own .nes.
+# (PVR video, snd_stream audio, maple pads, ROM menu) written for KallistiOS 680d1862 + the NAOMI_HOST patch of
+# ../mk64. The ROMs are linked into the program (fs_ramdisk): the image holds the games you give it (menu at boot;
+# hold START ~2 s in a game to come back to the menu). Pads profile "ct" (short START = Y = NES START).
 #
 # Nothing with copyright is in the repository. UNTESTED ON THE BOARD at the time of writing (see HANDOFF.md).
 #
@@ -13,7 +14,7 @@
 # dc2naomi's loader), git, patch, python3, genisoimage.
 # Environment: WORK (default $HOME/ndc-build), KOS_NAOMI_ENV (default /opt/toolchains/dc/kos/environ.sh), JOBS (3).
 set -eo pipefail
-ROM=$(realpath "${1:?usage: build_nesterdc.sh GAME.nes [OUT.bin]}")
+ROMS=${1:?usage: build_nesterdc.sh ROMS [OUT.bin]}
 HERE=$(cd "$(dirname "$0")" && pwd)
 D2N=$(cd "$HERE/../.." && pwd)
 OUT=$(realpath -m "${2:-$D2N/build/nesterdc_dc2naomict.bin}")
@@ -22,7 +23,10 @@ KOS_NAOMI_ENV=${KOS_NAOMI_ENV:-/opt/toolchains/dc/kos/environ.sh}
 JOBS=${JOBS:-3}
 SHBIN=/opt/toolchains/dc/sh-elf/bin
 say() { echo; echo "== $*"; }
-mkdir -p "$WORK"; [ "$(head -c4 "$ROM")" = $'NES\x1a' ] || { echo "$ROM is not an iNES file" >&2; exit 1; }
+mkdir -p "$WORK"
+if [ -d "$ROMS" ]; then LIST=$(find "$ROMS" -maxdepth 1 -iname '*.nes' | sort); else LIST=$(echo "$ROMS" | tr ',' '\n'); fi
+[ -n "$LIST" ] || { echo "no .nes found in $ROMS" >&2; exit 1; }
+while read -r r; do [ "$(head -c4 "$r")" = $'NES\x1a' ] || { echo "$r is not an iNES file" >&2; exit 1; }; done <<< "$LIST"
 
 # 1. KallistiOS 680d1862 + NAOMI_HOST (own tree), built as a Dreamcast (pristine) target
 KOS=$WORK/kos-ndc
@@ -61,7 +65,14 @@ done
 
 # 4. frontend + ROM + link
 say "frontend and ROM"
-APP=$WORK/app; mkdir -p "$APP"; cp "$HERE/ndc_main.cpp" "$HERE/rom.S" "$APP/"; cp "$ROM" "$APP/game.nes"
+APP=$WORK/app; rm -rf "$APP"; mkdir -p "$APP/roms"; cp "$HERE/ndc_main.cpp" "$APP/"
+i=0; { echo '	.section .rodata'; echo '	.balign 32'
+  while read -r r; do cp "$r" "$APP/roms/$i.nes"
+    n=$(basename "$r" .nes | sed 's/[^A-Za-z0-9 ._()!-]/_/g')
+    echo "name$i: .asciz \"$n\""; echo "	.balign 32"; echo "rom$i: .incbin \"roms/$i.nes\""; echo "rom${i}_end:"; i=$((i+1))
+  done <<< "$LIST"
+  echo '	.balign 4'; echo '	.global _rom_count'; echo '_rom_count: .long '$i; echo '	.global _rom_table'; echo '_rom_table:'
+  for ((k=0; k<i; k++)); do echo "	.long name$k, rom$k, rom${k}_end"; done; } > "$APP/rom.S"
 cd "$APP"
 $SHBIN/sh-elf-g++ $KOS_CFLAGS -std=gnu++14 -fpermissive -w -fno-exceptions -fno-rtti $INC -c ndc_main.cpp -o ndc_main.o
 $SHBIN/sh-elf-gcc $KOS_CFLAGS -c rom.S -o rom.o
