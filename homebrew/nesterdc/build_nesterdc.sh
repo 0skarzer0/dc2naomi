@@ -6,7 +6,7 @@
 # NesterDC (KallistiOS 1.1.8, its own AICA firmware, menus) is NOT used: ndc_main.cpp is a minimal new one
 # (PVR video, snd_stream audio, maple pads, ROM menu) written for KallistiOS 680d1862 + the NAOMI_HOST patch of
 # ../mk64. The ROMs are linked into the program (fs_ramdisk): the image holds the games you give it (menu at boot;
-# hold START ~2 s in a game to come back to the menu). Pads profile "ct" (short START = Y = NES START).
+# START + wheel to the right in a game = back to the menu). Pads profile "nes" (resident.c).
 #
 # Nothing with copyright is in the repository. UNTESTED ON THE BOARD at the time of writing (see HANDOFF.md).
 #

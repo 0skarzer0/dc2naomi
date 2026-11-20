@@ -816,7 +816,7 @@ GAMES["robocop_dncd15"]["groups"][0]["patches"] = [
 # is linked into the program (fs_ramdisk), so the user builds one image per game with their own .nes.
 GAMES["nesterdc"] = {
     "title": "NESTERDC",
-    "pads": "ct",
+    "pads": "nes",
     "region": 1,
     "language": 1,
     "layout": "rebuild",

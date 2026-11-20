@@ -2260,7 +2260,7 @@ mono 44,1 kHz con el mismo protocolo de dos mitades del núcleo, mandos maple).
 homebrew/nesterdc/build_nesterdc.sh CARPETA_O_JUEGO.nes   # -> build/nesterdc_dc2naomict.bin(.gz)
 ```
 
-Las ROMs se enlazan dentro del programa (`fs_ramdisk`, `/ram/rN.nes`), con un menú al arrancar (volante = cursor, START corto = jugar); en juego, **START mantenido ~2 s vuelve al menú**. Perfil de mandos `ct` (START corto = Y = START de NES; palanca atrás = A, adelante = B, pedales = A/B, X = SELECT).
+Las ROMs se enlazan dentro del programa (`fs_ramdisk`, `/ram/rN.nes`), con un menú al arrancar (palanca = cursor, acelerador o START = jugar); en juego, **START + volante a la derecha (medio segundo) vuelve al menú**. Perfil de mandos nuevo `nes` (`DIMM_PAD_NES` = 10 en `resident/resident.c`, esquema del usuario, 2026-11-20): START = START mientras se mantiene (no si se usa de cambio), volante a tope = izquierda/derecha (y stick analógico), acelerador = A, freno = B, palanca = arriba/abajo; con START apretado: acelerador = X, freno = Y, palanca adelante = L, atrás = R. En NES: A, B, START, SELECT = X o Y, cruceta = volante y palanca.
 No hay nada con copyright en el repositorio. `nester-kos-modern.patch` es el cambio a los fuentes de NesterDC
 (tipos `uint8…` sin `kos.h`, `htonl` propio, `*((T*)p)++` ilegal en gcc moderno, un `class NES_mapper;`).
 

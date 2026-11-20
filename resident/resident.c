@@ -1232,7 +1232,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         x = (p & 0x0800) ? 0 : (p & 0x0400) ? 255 : 128;
         y = (p & 0x2000) ? 0 : (p & 0x1000) ? 255 : 128;
     } else if (jvs.valid && (H.pad_map == DIMM_PAD_WHEEL || H.pad_map == DIMM_PAD_CT || H.pad_map == DIMM_PAD_YSGW ||
-                             H.pad_map == DIMM_PAD_WHEELUD ||
+                             H.pad_map == DIMM_PAD_WHEELUD || H.pad_map == DIMM_PAD_NES ||
                              PLANE_PADS)) {
         /* Crazy Taxi cabinet default for games not tuned yet (2026-11-09). START is sent on release, and only if
            nothing else was used while it was held; while held it shifts the controls: lever = up/down, brake = X,
@@ -1244,6 +1244,27 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
         u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000, brk_raw = brk;
+        if (H.pad_map == DIMM_PAD_NES) {
+            /* NesterDC (2026-11-20): START is START while held, unless it is used as a shift (gas/brake/lever);
+               START + wheel at its end = the ROM menu (the program looks for START + right). */
+            if (start) {
+                if (acc > 64) { b |= DC_X; }
+                if (brk > 64) { b |= DC_Y; }
+                u32 ltr = fwd ? 255 : 0, rtr = back ? 255 : 0;
+                if (!(acc > 64 || brk > 64 || fwd || back)) b |= DC_START;
+                acc = rtr; brk = ltr;
+            } else {
+                if (acc > 64) b |= DC_A;
+                if (brk > 64) b |= DC_B;
+                if (fwd) b |= DC_UP;
+                if (back) b |= DC_DOWN;
+                acc = brk = 0;
+            }
+            if (x < 16) b |= DC_LEFT;
+            if (x > 239) b |= DC_RIGHT;
+            start_pulse = 0;
+            goto nes_done;
+        }
         if (PLANE_PADS) plane_mode = 1;     /* After Burner II / Space Harrier on their own */
         if (H.pad_map == DIMM_PAD_AB2 && !plane_cfg_set) {
             /* After Burner II (tried live on the board with the user, 2026-11-11): R = vulcan, A = missile, and the
@@ -1345,6 +1366,7 @@ static void pad_state(u32 port, u16 *buttons, u8 *rtrig, u8 *ltrig, u8 *joyx, u8
             if (x < 16) b |= DC_LEFT;
             if (x > 239) b |= DC_RIGHT;
         }
+nes_done:;
     } else if (jvs.valid) {
         x = wheel(jvs.analog[0]);
         acc = scale(1, jvs.analog[1], 255);

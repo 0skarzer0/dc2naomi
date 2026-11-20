@@ -58,6 +58,10 @@
                                          release, START + lever = up/down, wheel lock = left/right), gas = A (N64 A),
                                          brake = X (N64 B), lever forward = R trigger (N64 R, hop/drift), lever back =
                                          L trigger (N64 Z, use item); wheel 2.5x faster around the centre */
+#define DIMM_PAD_NES    10            /* NesterDC (2026-11-20, the user's scheme): START = START while held (but not when it
+                                         is used as a shift), wheel = d-pad left/right at the ends (and the analog stick),
+                                         gas = A, brake = B, lever forward/back = d-pad up/down; with START held: gas = X,
+                                         brake = Y, lever forward = L trigger, lever back = R trigger */
 #define DIMM_PAD_AB2    7             /* After Burner II on its own: DIMM_PAD_PLANE with its own buttons and throttle (resident.c) */
 #define DIMM_PAD_WHEELUD 9            /* DIMM_PAD_WHEEL with the lever's two uses swapped: lever = up/down, START + lever =
                                          B/A (Test Drive 6, gears on the d-pad: the user's choice, 2026-11-19) */

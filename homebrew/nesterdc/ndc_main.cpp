@@ -106,8 +106,9 @@ static void video_draw() {
 }
 
 // ---------------------------------------------------------------- input
-// Pads "ct" of dc2naomi (cabinet): short START = Y, START held >1 s = START, lever fwd = B, lever back = A,
-// wheel = analog X (and, at the ends, d-pad left+up / right+down), pedals = triggers, JVS 0x0200 = X.
+// Pads "nes" of dc2naomi (resident.c, DIMM_PAD_NES, the user's scheme): START = START (not when used as a shift),
+// wheel = d-pad left/right (at the ends) + analog X, gas = A, brake = B, lever = d-pad up/down; with START held:
+// gas = X, brake = Y, lever forward = L trigger, back = R trigger. START + wheel right = ROM menu.
 struct Pad { uint32 b; int jx, lt, rt; };
 static Pad read_pad(int n) {
   Pad p = {0, 0, 0, 0};
@@ -123,13 +124,12 @@ static void poll_input(NES *emu) {
   for (int n = 0; n < 4; n++) {
     NES_pad *pad = emu->get_pad(n);
     Pad p = read_pad(n);
-    bool lock = (p.jx < -100 || p.jx > 100);          // wheel at its end: the cabinet also sends up/down
-    pad->nes_A      = (p.b & CONT_A) != 0 || p.rt > 128;
-    pad->nes_B      = (p.b & CONT_B) != 0 || p.lt > 128;
-    pad->nes_SELECT = (p.b & CONT_X) != 0;
-    pad->nes_START  = (p.b & CONT_Y) != 0;
-    pad->nes_UP     = ((p.b & CONT_DPAD_UP) != 0) && !lock;
-    pad->nes_DOWN   = ((p.b & CONT_DPAD_DOWN) != 0) && !lock;
+    pad->nes_A      = (p.b & CONT_A) != 0;
+    pad->nes_B      = (p.b & CONT_B) != 0;
+    pad->nes_SELECT = (p.b & (CONT_X | CONT_Y)) != 0;
+    pad->nes_START  = (p.b & CONT_START) != 0;
+    pad->nes_UP     = (p.b & CONT_DPAD_UP) != 0;
+    pad->nes_DOWN   = (p.b & CONT_DPAD_DOWN) != 0;
     pad->nes_LEFT   = ((p.b & CONT_DPAD_LEFT) != 0) || p.jx < -48;
     pad->nes_RIGHT  = ((p.b & CONT_DPAD_RIGHT) != 0) || p.jx > 48;
   }
@@ -157,16 +157,12 @@ static void put_text(int line, const char *s) { bfont_draw_str(stage + line * 24
 // returns the chosen ROM index
 static int rom_menu(int cur) {
   uint32 prev = 0xffffffff;       // ignore what is already pressed when the menu opens
-  int rep = 0;
   for (;;) {
     Pad p = read_pad(0);
     uint32 pressed = p.b & ~prev;
     if (pressed & CONT_DPAD_UP) { if (cur > 0) cur--; }
     if (pressed & CONT_DPAD_DOWN) { if (cur < rom_count - 1) cur++; }
-    if (p.jx < -100 && !rep) { if (cur > 0) cur--; rep = 1; }
-    if (p.jx > 100 && !rep) { if (cur < rom_count - 1) cur++; rep = 1; }
-    if (p.jx > -60 && p.jx < 60) rep = 0;
-    if (pressed & (CONT_A | CONT_Y | CONT_START)) return cur;
+    if (pressed & (CONT_A | CONT_START)) return cur;
     prev = p.b;
 
     memset(stage, 0, sizeof(stage));
@@ -177,7 +173,7 @@ static int rom_menu(int cur) {
       snprintf(line, sizeof(line), "%c %.38s", (first + i == cur) ? '>' : ' ', rom_table[first + i].name);
       put_text(2 + i, line);
     }
-    put_text(9, "VOLANTE=ELEGIR  START=JUGAR");
+    put_text(9, "PALANCA=ELEGIR  ACELERADOR=JUGAR");
     draw_stage();
   }
 }
@@ -202,8 +198,8 @@ int main(int argc, char **argv) {
     int hold = 0;
     for (;;) {
       Pad p = read_pad(0);
-      // START held (the cabinet sends START after 1 s of holding; one more second) = back to the menu
-      if (p.b & CONT_START) { if (++hold >= 60) break; } else hold = 0;
+      // START + wheel to the right (for half a second) = back to the ROM menu
+      if ((p.b & CONT_START) && (p.b & CONT_DPAD_RIGHT)) { if (++hold >= 30) break; } else hold = 0;
       poll_input(emu);
       emu->emulate_frame(nes_screen);
       snd->poll();
