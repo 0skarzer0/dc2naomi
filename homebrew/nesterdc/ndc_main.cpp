@@ -9,10 +9,29 @@
 
 KOS_INIT_FLAGS(INIT_DEFAULT);
 
-struct rom_ent { const char *name; const unsigned char *start; const unsigned char *end; };
-extern "C" {
-extern const struct rom_ent rom_table[];
-extern const int rom_count;
+// The ROMs are files on the (emulated) disc: /cd/ROMS/000.NES ... and /cd/ROMS.TXT with one display name per line.
+#define MAX_ROMS 1024
+static char *rom_names[MAX_ROMS];
+static int rom_count = 0;
+static char load_error[64] = "";
+
+static void load_rom_list() {
+  FILE *f = fopen("/cd/ROMS.TXT", "rb");
+  if (!f) { snprintf(load_error, sizeof(load_error), "NO SE LEE /cd/ROMS.TXT"); return; }
+  static char buf[MAX_ROMS * 48];
+  size_t n = fread(buf, 1, sizeof(buf) - 1, f);
+  fclose(f);
+  buf[n] = 0;
+  char *s = buf;
+  while (*s && rom_count < MAX_ROMS) {
+    char *e = s; while (*e && *e != '\n' && *e != '\r') e++;
+    char save = *e; *e = 0;
+    if (e > s) rom_names[rom_count++] = strdup(s);
+    if (!save) break;
+    s = e + 1;
+    while (*s == '\n' || *s == '\r') s++;
+  }
+  if (!rom_count) snprintf(load_error, sizeof(load_error), "ROMS.TXT VACIO");
 }
 
 #define SAMPLE_RATE 44100
@@ -172,7 +191,7 @@ static int rom_menu(int cur) {
     int first = cur - 2; if (first + 6 > rom_count) first = rom_count - 6; if (first < 0) first = 0;
     for (int i = 0; i < 6 && first + i < rom_count; i++) {
       char line[64];
-      snprintf(line, sizeof(line), "%c %.38s", (first + i == cur) ? '>' : ' ', rom_table[first + i].name);
+      snprintf(line, sizeof(line), "%c %.38s", (first + i == cur) ? '>' : ' ', rom_names[first + i]);
       put_text(2 + i, line);
     }
     { char h[48]; snprintf(h, sizeof(h), "%d/%d  PALANCA=ELEGIR  VOLANTE=PAGINA", cur + 1, rom_count); put_text(8, h); }
@@ -183,17 +202,15 @@ static int rom_menu(int cur) {
 
 int main(int argc, char **argv) {
   video_init();
-  for (int i = 0; i < rom_count; i++) {
-    char fn[16]; snprintf(fn, sizeof(fn), "r%d.nes", i);
-    fs_ramdisk_attach(fn, (void *)rom_table[i].start, rom_table[i].end - rom_table[i].start);
-  }
+  load_rom_list();
   ndc_sound_mgr *snd = new ndc_sound_mgr();
   snd->initialize();
 
   int cur = 0;
   for (;;) {
+    if (!rom_count) { memset(stage, 0, sizeof(stage)); put_text(0, "NESTERDC"); put_text(2, load_error); draw_stage(); continue; }
     cur = rom_menu(cur);
-    char path[24]; snprintf(path, sizeof(path), "/ram/r%d.nes", cur);
+    char path[32]; snprintf(path, sizeof(path), "/cd/ROMS/%03d.NES", cur);
     NES *emu = new NES(snd);
     strcpy(emu->disksys_rom_filename, "/ram/disksys.rom");
     snd->clear_buffer();

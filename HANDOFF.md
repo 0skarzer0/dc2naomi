@@ -2260,7 +2260,7 @@ mono 44,1 kHz con el mismo protocolo de dos mitades del núcleo, mandos maple).
 homebrew/nesterdc/build_nesterdc.sh CARPETA_O_JUEGO.nes   # -> build/nesterdc_dc2naomict.bin(.gz)
 ```
 
-Las ROMs se enlazan dentro del programa (`fs_ramdisk`, `/ram/rN.nes`), con un menú al arrancar (palanca = cursor, acelerador o START = jugar); en juego, **START + volante a la derecha (medio segundo) vuelve al menú**. Perfil de mandos nuevo `nes` (`DIMM_PAD_NES` = 10 en `resident/resident.c`, esquema del usuario, 2026-11-20): START = START mientras se mantiene (no si se usa de cambio), volante a tope = izquierda/derecha (y stick analógico), acelerador = A, freno = B, palanca = arriba/abajo; con START apretado: acelerador = X, freno = Y, palanca adelante = L, atrás = R. En NES: A, B, START, SELECT = X o Y, cruceta = volante y palanca.
+Las ROMs van en el disco (`/cd/ROMS/`), con un menú al arrancar (palanca = cursor, acelerador o START = jugar); en juego, **START + volante a la derecha (medio segundo) vuelve al menú**. Perfil de mandos nuevo `nes` (`DIMM_PAD_NES` = 10 en `resident/resident.c`, esquema del usuario, 2026-11-20): START = START mientras se mantiene (no si se usa de cambio), volante a tope = izquierda/derecha (y stick analógico), acelerador = A, freno = B, palanca = arriba/abajo; con START apretado: acelerador = X, freno = Y, palanca adelante = L, atrás = R. En NES: A, B, START, SELECT = X o Y, cruceta = volante y palanca.
 No hay nada con copyright en el repositorio. `nester-kos-modern.patch` es el cambio a los fuentes de NesterDC
 (tipos `uint8…` sin `kos.h`, `htonl` propio, `*((T*)p)++` ilegal en gcc moderno, un `class NES_mapper;`).
 
@@ -2268,7 +2268,7 @@ No hay nada con copyright en el repositorio. `nester-kos-modern.patch` es el cam
 NAOMI 2 en la sesión de la IA para Flycast y la Raspberry/.251 no es alcanzable desde la nube (IP privada). Probado solo
 con una ROM de prueba mínima hecha a mano (fondo de un color, no es un juego).
 
-**Imagen completa (2026-11-20):** 142 ROMs del usuario (coches, motos, carreras y una carpeta "Arcade Ports") en una sola imagen de 23,6 MB (11 MB comprimida); `_end` = `0x8d742954`, quedan ~4,9 MB de montículo hasta `0x8dc00000`. Nombres del menú sin paréntesis ni corchetes; volante izquierda/derecha = página de 8. **Pendiente / dudas:** que arranque; el audio (la posición de reproducción se saca de lo consumido por el callback, que
+**Imagen completa (2026-11-20):** 142 ROMs del usuario en una imagen de 23,9 MB (11 MB comprimida). **Lección:** la primera versión enlazaba las ROMs dentro de `1ST_READ.BIN` (23,8 MB): en la placa se quedó en «starting...» (el residente lee `1ST_READ.BIN` entero por PIO antes de arrancar, y además dejaba solo ~4,9 MB de montículo). Ahora las ROMs van **como ficheros del disco** (`/cd/ROMS/NNN.NES`, nombres en `/cd/ROMS.TXT`) y el programa mide 636 KB; la ROM se lee al elegirla (`/cd/ROMS/NNN.NES` se pasa directamente a `NES::initialize`). Nombres del menú sin paréntesis ni corchetes; volante izquierda/derecha = página de 8. **Pendiente / dudas:** que arranque; el audio (la posición de reproducción se saca de lo consumido por el callback, que
 va adelantado respecto a lo que suena); mandos (volante = joyx ±48, A→A, X/B→B, Y/Z→SELECT, START); VMU y partidas
 guardadas (no están); menú de selección de ROM (no hay); FDS (necesita `disksys.rom`). No sirve para el volante: la NES
 tiene pocos juegos de conducción.

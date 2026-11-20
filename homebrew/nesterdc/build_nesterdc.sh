@@ -65,22 +65,20 @@ done
 
 # 4. frontend + ROM + link
 say "frontend and ROM"
-APP=$WORK/app; rm -rf "$APP"; mkdir -p "$APP/roms"; cp "$HERE/ndc_main.cpp" "$APP/"
-i=0; { echo '	.section .rodata'; echo '	.balign 32'
-  while read -r r; do cp "$r" "$APP/roms/$i.nes"
-    n=$(basename "$r" .nes | sed -E 's/ ?\([^)]*\)//g; s/ ?\[[^]]*\]//g' | sed "s/[^A-Za-z0-9 ._!'+-]/_/g")
-    echo "name$i: .asciz \"$n\""; echo "	.balign 32"; echo "rom$i: .incbin \"roms/$i.nes\""; echo "rom${i}_end:"; i=$((i+1))
-  done <<< "$LIST"
-  echo '	.balign 4'; echo '	.global _rom_count'; echo '_rom_count: .long '$i; echo '	.global _rom_table'; echo '_rom_table:'
-  for ((k=0; k<i; k++)); do echo "	.long name$k, rom$k, rom${k}_end"; done; } > "$APP/rom.S"
+APP=$WORK/app; rm -rf "$APP"; mkdir -p "$APP"; cp "$HERE/ndc_main.cpp" "$APP/"
 cd "$APP"
 $SHBIN/sh-elf-g++ $KOS_CFLAGS -std=gnu++14 -fpermissive -w -fno-exceptions -fno-rtti $INC -c ndc_main.cpp -o ndc_main.o
-$SHBIN/sh-elf-gcc $KOS_CFLAGS -c rom.S -o rom.o
-kos-c++ -o ndc.elf $KOS_START ndc_main.o rom.o "$OBJ"/*.o $KOS_LIBS
+kos-c++ -o ndc.elf $KOS_START ndc_main.o "$OBJ"/*.o $KOS_LIBS
 
 # 5. disc as files, then dc2naomi
 DISC=$WORK/disc; rm -rf "$DISC"; mkdir -p "$DISC"
 $SHBIN/sh-elf-objcopy -R .stack -O binary ndc.elf "$DISC/1ST_READ.BIN"
+# the ROMs go on the disc as files (read when chosen), not inside the program: 1ST_READ.BIN is read by PIO at boot
+mkdir -p "$DISC/ROMS"; : > "$DISC/ROMS.TXT"; i=0
+while read -r r; do
+    n=$(basename "$r" .nes | sed -E 's/ ?\([^)]*\)//g; s/ ?\[[^]]*\]//g' | sed "s/[^A-Za-z0-9 ._!'+-]/_/g")
+    cp "$r" "$DISC/ROMS/$(printf %03d $i).NES"; echo "$n" >> "$DISC/ROMS.TXT"; i=$((i+1))
+done <<< "$LIST"
 "$KOS/utils/makeip/makeip" "$HERE/ip.txt" "$DISC/IP.BIN" 2>/dev/null || /opt/toolchains/dc/kos/utils/makeip/makeip "$HERE/ip.txt" "$DISC/IP.BIN"
 say "dc2naomi: nesterdc -> $OUT"
 cd "$D2N"; mkdir -p "$(dirname "$OUT")"
