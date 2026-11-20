@@ -24,7 +24,7 @@ JOBS=${JOBS:-3}
 SHBIN=/opt/toolchains/dc/sh-elf/bin
 say() { echo; echo "== $*"; }
 mkdir -p "$WORK"
-if [ -d "$ROMS" ]; then LIST=$(find "$ROMS" -maxdepth 1 -iname '*.nes' | sort); else LIST=$(echo "$ROMS" | tr ',' '\n'); fi
+if [ -d "$ROMS" ]; then LIST=$(find "$ROMS" -iname '*.nes' | sort); else LIST=$(echo "$ROMS" | tr ',' '\n'); fi
 [ -n "$LIST" ] || { echo "no .nes found in $ROMS" >&2; exit 1; }
 while read -r r; do [ "$(head -c4 "$r")" = $'NES\x1a' ] || { echo "$r is not an iNES file" >&2; exit 1; }; done <<< "$LIST"
 
@@ -68,7 +68,7 @@ say "frontend and ROM"
 APP=$WORK/app; rm -rf "$APP"; mkdir -p "$APP/roms"; cp "$HERE/ndc_main.cpp" "$APP/"
 i=0; { echo '	.section .rodata'; echo '	.balign 32'
   while read -r r; do cp "$r" "$APP/roms/$i.nes"
-    n=$(basename "$r" .nes | sed 's/[^A-Za-z0-9 ._()!-]/_/g')
+    n=$(basename "$r" .nes | sed -E 's/ ?\([^)]*\)//g; s/ ?\[[^]]*\]//g' | sed "s/[^A-Za-z0-9 ._!'+-]/_/g")
     echo "name$i: .asciz \"$n\""; echo "	.balign 32"; echo "rom$i: .incbin \"roms/$i.nes\""; echo "rom${i}_end:"; i=$((i+1))
   done <<< "$LIST"
   echo '	.balign 4'; echo '	.global _rom_count'; echo '_rom_count: .long '$i; echo '	.global _rom_table'; echo '_rom_table:'

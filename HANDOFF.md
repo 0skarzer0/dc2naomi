@@ -2268,7 +2268,7 @@ No hay nada con copyright en el repositorio. `nester-kos-modern.patch` es el cam
 NAOMI 2 en la sesión de la IA para Flycast y la Raspberry/.251 no es alcanzable desde la nube (IP privada). Probado solo
 con una ROM de prueba mínima hecha a mano (fondo de un color, no es un juego).
 
-**Pendiente / dudas:** que arranque; el audio (la posición de reproducción se saca de lo consumido por el callback, que
+**Imagen completa (2026-11-20):** 142 ROMs del usuario (coches, motos, carreras y una carpeta "Arcade Ports") en una sola imagen de 23,6 MB (11 MB comprimida); `_end` = `0x8d742954`, quedan ~4,9 MB de montículo hasta `0x8dc00000`. Nombres del menú sin paréntesis ni corchetes; volante izquierda/derecha = página de 8. **Pendiente / dudas:** que arranque; el audio (la posición de reproducción se saca de lo consumido por el callback, que
 va adelantado respecto a lo que suena); mandos (volante = joyx ±48, A→A, X/B→B, Y/Z→SELECT, START); VMU y partidas
 guardadas (no están); menú de selección de ROM (no hay); FDS (necesita `disksys.rom`). No sirve para el volante: la NES
 tiene pocos juegos de conducción.

@@ -162,18 +162,21 @@ static int rom_menu(int cur) {
     uint32 pressed = p.b & ~prev;
     if (pressed & CONT_DPAD_UP) { if (cur > 0) cur--; }
     if (pressed & CONT_DPAD_DOWN) { if (cur < rom_count - 1) cur++; }
+    if (pressed & CONT_DPAD_LEFT) { cur = cur > 8 ? cur - 8 : 0; }
+    if (pressed & CONT_DPAD_RIGHT) { cur = cur + 8 < rom_count ? cur + 8 : rom_count - 1; }
     if (pressed & (CONT_A | CONT_START)) return cur;
     prev = p.b;
 
     memset(stage, 0, sizeof(stage));
     put_text(0, "NESTERDC  -  JUEGOS");
-    int first = cur - 6; if (first < 0) first = 0;
-    for (int i = 0; i < 8 && first + i < rom_count; i++) {
+    int first = cur - 2; if (first + 6 > rom_count) first = rom_count - 6; if (first < 0) first = 0;
+    for (int i = 0; i < 6 && first + i < rom_count; i++) {
       char line[64];
       snprintf(line, sizeof(line), "%c %.38s", (first + i == cur) ? '>' : ' ', rom_table[first + i].name);
       put_text(2 + i, line);
     }
-    put_text(9, "PALANCA=ELEGIR  ACELERADOR=JUGAR");
+    { char h[48]; snprintf(h, sizeof(h), "%d/%d  PALANCA=ELEGIR  VOLANTE=PAGINA", cur + 1, rom_count); put_text(8, h); }
+    put_text(9, "ACELERADOR=JUGAR");
     draw_stage();
   }
 }
