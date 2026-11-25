@@ -222,6 +222,11 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   soulcal, ysgw, buzz_es, ikaruga, ssf2x_en, toystory2_es llevan cargadores anteriores).
 - Restos en las Pi sin decidir: fila huérfana `h-daytona3_dc2naomi.bin.gz` en el CSV de la .251; `kof02_dc2naomi.vmu`
   y `dc-lastblade2_dc2naomi.bin.gz` (sin fila) en la .250.
+- OutRun C2C, Rev 2.9-b de ArkRetro (GDI en la carpeta del usuario, `outrun2/`): sin fuentes publicadas y con datos
+  que ya no casan con `a689a9a`; aprovechable el coche ligero `COCHEnnL.DAT` (mismo `ORD7`, 25 % menos vértices) y
+  los commits `25f60d0`/`7dfe8a9` (nuestro parche entra salvo el trozo de `arranque_hold`). Pedidas las fuentes
+  (`homebrew/orc2cdc/issue_arkretro_fuentes29b.md`, comentario en ArkRetro/ORC2CDC#2 publicado por el usuario):
+  esperar respuesta antes de rebasar.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback; versión en castellano de Mario Kart 64.
 
 ## Historial: dónde está cada cosa
