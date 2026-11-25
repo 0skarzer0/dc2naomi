@@ -448,3 +448,5 @@ estado). Ahora cada vigilante sale si el fichero de estado ya no lleva su PID. I
 
 Herramientas de prueba en `tools/flycast/`: `img_mkbin.py` (descomprime e inyecta la .vmu como el netbooter),
 `img_setpad.py`, `img_setflag.py`, `img_hdr.py` (tabla de parches), `img_box.py` (caja negra de un volcado de Flycast).
+
+**Confirmado por el usuario (2026-11-25):** MSR v2, Test Drive Le Mans y Wacky Races (los de "otros programas") funcionan en la placa del mueble Crazy Taxi.

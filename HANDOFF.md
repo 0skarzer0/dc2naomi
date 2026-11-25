@@ -196,10 +196,10 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | F355 `f355b`, 18 Wheeler `18wheeler2` | ✅ terminados, con VMU | Crazy Taxi |
 | Sega Rally 2 (Windows CE) `sr2` | ✅ con VMU y modo de 30 FPS (sin música de carreras: CD-DA) | Crazy Taxi |
 | Test Drive 6 | ✅ llega al menú (`read_chunk` 4, mandos `wheelud`) | Crazy Taxi |
-| MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | subidos a la .251 el 2026-11-19, sin confirmar en placa | Crazy Taxi |
+| MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |
 | Airline Pilots (NAOMI original) | CAUTION 51: ponerlo a 1 PLAYER(S) en el test; mandos pendientes | Crazy Taxi |
-| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) quizá sin subir | Crazy Taxi |
+| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE v1.1 `nesterse` | sin probar (binario KOS 1.1.8 sin `NAOMI_HOST`) | Crazy Taxi |
@@ -216,7 +216,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 
 ## Pendiente
 
-- Confirmar en placa: MSR v2, Test Drive Le Mans, Wacky Races, SPF2X rehecha, NesterDC corregido, NesterDC SE.
+- Confirmar en placa: SPF2X rehecha, NesterDC corregido, NesterDC SE.
 - Rush 2049 (menú lento), mandos de Airline Pilots.
 - Si otra imagen vieja de la .250 se cuelga como SPF2X: `newloader.py` (dcop_es, kof02, motw, rcotton_en, sf3ts,
   soulcal, ysgw, buzz_es, ikaruga, ssf2x_en, toystory2_es llevan cargadores anteriores).

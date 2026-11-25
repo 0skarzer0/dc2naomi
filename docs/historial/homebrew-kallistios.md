@@ -262,3 +262,5 @@ Probado en la placa: arranca, menú responde. Arreglado en la iteración siguien
 
 ### NesterDC SE v1.1 (2026-11-20) — perfil `nesterse`
 El usuario aportó NesterDC SE v1.1 (Christuserloeser, 2008-12-09; build modificada de NesterDC SE, binario + scripts .js; **no está en el repo**). Imagen sin recompilar: `1ST_READ.BIN` + `IP.BIN` del paquete tal cual, carpeta `NES/` con las ROMs del usuario (nombres ≤46+3 caracteres, sin paréntesis; estructura de carpetas conservada) y `REBUILD=1 ./build.sh nesterse DISCO SALIDA.bin`. Mismo perfil de mandos `nes` (START+acelerador = X = subir de carpeta; B = volver al menú principal). `1ST_READ.BIN` viene **scrambled**: se desbloquea con `scramble -d` (KOS utils) antes de meterlo en el disco. Imagen generada 2026-11-20 (143 ROMs, 28,4 MB; `h-nesterse_naomi.bin.gz`). ⚠️ Sin probar en placa: es un binario KOS 1.1.8 sin parche NAOMI_HOST, puede no arrancar.
+
+**Confirmado por el usuario (2026-11-25):** la última imagen de Mario Kart 64 (palanca adelante = salto, free play / attract mudo) sí llegó a subirse a la Pi del Crazy Taxi.
