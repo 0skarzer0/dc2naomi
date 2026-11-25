@@ -126,7 +126,7 @@ Esquema del usuario, en el residente (`DIMM_PAD_MK64`) y en el parche del juego:
 | Acelerador | A |
 | Freno | **B** (antes era C-derecha, ver abajo) |
 | START + freno | **L** |
-| Acelerador + START | **stick abajo + Z** (lanzar el objeto hacia atrás) |
+| Acelerador + START | **stick abajo** |
 | Palanca adelante / atrás | R (salto y derrape) / Z (usar objeto) |
 | START solo | START (al soltarlo; con la palanca, arriba/abajo en los menús) |
 
@@ -136,6 +136,8 @@ Esquema del usuario, en el residente (`DIMM_PAD_MK64`) y en el parche del juego:
   parche del juego hace que la C de la Dreamcast (que no usa nadie) sea L, y el residente la manda con START + freno.
 - Con cualquiera de las dos combinaciones, START no se manda al soltarlo.
 - Probado en Flycast leyendo `gControllers[0]` del juego: freno → B; START + freno → L; acelerador + START → A, stick
-  abajo y gatillo L (en la demo, que cuenta como menú, sale como L; en carrera el port lo convierte en Z); START solo
+  abajo; START solo
   → del título a la selección de juego. En el mueble, pendiente.
 - El perfil `dkr` (Diddy Kong Racing, otra sesión) usa los mismos mandos y hereda el cambio.
+- Primera versión (2026-11-26, commit `40262b7`): acelerador + START era stick abajo + Z; el usuario prefirió solo
+  stick abajo.

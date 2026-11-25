@@ -1415,8 +1415,8 @@ nes_done:;
                 /* Mario Kart 64 (mk64-dc, BUTTON_SWAP_X: DC A = N64 A, B = B, X = C-right, L trigger = Z in a race
                    and L in menus, R trigger = R) */
                 /* The user's scheme (2026-11-26): brake = N64 B; START + brake = N64 L (DC C: our mk64-dc patch
-                   makes it N64 L, as the port has no DC button for L in a race); gas + START = stick down + N64 Z
-                   (throw the item backwards). Either way START is not sent on release. */
+                   makes it N64 L, as the port has no DC button for L in a race); gas + START = stick down (2026-11-26,
+                   at first with N64 Z too). Either way START is not sent on release. */
                 u32 throwb = start && acc > 64;
                 b &= ~(u32)(DC_A | DC_B);
                 if (acc > 64) b |= DC_A;
@@ -1429,7 +1429,7 @@ nes_done:;
                     y = 255;                         /* stick down */
                 }
                 acc = (!start && fwd) ? 255 : 0;     /* lever forward = R trigger = N64 R: hop / drift */
-                brk = ((!start && back) || throwb) ? 255 : 0;   /* lever back = L trigger = N64 Z: use item */
+                brk = (!start && back) ? 255 : 0;    /* lever back = L trigger = N64 Z: use item */
                 /* the user asked for much less wheel travel (2026-11-13): 2.5x around the centre, so the
                    stick is at its end at 40 % of the wheel's travel (the d-pad above still needs the lock) */
                 {

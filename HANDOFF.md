@@ -202,7 +202,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |
 | Airline Pilots (NAOMI original) | CAUTION 51: ponerlo a 1 PLAYER(S) en el test; mandos pendientes | Crazy Taxi |
-| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado (tirones en carrera del 3,8 % al 0 %, el usuario: "funciona perfecta") y mandos nuevos (freno = B; START + freno = L; acelerador + START = abajo + Z): ROM principal desde el 2026-11-26, la anterior en `/boot/roms/_test/`: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
+| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado (tirones en carrera del 3,8 % al 0 %, el usuario: "funciona perfecta") y mandos nuevos (freno = B; START + freno = L; acelerador + START = stick abajo): ROM principal desde el 2026-11-26, la anterior en `/boot/roms/_test/`: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE v1.1 `nesterse` | sin probar (binario KOS 1.1.8 sin `NAOMI_HOST`) | Crazy Taxi |
