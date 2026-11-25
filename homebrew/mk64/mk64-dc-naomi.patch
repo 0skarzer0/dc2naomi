@@ -1,8 +1,8 @@
 diff --git a/src/gfx/gfx_dc.c b/src/gfx/gfx_dc.c
-index 3212e82e..d6aa7282 100644
+index 3212e82e..f484e6a7 100644
 --- a/src/gfx/gfx_dc.c
 +++ b/src/gfx/gfx_dc.c
-@@ -18,6 +18,43 @@ int force_30fps = 1;   // 0 = uncapped (real vsync, 60Hz-capable) — only 1P ra
+@@ -18,6 +18,45 @@ int force_30fps = 1;   // 0 = uncapped (real vsync, 60Hz-capable) — only 1P ra
                         // change; race_logic_loop re-asserts per mode every frame.
  static unsigned int last_time = 0;
  
@@ -30,8 +30,10 @@ index 3212e82e..d6aa7282 100644
 +extern int16_t gCurrentCourseId;
 +static uint64_t med_t0, med_t1, med_t2, med_last_vbl;
 +static uint32_t med_fr, med_vbl, med_lg, med_wk, med_fn, med_up, med_pv, med_pu, med_h[5], med_late, med_wt;
++extern uint32_t naomi_tz_ini, naomi_tz_cpu;
 +static void med_frame_start(void) {
 +    med_t0 = timer_us_gettime64();
++    naomi_tz_ini = (uint32_t) med_t0;
 +    med_gap = med_t4 ? (uint32_t) (med_t0 - med_t4) : 0;
 +    if (med_gap > med_gap_m) med_gap_m = med_gap;
 +}
@@ -46,7 +48,7 @@ index 3212e82e..d6aa7282 100644
  extern uint64_t timer_ms_gettime64(void);
  
  unsigned int GetSystemTimeLow(void) {
-@@ -57,6 +94,7 @@ static void gfx_dc_get_dimensions(uint32_t *width, uint32_t *height) {
+@@ -57,6 +96,7 @@ static void gfx_dc_get_dimensions(uint32_t *width, uint32_t *height) {
  
  /* What events should we be handling? */
  static void gfx_dc_handle_events(void) {
@@ -54,7 +56,7 @@ index 3212e82e..d6aa7282 100644
      /* Lets us yield to other threads*/
      //DelayThread(100);
  }
-@@ -65,6 +103,7 @@ uint8_t skip_debounce = 0;
+@@ -65,6 +105,7 @@ uint8_t skip_debounce = 0;
  const unsigned int FRAME_TIME_MS = 33; // hopefully get right on target @ 33.3
  
  static uint8_t gfx_dc_start_frame(void) {
@@ -62,7 +64,7 @@ index 3212e82e..d6aa7282 100644
      // The old ms-based frame-skip is GONE (2026-08-18). It depended on last_time being
      // refreshed by the old sleep-cap in swap_buffers_end; with that replaced by vblank
      // pacing, last_time froze at boot, elapsed was always > 33ms, and every OTHER frame
-@@ -76,11 +115,56 @@ static uint8_t gfx_dc_start_frame(void) {
+@@ -76,11 +117,57 @@ static uint8_t gfx_dc_start_frame(void) {
  }
  
  static void gfx_dc_swap_buffers_begin(void) {
@@ -76,6 +78,7 @@ index 3212e82e..d6aa7282 100644
 +extern volatile uint64_t vblticker;
 +static void med_frame_end(void) {
 +    uint64_t t3 = timer_us_gettime64();
++    naomi_tz_cpu = (uint32_t) t3;
 +    uint64_t v = vblticker;
 +    uint32_t dv = med_last_vbl ? (uint32_t) (v - med_last_vbl) : 2;
 +    uint32_t cpu = (uint32_t) (t3 - med_t0);
@@ -119,7 +122,7 @@ index 3212e82e..d6aa7282 100644
      // 30fps pacing on the real 60Hz vblank: hold each frame to a CONSTANT 2-vblank beat.
      // NEVER pace on gTickSpeed/sNumVBlanks — those MEASURE the frame we're pacing, so a
      // one-frame hiccup ratchets the wait up permanently (wait 3 -> measures 3 -> wait 3...).
-@@ -89,8 +173,16 @@ static void gfx_dc_swap_buffers_end(void) {
+@@ -89,8 +176,16 @@ static void gfx_dc_swap_buffers_end(void) {
      // wake_one only ever woke one of us per vblank (starving the other).
      if (force_30fps) {
          const uint64_t target = last_ticker + 2;
@@ -137,7 +140,7 @@ index 3212e82e..d6aa7282 100644
      }
  }
 diff --git a/src/gfx/gfx_pvr.c b/src/gfx/gfx_pvr.c
-index 74c3ffdf..09135b84 100644
+index 74c3ffdf..bd92d2f2 100644
 --- a/src/gfx/gfx_pvr.c
 +++ b/src/gfx/gfx_pvr.c
 @@ -471,6 +471,9 @@ int gfx_pvr_texture_resident(uint32_t id) {
@@ -168,6 +171,18 @@ index 74c3ffdf..09135b84 100644
      sUpN = sUpBytes = sUpFails = 0;
      // One greppable VRAM health line per second (GFX_VRAM_LOG) — plus every frame that had a
      // failed upload REGARDLESS, so a flush->re-OOM loop is visible as consecutive-frame lines.
+@@ -973,6 +984,11 @@ static void gfx_pvr_end_frame(void) {
+ 
+ static void gfx_pvr_finish_render(void) {
+     // Submits the scene to the GPU and flips.
++#ifdef NAOMI_HOST
++    { extern void naomi_tz_finish(void); naomi_tz_finish(); }
++    /* NAOMI: la imagen sale 2 vblanks despues, siempre (pvr_naomi_hold_flip, parche de KallistiOS) */
++    { extern void pvr_naomi_hold_flip(uint32_t vbls); pvr_naomi_hold_flip(2); }
++#endif
+     pvr_scene_finish();
+ }
+ 
 diff --git a/src/gfx/gfx_retro_dc.c b/src/gfx/gfx_retro_dc.c
 index 1a8657a2..6c2bf7dc 100644
 --- a/src/gfx/gfx_retro_dc.c
@@ -197,10 +212,10 @@ index 1a8657a2..6c2bf7dc 100644
  #if GFX_PROF
  	prof_frame++;
 diff --git a/src/main.c b/src/main.c
-index e14a951f..c434d171 100644
+index e14a951f..06767fcf 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -2472,17 +2472,39 @@ void update_gamestate(void) {
+@@ -2472,17 +2472,69 @@ void update_gamestate(void) {
  void SPINNING_THREAD(UNUSED void *arg);
  
  /* static */ volatile uint64_t vblticker=0;
@@ -209,6 +224,28 @@ index e14a951f..c434d171 100644
 +volatile uint64_t naomi_vbl_us;   /* cuando llego el ultimo vblank (medidas, gfx_dc.c) */
 +volatile uint32_t naomi_aud_sum, naomi_aud_max, naomi_aud_n;
 +volatile uint32_t naomi_flip_h[5], naomi_rnd_sum, naomi_rnd_max, naomi_flips;
++#include <../hardware/pvr/pvr_internal.h>   /* pvr_state: tiempos de registro y render */
++#define TZ_N 16
++#define TZ_FOTO (2 + TZ_N * 4 + TZ_N * 7)
++/* naomi_traza: 'TRAZ', fotos hechas, imagenes fuera de ritmo vistas en carrera, libre; y 8 fotos de TZ_FOTO:
++   cuadros mandados, cambios de imagen (contadores), 16 x {vbl, t_inicio, t_cpu (antes de esperar),
++   t_finish (pvr_scene_finish)} y 16 x {vbl, t_vbl, t_reg0, reg_us, t_rnd0, rnd_us, render_busy}. */
++volatile uint32_t naomi_traza[4 + 8 * TZ_FOTO] = { 0x5a415254 };
++static uint32_t tz_fin[TZ_N][4], tz_flip[TZ_N][7], tz_nf, tz_nl, tz_pend;
++uint32_t naomi_tz_ini, naomi_tz_cpu;
++void naomi_tz_finish(void) {
++    uint32_t *f = tz_fin[tz_nf++ % TZ_N];
++    f[0] = (uint32_t) vblticker; f[1] = naomi_tz_ini; f[2] = naomi_tz_cpu; f[3] = (uint32_t) timer_us_gettime64();
++}
++static void tz_foto(void) {
++    uint32_t k = naomi_traza[1];
++    if (k >= 8) return;
++    volatile uint32_t *d = &naomi_traza[4 + k * TZ_FOTO];
++    d[0] = tz_nf; d[1] = tz_nl; d += 2;
++    for (uint32_t i = 0; i < TZ_N; i++) for (int j = 0; j < 4; j++) *d++ = tz_fin[(tz_nf + i) % TZ_N][j];
++    for (uint32_t i = 0; i < TZ_N; i++) for (int j = 0; j < 7; j++) *d++ = tz_flip[(tz_nl + i) % TZ_N][j];
++    naomi_traza[1] = k + 1;
++}
 +#endif
  
  void vblfunc(uint32_t c, void *d) {
@@ -224,6 +261,14 @@ index e14a951f..c434d171 100644
 +            med_fc = st.frame_count; med_fv = vblticker;
 +            naomi_flip_h[d <= 1 ? 0 : d >= 5 ? 4 : d - 1]++;
 +            naomi_rnd_sum += r; naomi_flips++; if (r > naomi_rnd_max) naomi_rnd_max = r;
++            {   uint32_t *l = tz_flip[tz_nl++ % TZ_N];
++                l[0] = (uint32_t) vblticker; l[1] = (uint32_t) naomi_vbl_us;
++                l[2] = (uint32_t) (pvr_state.reg_start_time / 1000); l[3] = (uint32_t) (pvr_state.reg_last_len / 1000);
++                l[4] = (uint32_t) (pvr_state.rnd_start_time / 1000); l[5] = (uint32_t) (pvr_state.rnd_last_len / 1000);
++                l[6] = pvr_state.render_busy;
++                if (d != 2 && gGamestate == 4 && !tz_pend) { naomi_traza[2]++; tz_pend = 5; }
++                if (tz_pend && --tz_pend == 0) tz_foto();
++            }
 +        }
 +    }
 +#endif
@@ -240,7 +285,7 @@ index e14a951f..c434d171 100644
  }
  
  void thread5_game_loop(UNUSED void* arg) {
-@@ -2569,6 +2591,13 @@ void SPINNING_THREAD(UNUSED void *arg) {
+@@ -2569,6 +2621,13 @@ void SPINNING_THREAD(UNUSED void *arg) {
          /* AICA hardware mixing: create_next_audio_buffer drives the AICA voices
             directly (AicaSynth_Update inside synthesis_execute). No software mix
             buffer is produced, so the KOS stream is no longer pushed/used. */

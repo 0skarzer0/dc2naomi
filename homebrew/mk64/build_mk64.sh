@@ -47,19 +47,24 @@ mkdir -p "$WORK"
 
 # 1. KallistiOS 680d1862 with the NAOMI_HOST patch, in its own tree (never the one the loader uses)
 KOS=$WORK/kos-mk64
-if [ ! -f "$KOS/lib/dreamcast/libkallisti.a" ]; then
+if [ ! -f "$KOS/lib/dreamcast/libkallisti.a" ] ||
+   ! git -C "$KOS" apply -R --check "$HERE/kos-680d1862-naomi_host.patch" 2>/dev/null; then
+    # new tree, or one built with an older version of the patch: back to $KOS_REV, patch, rebuild
     say "KallistiOS $KOS_REV + NAOMI_HOST"
     [ -d "$KOS/.git" ] || git clone -q "$KOS_URL" "$KOS"
-    git -C "$KOS" checkout -q "$KOS_REV"
-    git -C "$KOS" diff --quiet && git -C "$KOS" apply "$HERE/kos-680d1862-naomi_host.patch"
+    git -C "$KOS" checkout -q -f "$KOS_REV"
+    git -C "$KOS" apply "$HERE/kos-680d1862-naomi_host.patch"
+    rm -f "$KOS/lib/dreamcast/libkallisti.a"
 fi
 # mk64-dc's own environ.sh, pointed at these trees, plus -DNAOMI_HOST (KOS itself and the game see it)
 [ -d "$WORK/mk64-dc/.git" ] || git clone -q "$MK64_URL" "$WORK/mk64-dc"
 git -C "$WORK/mk64-dc" checkout -q "$MK64_REV"
 # the game's NAOMI changes (frame pacing and the naomi_med measurements, all under NAOMI_HOST;
 # see docs/juegos/mario-kart-64.md), applied once
-git -C "$WORK/mk64-dc" apply -R --check "$HERE/mk64-dc-naomi.patch" 2>/dev/null ||
+if ! git -C "$WORK/mk64-dc" apply -R --check "$HERE/mk64-dc-naomi.patch" 2>/dev/null; then
+    git -C "$WORK/mk64-dc" checkout -- src/gfx/gfx_dc.c src/gfx/gfx_pvr.c src/gfx/gfx_retro_dc.c src/main.c
     git -C "$WORK/mk64-dc" apply "$HERE/mk64-dc-naomi.patch"
+fi
 sed -e "s#KOS_BASE=\"/opt/toolchains/dc/kos\"#KOS_BASE=\"$KOS\"#" \
     -e "s#KOS_PORTS=\"\${KOS_BASE}/../kos-ports\"#KOS_PORTS=\"$WORK/kos-ports-mk64\"#" \
     "$WORK/mk64-dc/environ.sh" > "$KOS/environ.sh"

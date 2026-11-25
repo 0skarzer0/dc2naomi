@@ -2,7 +2,10 @@
 
 El port de [mk64-dc](https://github.com/jnmartin84/mk64-dc) va siempre a 30 fps (`force_30fps = 1`): cada imagen
 debería verse 2 vblanks (2 × 16,7 ms). Aquí está cómo se mide en la placa, qué causa los tirones y qué se ha cambiado.
-Los cambios están en `homebrew/mk64/mk64-dc-naomi.patch` (todo bajo `NAOMI_HOST`) y `build_mk64.sh` lo aplica.
+Los cambios están en `homebrew/mk64/mk64-dc-naomi.patch` (el juego) y en `kos-680d1862-naomi_host.patch` (KallistiOS),
+todo bajo `NAOMI_HOST`. `build_mk64.sh` los aplica y, si encuentra un árbol con una versión anterior, lo pone al día.
+
+**Resultado (placa, demo entera): imágenes fuera de ritmo en carrera del 3,8 % al 0,0 %.**
 
 ## Cómo se mide
 
@@ -43,13 +46,22 @@ Los cambios están en `homebrew/mk64/mk64-dc-naomi.patch` (todo bajo `NAOMI_HOST
 - El juego despierta tras el vblank 1,4 ms tarde de media (máximo 2,9 ms).
 - El audio gasta menos de 1 ms por vblank: no es el problema.
 
+- **Traza de los tirones** (`traza_mk64.py`, dirección `_naomi_traza`, `0x8c10f9f4`): en carrera, cuando una imagen no
+  dura 2 vblanks, el juego guarda los últimos 16 cuadros (cuándo empezaron, cuándo acabó la CPU, cuándo se mandaron a
+  la GPU) y los últimos 16 cambios de imagen (cuándo empezaron y cuánto duraron el registro y el render). Hasta 8
+  fotos. Se leen al final, de una vez: `python3 traza_mk64.py 10.0.0.4 0x8c10f9f4`.
+
 ## Causas (en sencillo)
 
 1. **El ritmo se marcaba en el sitio equivocado.** El juego esperaba al vblank par *después* de mandar el cuadro a la
    GPU, y KallistiOS cambia la imagen en el primer vblank tras acabar el render. Por eso la imagen salía cuando le
    tocaba según lo que tardasen CPU + GPU. Si un cuadro acababa antes de 16,7 ms y el siguiente después, uno se veía 1
    vblank y otro 3, aunque el juego fuese a 30 fps justos.
-2. **El juego despertaba tarde.** KallistiOS no cambia de hilo cuando llega el vblank: el juego esperaba al siguiente
+2. **La imagen salía 1 o 2 vblanks después de mandarla, según el cuadro** (la que más pesaba; la encontró la traza).
+   Entre mandar el cuadro y la imagen nueva hay dos pasos: el registro (la geometría entra en la GPU, 7-15 ms) y el
+   render (7-18 ms). Juntos rondan los 16,7 ms: un cuadro de 10,1 + 7,6 ms salía a los 2 vblanks y el siguiente, de
+   8,8 + 7,2, a 1. KallistiOS cambia la imagen en el primer vblank tras acabar.
+3. **El juego despertaba tarde.** KallistiOS no cambia de hilo cuando llega el vblank: el juego esperaba al siguiente
    punto de cambio, que era el hilo que contesta a la NetDIMM (cada 2 ms) o el tic del reloj (cada 10 ms).
 
 ## Cambios
@@ -65,7 +77,13 @@ pinta. Flycast: de 3/24/3 a 0/30/0 (imágenes de 1/2/3 vblanks en 30). Placa: t�
 **2. Cambiar de hilo en el vblank** (`vblfunc` en `src/main.c`: `thd_schedule(1, 0)` tras despertar a quien espera,
 igual que hace KallistiOS en `pvr_irq.c` al acabar la GPU). Retraso al despertar: de 1,4 ms (máx. 2,9) a 0,0.
 
-**Con los dos (placa, una vuelta entera de la demo):**
+**3. La imagen sale siempre 2 vblanks después de mandarla** (parche de KallistiOS: `pvr_naomi_hold_flip(n)` y la
+condición en `pvr_vblank_handler`; el juego lo llama antes de `pvr_scene_finish`). KallistiOS ya no cambia de imagen
+antes de tiempo aunque el registro y el render acaben pronto. Todas duran 2 vblanks mientras registro + render quepan
+en 33 ms, y en la traza siempre caben. El precio es que las imágenes que antes salían un vblank antes ahora esperan:
+unos 16 ms más de retraso entre el mando y la pantalla en esas escenas.
+
+**Con los cambios 1 y 2 (placa, una vuelta entera de la demo):**
 
 | Tramo | antes | después |
 |---|---|---|
@@ -77,11 +95,24 @@ igual que hace KallistiOS en `pvr_irq.c` al acabar la GPU). Retraso al despertar
 | Sherbet Land 4P | – | 2,5 % |
 | **Todas las carreras** | **3,8 %** | **2,8 %** |
 
+**Con los tres (placa, una vuelta entera de la demo, 8.670 imágenes en carrera):**
+
+| Tramo | sin cambios | 1 + 2 | 1 + 2 + 3 |
+|---|---|---|---|
+| Título y menús de la demo | 1,5 – 2,4 % | 0 – 0,6 % | 0 % |
+| Mario Raceway 1P | 2,7 % | 1,2 – 2,2 % | 0 % |
+| Choco Mountain 2P | 2,8 % | 3,4 – 4,8 % | 0 % |
+| Kalimari Desert 1P | 2,6 % | 1,6 – 1,8 % | 0 % |
+| Wario Stadium 3P | 7,9 % | 4,8 % | 0 % |
+| Bowser's Castle 1P | 0,9 % | 3,1 % | 0 % |
+| Sherbet Land 4P | – | 2,5 % | 0 % |
+| **Todas las carreras** | **3,8 %** | **2,8 %** | **0,0 %** |
+
 ## Lo que queda
 
-En las carreras sigue habiendo un 2-3 % de imágenes fuera de ritmo en ventanas donde ni la CPU (menos de 33 ms), ni
-el render (menos de 14 ms) ni el despertar (0 ms) lo explican. Choco Mountain 2P es el peor. Lo siguiente sería
-apuntar, imagen por imagen, cuándo se manda el cuadro, cuándo acaba la GPU y en qué vblank cambia la imagen, para ver
-cuál de los tres se sale de su sitio. Las imágenes con render de más de 16,7 ms (picos de hasta 20-30 ms en Mario
-Raceway y Bowser's Castle) también saltan un vblank: sería cosa de aligerar lo que pinta la GPU (las listas
-translúcidas se ordenan por píxel, `autosort`).
+- Medido con la demo, sin nadie jugando. Falta una partida de verdad (con objetos, 4 jugadores) y la opinión del
+  jugador sobre el retraso del mando (cambio 3).
+- Un cuadro cuyo registro + render pase de 33 ms, o cuya CPU pase de 33 ms, sigue saltando un vblank. En la demo
+  no pasa (el render llega como mucho a 28 ms y la CPU, en carrera, a 30 ms: cerca del límite); en una partida con más objetos, quizá.
+- `timehack.py` corre en el uso normal y habla con la NetDIMM; en las medidas estaba parado. Las lecturas no afectan
+  (comprobado arriba), así que no debería notarse.

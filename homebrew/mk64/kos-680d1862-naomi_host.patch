@@ -259,6 +259,40 @@ index 522a3ea5..b6d9e0d7 100644
      maple_write(MAPLE_DMAADDR, ((uint32) ptr) & MEM_AREA_CACHE_MASK);
  }
  
+diff --git a/kernel/arch/dreamcast/hardware/pvr/pvr_irq.c b/kernel/arch/dreamcast/hardware/pvr/pvr_irq.c
+index 711b271b..acad64e5 100644
+--- a/kernel/arch/dreamcast/hardware/pvr/pvr_irq.c
++++ b/kernel/arch/dreamcast/hardware/pvr/pvr_irq.c
+@@ -113,6 +113,16 @@ static void pvr_render_lists(void) {
+     }
+ }
+ 
++#ifdef NAOMI_HOST
++/* dc2naomi: no cambiar de imagen antes del vblank pvr_naomi_flip_min. Un juego a ritmo fijo (Mario Kart 64 a
++   30 fps) llama a pvr_naomi_hold_flip(2) al mandar cada cuadro: la imagen sale siempre 2 vblanks despues,
++   aunque el registro y el render acaben antes, en vez de en el primer vblank tras acabar. */
++static uint32 pvr_naomi_flip_min;
++void pvr_naomi_hold_flip(uint32 vbls) {
++    pvr_naomi_flip_min = pvr_state.vbl_count + vbls;
++}
++#endif
++
+ void pvr_vblank_handler(uint32 code, void *data) {
+     (void)code;
+     (void)data;
+@@ -121,7 +131,11 @@ void pvr_vblank_handler(uint32 code, void *data) {
+ 
+     // If the render-done interrupt has fired then we are ready to flip to the
+     // new frame buffer.
+-    if(pvr_state.render_completed) {
++    if(pvr_state.render_completed
++#ifdef NAOMI_HOST
++       && (int32)(pvr_state.vbl_count - pvr_naomi_flip_min) >= 0
++#endif
++      ) {
+         //DBG(("view(%d)\n", pvr_state.view_target ^ 1));
+ 
+         // Handle PVR stats
 diff --git a/kernel/arch/dreamcast/hardware/spu.c b/kernel/arch/dreamcast/hardware/spu.c
 index e5db35f5..e1f15e4d 100644
 --- a/kernel/arch/dreamcast/hardware/spu.c
