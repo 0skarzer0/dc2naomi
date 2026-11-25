@@ -4,7 +4,7 @@ Mueble estándar de dos jugadores: 2 palancas, 6 botones y START por jugador. Ra
 **192.168.68.250**, NetDIMM en 10.0.0.3. Todas las imágenes se hacen con `app/dc2naomi.py --cab joy` (palanca =
 cruceta y stick, botones 1-6 = A B X Y L R) y llevan su `.vmu` al lado, con una partida con todo desbloqueado de
 [bucanero/dreamcast-saves](https://github.com/bucanero/dreamcast-saves) cuando hay una de la misma región. Los juegos
-de volante van al mueble Crazy Taxi (Pi .60): índice en
+de volante van al mueble Crazy Taxi (Pi .251, antes .60): índice en
 [naomi-wheel-games/docs/pi60-juegos.md](https://github.com/0skarzer0/naomi-wheel-games/blob/main/docs/pi60-juegos.md).
 
 ✅ funciona en placa · 🧪 subido, sin probar · ❌ con fallos. Ficheros `/boot/roms/dc-<nombre>_dc2naomi.{bin.gz,vmu}`;
@@ -82,7 +82,7 @@ las dos Capcom vs. SNK 2 "Unlocked-debug" (copiadas de las "unlocked", título c
 **Después (mismo día, a petición del usuario: "Dragon Treasure quítalo; si hay algún juego de carreras quítalo, está
 en la otra NAOMI"):** fuera de la tarjeta y del CSV (copia `romsinfo.csv.bak_quita_carreras`) Dragon Treasure 2 y 3,
 18 Wheeler Deluxe y Standard, Faster Than Speed, Wave Runner GP, Tokyo Bus Guide, Jambo! Safari y Shutokou Battle 2 de
-Dreamcast (`dc-shutokou2_en`, con su `.vmu`): los de conducción van al mueble Crazy Taxi (Pi .60). Quedan 187
+Dreamcast (`dc-shutokou2_en`, con su `.vmu`): los de conducción van al mueble Crazy Taxi (Pi .251, antes .60). Quedan 187
 juegos; `/boot` con 5,8 GB libres.
 
 ### Originales de NAOMI

@@ -1,5 +1,7 @@
 # Medidas en la placa (NAOMI 2 del mueble Crazy Taxi), OutRun C2C compilado para NAOMI
 
+> La Raspberry del mueble Crazy Taxi, aquí ".60", es la **192.168.68.251** desde el 2026-11-19.
+
 Con `med.py` desde la Raspberry .60 mientras corre la **demo automática** (estado 2 = carrera), una ventana por cada 30
 cuadros. "cpu" = ms de CPU por cuadro (dibujo + lógica, la misma medida con la que el juego acorta la distancia de
 dibujo); "lejos" = distancia de dibujo en m (la del original llega a 4000; el juego la baja 50 m por segundo si la CPU

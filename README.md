@@ -27,7 +27,7 @@ El programa te dice:
   automáticamente) o **NO FUNCIONA todavía** (te pregunta si quieres convertirlo igualmente);
 - **cómo quedan los mandos**;
 - si la imagen **no cabe** en la NetDIMM de 512 MB. Se genera igualmente: recorta tú el juego (vídeos, datos que
-  no uses) y vuelve a convertirlo. Las pistas de audio de CD se descartan siempre (ver limitaciones).
+  no uses) y vuelve a convertirlo. El programa descarta las pistas de audio de CD (ver limitaciones).
 
 **Si no cabe por los vídeos** (películas Sofdec, `.SFD`), se pueden recodificar a menos calidad sin quitar nada
 (hace falta Python 3 y ffmpeg; no está en los ejecutables):
@@ -56,8 +56,9 @@ Formatos de entrada: `.chd` (versión 5, la de cualquier `chdman` reciente), `.g
 **CD de autoarranque (`.cdi`).** El juego está en la última sesión del CD, en su propia dirección (11700, 45000…),
 y así se sirve; el `1ST_READ.BIN` se descifra como hace la BIOS si viene cifrado (MIL-CD), y el relleno que llevan
 muchos de estos discos para colocar los datos al borde del CD (un archivo de un solo byte repetido, p. ej. 448 MB
-en Cannon Spike) no se copia a la imagen. La música en pistas de audio de CD no suena (ver limitaciones).
-Comprobado contra el disco original archivo por archivo (`tools/cmpimage.py`); **ninguno probado aún en placa**.
+en Cannon Spike) no se copia a la imagen. La música en pistas de audio de CD no suena con el programa (ver limitaciones).
+Comprobado contra el disco original archivo por archivo (`tools/cmpimage.py`). Probado en placa: RoboCop para
+DreamNeo CD (`.cdi`, perfil propio con su música de CD).
 
 **La memoria (VMU).** Salvo en los juegos que ya iban bien sin ella (Crazy Taxi 2, Yu Suzuki GW), el
 programa activa la VMU emulada y deja junto al `.bin.gz` un `JUEGO_dc2naomi.vmu` vacío (128 KB). Para que las partidas
@@ -109,7 +110,8 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: salir con B deja negro) |
 | Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (disparo automático, acelerador = gases, freno = misil, START + acelerador = frenar, START + freno = quitar/poner el disparo automático; las luces del arcade, en el botón START); Space Harrier (acelerador = disparo rápido); se crean con `tools/mkgz.py` |
 | The Last Blade 2 Final Edition (Japón) con el parche VGA de la comunidad (perfil `lb2fe`; vídeos recodificados) | experimental (llega a la intro, al título y al menú en emulador) | experimental |
-| KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, Super Puzzle Fighter II X, Super Street Fighter II X, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
+| KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
+| Super Puzzle Fighter II X | experimental (en placa se colgaba tras los logos; rehecho con el residente actual, sin volver a probar) | experimental |
 | F355 Challenge (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (esa partida trae la música a volumen 0: súbela en Options) |
 | 18 Wheeler: American Pro Trucker (USA) | experimental | ✅ probado con VMU en fichero y partida desbloqueada (START + acelerador = vista, START + freno = bocina) |
 | Sega Rally 2 (USA; arranca con Windows CE) | experimental | ✅ probado con VMU en fichero (sin la música de las carreras: son pistas de audio CD; la imagen activa de serie el modo oculto de 30 FPS del juego, probado en placa) |
@@ -120,22 +122,24 @@ con partidas con todo desbloqueado de cientos de juegos):
 
 ### Limitaciones
 
-- **No hay audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella (también los `.cdi` con
-  pistas de audio, como Unreal Tournament o Millennium Racer).
-- **Memorias (VMU):** emulada, y probada en placa real solo con Namco Museum y Daytona USA 2001 (con los scripts de
-  `wipi/` las partidas se conservan entre cargas de otros juegos: comprobado en placa con Daytona y Namco). Vive en la memoria
-  de la placa y se pierde al apagarla, salvo que uses los scripts de [`wipi/`](wipi/README.md) (WiPi Netbooter), que
-  guardan la tarjeta de cada juego en un fichero `.vmu` junto a su imagen. El resto de juegos (menos los tres que ya
-  iban bien sin ella) la llevan activada sin haberse probado con ella en placa.
+- **El programa no pone audio de CD** (pistas CDDA): los juegos que ponen su música así quedan sin ella (también los
+  `.cdi` con pistas de audio, como Unreal Tournament o Millennium Racer). El residente ya sabe reproducirla (`DIMM_CDDA`,
+  probado en placa con RoboCop para DreamNeo CD), pero hace falta un perfil hecho a mano y solo con `.cdi` o `.gdi`.
+- **Memorias (VMU):** emulada, y probada en placa real con Namco Museum, Daytona USA 2001, Crazy Taxi 2, F355,
+  18 Wheeler, Sega Rally 2, Ikaruga, SF III Double Impact y SSF2X (con los scripts de `wipi/` las partidas se conservan
+  entre cargas de otros juegos). Vive en la memoria de la placa y se pierde al apagarla, salvo que uses los scripts de
+  [`wipi/`](wipi/README.md) (WiPi Netbooter), que guardan la tarjeta de cada juego en un fichero `.vmu` junto a su
+  imagen. El resto de juegos la llevan activada sin haberse probado con ella en placa.
 - **No están soportados los juegos especiales:** los que arrancan con Windows CE solo están resueltos para Sega Rally 2
   (cada juego trae su propio núcleo y hay que localizar sus manejadores de interrupción: ver HANDOFF); los
-  Midway's Greatest Arcade Hits siguen sin funcionar. Los que son un menú que carga varios programas necesitan los
-  parches de cada programa en su perfil (resuelto para SF III Double Impact y Yu Suzuki Game Works).
+  Midway's Greatest Arcade Hits siguen sin funcionar. Los que cargan otro programa en lugar del primero (Wacky Races,
+  MSR) se parchean solos; los menús que cargan varios programas necesitan los parches de cada uno en su perfil (resuelto
+  para SF III Double Impact y Yu Suzuki Game Works).
 - **Probado con NAOMI 2 y NetDIMM de 512 MB.** No se ha probado con NAOMI 1, aunque debería funcionar.
 
 ### Ideas para el futuro
 
-- Audio de CD (recodificado para caber en la NetDIMM).
+- Audio de CD en el programa, para cualquier juego (recodificado para caber en la NetDIMM).
 - Un aviso visible de "guardado en el fichero" (hoy solo está en el registro de la Raspberry).
 - Llevar la vibración (Puru Puru Pack) al force feedback de los muebles NAOMI que lo tengan.
 
@@ -152,7 +156,8 @@ con partidas con todo desbloqueado de cientos de juegos):
 - **`wipi/`**: scripts para WiPi Netbooter que guardan la VMU de cada juego en un fichero.
 - **`tools/chd.py`**: lector de CHD propio. **`app/dc2naomi.py`**: el programa.
 
-Los detalles técnicos, las direcciones y lo aprendido en la placa están en [HANDOFF.md](HANDOFF.md).
+Lo vigente (recetas y estado) está en [HANDOFF.md](HANDOFF.md); cómo funciona por dentro, en
+[docs/arquitectura.md](docs/arquitectura.md), y lo aprendido sesión a sesión, en [docs/historial/](docs/historial/).
 
 ## Compilar
 
@@ -174,7 +179,7 @@ paso, pero el juego solo cuenta como probado cuando funciona en la placa.
 ## Juegos convertidos
 
 Lo que hay cargado en la NAOMI de palancas y su estado: [docs/pi250-juegos.md](docs/pi250-juegos.md). Los del mueble
-Crazy Taxi: [naomi-wheel-games/docs/pi60-juegos.md](https://github.com/0skarzer0/naomi-wheel-games/blob/main/docs/pi60-juegos.md).
+Crazy Taxi (Pi .251): [naomi-wheel-games/docs/pi60-juegos.md](https://github.com/0skarzer0/naomi-wheel-games/blob/main/docs/pi60-juegos.md).
 
 ## Agradecimientos
 
@@ -267,6 +272,6 @@ los juegos citados son marcas de sus propietarios.
 
 Parte del proyecto [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-games).
 
-- **NesterDC** (`homebrew/nesterdc/`, sin probar en placa): emulador de NES. Núcleo Nester (GPL2, Darren Ranalli y
+- **NesterDC** (`homebrew/nesterdc/`; arranca en placa, las últimas correcciones sin probar): emulador de NES. Núcleo Nester (GPL2, Darren Ranalli y
   colaboradores) y su port a Dreamcast [NesterDC](https://github.com/pqrs-org/NesterDC) de **tekezo** (pqrs-org); aquí
   solo se aprovecha el núcleo, con un frontend nuevo. Su código no se incluye: `build_nesterdc.sh` lo descarga.

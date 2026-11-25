@@ -1,6 +1,6 @@
 # OutRun 2006 Coast 2 Coast (demo de ArkRetro) compilado para NAOMI
 
-> **VERSIÓN FINAL (2026-11-19 00:40, el usuario: "funciona todo perfecto"): `h-orc2c8_dc2naomict`** en la Pi .60
+> **VERSIÓN FINAL (2026-11-19 00:40, el usuario: "funciona todo perfecto"): `h-orc2c8_dc2naomict`** en la Pi .60 (hoy .251)
 > (fila 53 de `romsinfo.csv`), md5 `.gz` `e800dd0a6556ecbfb182cedcab4006b2`, copia en `otros/orc3/gdi5img/` del
 > usuario. Es la `h-orc2c4` de abajo con las sombras sin copia de la pintura y montada en un GDI rehecho con un relleno
 > de 0xFF para el `1ST_READ.BIN` (con el de ceros la imagen lo cortaba y no arrancaba: ver MEDIDAS.md). Compilada con
