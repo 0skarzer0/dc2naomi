@@ -56,8 +56,11 @@
                                          fire, brake = B missile), START as DIMM_PAD_WHEEL */
 #define DIMM_PAD_MK64   8             /* Mario Kart 64 (mk64-dc, 2026-11-13, the user's choice): as MENU (START sent on
                                          release, START + lever = up/down, wheel lock = left/right), gas = A (N64 A),
-                                         brake = X (N64 B), lever forward = R trigger (N64 R, hop/drift), lever back =
-                                         L trigger (N64 Z, use item); wheel 2.5x faster around the centre */
+                                         brake = B (N64 B; was X = N64 C-right until 2026-11-26), lever forward = R trigger (N64 R, hop/drift), lever back =
+                                         L trigger (N64 Z, use item); wheel 2.5x faster around the centre.
+                                         2026-11-26: START + brake = C (N64 L, homebrew/mk64/mk64-dc-naomi.patch),
+                                         gas + START = stick down + L trigger (throw the item backwards); both
+                                         keep START from being sent */
 #define DIMM_PAD_NES    10            /* NesterDC (2026-11-20, the user's scheme): START = START while held (but not when it
                                          is used as a shift), wheel = d-pad left/right at the ends (and the analog stick),
                                          gas = A, brake = B, lever forward/back = d-pad up/down; with START held: gas = X,

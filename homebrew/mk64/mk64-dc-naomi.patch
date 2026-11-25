@@ -212,10 +212,21 @@ index 1a8657a2..6c2bf7dc 100644
  #if GFX_PROF
  	prof_frame++;
 diff --git a/src/main.c b/src/main.c
-index e14a951f..06767fcf 100644
+index e14a951f..7a8706ea 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -2472,17 +2472,69 @@ void update_gamestate(void) {
+@@ -1029,6 +1029,10 @@ void update_controller(s32 index) {
+         else // DC L becomes N64 L in-menu
+             ucheld |= 0x0020; //L_TRIG
+     }
++#ifdef NAOMI_HOST
++    if (state->buttons & CONT_C)   // NAOMI: DC C = N64 L (START + freno en el mueble)
++        ucheld |= 0x0020; //L_TRIG
++#endif
+     if (state->buttons & CONT_START)
+        ucheld |= 0x1000; //START_BUTTON
+ 
+@@ -2472,17 +2476,69 @@ void update_gamestate(void) {
  void SPINNING_THREAD(UNUSED void *arg);
  
  /* static */ volatile uint64_t vblticker=0;
@@ -285,7 +296,7 @@ index e14a951f..06767fcf 100644
  }
  
  void thread5_game_loop(UNUSED void* arg) {
-@@ -2569,6 +2621,13 @@ void SPINNING_THREAD(UNUSED void *arg) {
+@@ -2569,6 +2625,13 @@ void SPINNING_THREAD(UNUSED void *arg) {
          /* AICA hardware mixing: create_next_audio_buffer drives the AICA voices
             directly (AicaSynth_Update inside synthesis_execute). No software mix
             buffer is produced, so the KOS stream is no longer pushed/used. */

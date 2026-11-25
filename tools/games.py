@@ -759,7 +759,8 @@ GAMES["spaceharrier"] = _ysgw_one("SPACE HARRIER", "plane", 1, 0)
 #
 # Controls (the user's choice, tried on the board 2026-11-13): pads "mk64" = gas = N64 A, brake = N64 B,
 # lever forward = R (hop/drift), lever back = Z (use item), START = START (on release; START + lever =
-# up/down in menus, wheel lock = left/right), wheel 2.5x faster around the centre.
+# up/down in menus, wheel lock = left/right), wheel 2.5x faster around the centre. 2026-11-26: START + brake =
+# N64 L, gas + START = stick down + Z (throw the item backwards).
 GAMES["mk64"] = {
     "title": "MARIO KART 64",
     "pads": "mk64",

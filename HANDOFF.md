@@ -202,7 +202,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |
 | Airline Pilots (NAOMI original) | CAUTION 51: ponerlo a 1 PLAYER(S) en el test; mandos pendientes | Crazy Taxi |
-| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado y medido en placa con la demo (tirones en carrera del 3,8 % al 0 %); falta probarlo jugando y subirlo como imagen principal: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
+| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado (tirones en carrera del 3,8 % al 0 %, el usuario: "funciona perfecta") y mandos nuevos (freno = B; START + freno = L; acelerador + START = abajo + Z): ROM principal desde el 2026-11-26, la anterior en `/boot/roms/_test/`: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE v1.1 `nesterse` | sin probar (binario KOS 1.1.8 sin `NAOMI_HOST`) | Crazy Taxi |
@@ -231,9 +231,11 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   (`homebrew/orc2cdc/issue_arkretro_fuentes29b.md`, comentario en ArkRetro/ORC2CDC#2 publicado por el usuario):
   esperar respuesta antes de rebasar.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback; versión en castellano de Mario Kart 64.
-- Mario Kart 64: probar jugando la imagen con el ritmo arreglado (ver
-  [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)); el parche de KallistiOS tiene `pvr_naomi_hold_flip`
-  (lo comparten NesterDC y OutRun C2C, que no lo llaman). Compilar en WSL (Ubuntu 22.04): desde un clon con
+- Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
+  [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`
+  (lo comparten NesterDC y OutRun C2C, que no lo llaman). `app/loader.bin` sigue con el residente anterior
+  (perfil `mk64`: freno = X): reconstruirlo (receta 1) con la KallistiOS de siempre; la de WSL (`master`
+  9926b70a) da un loader 13 KB mayor, probado en placa solo con Mario Kart 64. Compilar en WSL (Ubuntu 22.04): desde un clon con
   saltos LF (el de Windows tiene CRLF), dc-chain con `toolchain_profile=15.1.1-dev`, y el loader con una KallistiOS
   `master` (la 680d1862 no tiene `dcache_wback_range`). Flycast con la BIOS NAOMI 1: `naomi.zip` en `~/.local/share/flycast/`.
 

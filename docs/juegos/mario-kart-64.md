@@ -116,3 +116,26 @@ unos 16 ms más de retraso entre el mando y la pantalla en esas escenas.
   no pasa (el render llega como mucho a 28 ms y la CPU, en carrera, a 30 ms: cerca del límite); en una partida con más objetos, quizá.
 - `timehack.py` corre en el uso normal y habla con la NetDIMM; en las medidas estaba parado. Las lecturas no afectan
   (comprobado arriba), así que no debería notarse.
+
+## Mandos (2026-11-26)
+
+Esquema del usuario, en el residente (`DIMM_PAD_MK64`) y en el parche del juego:
+
+| En el mueble | Botón del N64 |
+|---|---|
+| Acelerador | A |
+| Freno | **B** (antes era C-derecha, ver abajo) |
+| START + freno | **L** |
+| Acelerador + START | **stick abajo + Z** (lanzar el objeto hacia atrás) |
+| Palanca adelante / atrás | R (salto y derrape) / Z (usar objeto) |
+| START solo | START (al soltarlo; con la palanca, arriba/abajo en los menús) |
+
+- mk64-dc se compila con `BUTTON_SWAP_X=1`: la X de la Dreamcast es C-derecha y la B es B. El residente mandaba el
+  freno como X, así que el freno nunca fue el B del N64. Ahora manda B.
+- En el port, el gatillo L de la Dreamcast es Z en carrera y L en los menús: no había botón para L en carrera. El
+  parche del juego hace que la C de la Dreamcast (que no usa nadie) sea L, y el residente la manda con START + freno.
+- Con cualquiera de las dos combinaciones, START no se manda al soltarlo.
+- Probado en Flycast leyendo `gControllers[0]` del juego: freno → B; START + freno → L; acelerador + START → A, stick
+  abajo y gatillo L (en la demo, que cuenta como menú, sale como L; en carrera el port lo convierte en Z); START solo
+  → del título a la selección de juego. En el mueble, pendiente.
+- El perfil `dkr` (Diddy Kong Racing, otra sesión) usa los mismos mandos y hereda el cambio.
