@@ -144,6 +144,8 @@ además saca los archivos) y, de menos a más trabajo:
 - quitar vídeos (`--alias "X.SFD=EL_MAS_CORTO.SFD"`): sólo si el usuario lo prefiere (con Rainbow Cotton no lo quiso);
 - música/voces ADX dentro de `.AFS`: `tools/afsmono.py ORIG.AFS NUEVO/X.AFS [--half-rate]` (MSR);
 - PCM sin comprimir de Rush 2049: `tools/rushstr.py` (mono) o compartir canciones con `--alias`.
+- WAV PCM que el juego lee con su cabecera: a la mitad de frecuencia con `tools/wavhalf.py` (Sega Rally 2 DX); con un
+  perfil de `games.py` en vez del conversor: `WITHFILES=CARPETA ./build.sh PERFIL DISCO`.
 Después, releer la imagen y comparar cada archivo (`tools/cmpimage.py`).
 
 **15. Un homebrew de KallistiOS compilado por nosotros (Mario Kart 64, OutRun C2C, NesterDC):** compilarlo con la
@@ -195,6 +197,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Daytona USA 2001 `daytona5` | ✅ con VMU (imagen hecha a mano; el programa aún no lo soporta) | Crazy Taxi |
 | F355 `f355b`, 18 Wheeler `18wheeler2` | ✅ terminados, con VMU | Crazy Taxi |
 | Sega Rally 2 (Windows CE) `sr2` | ✅ con VMU y modo de 30 FPS (sin música de carreras: CD-DA) | Crazy Taxi |
+| Sega Rally 2 DX / DX European (trad. PITITO, disco JP) `sr2dx` / `sr2eu` | en Flycast llegan a la carrera; **sin probar en placa** (músicas de menú a 22 kHz, VMU nuevas) | Crazy Taxi |
 | Test Drive 6 | ✅ llega al menú (`read_chunk` 4, mandos `wheelud`) | Crazy Taxi |
 | MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |

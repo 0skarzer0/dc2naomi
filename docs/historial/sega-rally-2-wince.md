@@ -161,3 +161,36 @@ Módulos de la ROM de SR2: nk, coredll, device, gwes, filesys, sysstart, platuti
 wsegacd (`0x8c093000`, virtual `0x01df1000`), ddraw, d3dim, ddhal, sndcore, dinputx, ole32, cemm...
 **Regresión:** CT2 (`ct2h8`) con el loader nuevo llega igual a la pantalla de la VMU en Flycast (los cambios de CE
 solo actúan con la MMU encendida).
+
+## Sega Rally 2 "DX Edition" y "DX European" (traducción de PITITO, 2026-11-25)
+
+Dos discos nuevos del usuario (`.gdi`, no se suben): la traducción al castellano v2.0 "DX Edition" de PITITO sobre el
+disco **japonés v1.04** (IP.BIN `JUE`, `V1.04 19990113`). Variantes: **DX** (Escort con la decoración Repsol de la
+versión DX de Model 3) y **DX European** (los coches de la versión europea: cambian los modelos del Escort, Lancer,
+106 e Impreza, las texturas de coches, selección, título, menús y rankings, las músicas de selección `BGM/CP_106`,
+`CP_ESCO`, `CP_EVO5`, y `RALLY2.EXE`, `MSELECT.DLL`, `RECORD.DLL`, `SYSFILELS.DLL`; no trae `TIMER.DLL` ni `WINSOCK.DLL`).
+En las dos el `0WINCEOS.BIN` y el `TITLE.DLL` son idénticos; 30 FPS fijos de serie y Arcade a 2 vueltas (readme).
+
+- **Núcleo de CE japonés:** las mismas rutinas que el USA, desplazadas: rama de maple +0x2a8 (`0x8c02e3bc`: `mov.l`
+  del literal `0x8c02e43c` = `0xffffcfff`, `and r3,r2` en `0x8c02e3be`, `mov #18,r0` en `0x8c02e3c0`), tick +0x2b8
+  (`0x8c02e4e0`, literal `0x8c02e504` = `0xffd80000`, `mov.w @(16,r1),r0` en `0x8c02e4e4`). Cada literal solo lo carga
+  esa instrucción (buscado en los 1 KB anteriores). Revisado por Juno (Gemini) contra `head.S`.
+- **IP.BIN más antiguo:** la tabla de inicialización está en `0x8c00dfd4` / `0x8c00dfe0` (en `0x5ab4` / `0x5ac0` hay
+  ceros; `findpatch` lo da como no estándar). El parche del cable (`0x382` = `0x8532`) sí está en su sitio.
+- **El parche de 30 FPS de `TITLE.DLL` sobra** (otros bytes; el modo ya viene fijo).
+- **No cabían** (510 / 513 MB de ficheros): las cuatro músicas de menú `MISC/RATIO911`, `IG98_SEL`, `DRIVE_SL`,
+  `M_MENU.WAV` (PCM 44,1 kHz estéreo, 85 MB) se bajan a **22,05 kHz estéreo** con `tools/wavhalf.py` (FIR + diezmado,
+  numpy). Es seguro porque el mismo reproductor (la tabla de nombres de `RALLY2.EXE` en `0xa2fee` lista juntos
+  `MISC\*.wav` y `BGM\cp_*.wav`) ya toca las de `BGM/` a 22,05 kHz mono leyendo la cabecera. Se meten con la opción
+  nueva **`WITHFILES=CARPETA`** de `build_image.py` (la sustitución de ficheros de `tools/withfiles.py`, ahora también
+  con un perfil de `games.py`): DX 468,9 MB, European 472,1 MB.
+- **VMU nuevas, vacías:** PITITO cambió el nombre de la partida (`SG_RALLY2DXJ` en DX, `SG_RALLY2DXE` en European, en
+  `SYSFILELS.DLL`), así que no valen ni la USA (`SGRALLY2`) ni las japonesas de dreamcast-saves (`SG_RALLY2`). Para
+  desbloquearlo todo: 14 veces L en el título.
+- **Flycast (NAOMI, `FC_SYSM_RAM=1 FC_PEDALS=1`), región USA / inglés como `sr2`:** DX llega a logo de CE, título
+  "DX Edition", menú principal en castellano y selección de modo; European llega a selección de coche (Peugeot 206 WRC),
+  nombre, carga de Sáhara y la carrera. El sonido no se puede comprobar en el Flycast sin pantalla. **Sin probar en placa.**
+- Imágenes en la carpeta del PC `dc2naomi/rally/`: `dc-sr2dx_dc2naomi.bin.gz` / `.vmu` y `dc-sr2eu_dc2naomi.bin.gz` /
+  `.vmu`. Rehacerlas (WSL, `~/dc2naomi`, con `kos-naomi/environ.sh`):
+  `WITHFILES=.../rally/sr2_wav22 ./build.sh sr2dx ".../SR2_DX_PITITO_ES [GDI]/disc.gdi" /tmp/sr2dx.bin` (y `sr2eu`),
+  con `sr2_wav22/MISC/*.WAV` hechos con `python3 tools/wavhalf.py ORIG.WAV sr2_wav22/MISC/X.WAV`.

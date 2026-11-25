@@ -672,6 +672,32 @@ GAMES["sr2"]["disc_patches"] = [("TITLE.DLL", 0x63C,
     bytes.fromhex("48d11261" "3ed31265" "52623b22" "222519a0" "0900"))]
 GAMES["sr2_diag"] = dict(GAMES["sr2"], flags=GAMES["sr2"]["flags"] | 0x0008)   # rows of bits on screen (DIMM_DIAG)
 
+# Sega Rally 2 "DX Edition" (2026-11-25): Pitito's Spanish translation v2.0 over the Japanese v1.04 disc (IP.BIN
+# "JUE", 1999-01-13), in two variants: "DX" (Escort with the Model 3 DX Repsol livery) and "DX EUROPEAN" (the
+# European cars). Both: the same 0WINCEOS.BIN (the Japanese kernel) and TITLE.DLL (30 FPS already fixed: no disc
+# patch). The kernel routines are the same as the USA ones, moved: the maple branch +0x2a8 (0x8c02e3bc: mov.l
+# literal 0x8c02e43c, and r3,r2, mov #18,r0) and the tick handler +0x2b8 (0x8c02e4e0, literal 0x8c02e504). Each
+# literal is loaded only there. The older IP.BIN has its init table at 0x8c00dfd4 / 0x8c00dfe0 (0x5ab4 / 0x5ac0
+# hold zeros). The disc does not fit (510 / 513 MB of files): the four menu songs MISC/*.WAV (44.1 kHz stereo,
+# 85 MB) are built at 22.05 kHz stereo with tools/wavhalf.py (the same player streams BGM/*.WAV at 22.05 kHz mono)
+# and WITHFILES=FOLDER (build_image.py).
+_SR2JP = [
+    {"file": "IP.BIN", "base": 0x8C008000, "patches": [
+        (0x8C008382, 2, mov_imm0(0)),          # bootstrap cable type -> VGA
+        (0x8C00DFD4, 4, SCRATCH + 0x00),       # init table: 0xa05f7490
+        (0x8C00DFE0, 4, SCRATCH + 0x10),       # init table: 0xa05f74a0
+    ]},
+    {"file": "0WINCEOS.BIN", "base": 0x8C00F800, "patches": [
+        (0x8C02E43C, 4, CEMAPLE),   # literal 0xffffcfff -> ce_maple_isr
+        (0x8C02E3BE, 2, 0x432B),    # and r3,r2 -> jmp @r3
+        (0x8C02E3C0, 2, 0x0009),    # mov #18,r0 -> nop
+        (0x8C02E504, 4, CETICK),    # literal 0xffd80000 -> ce_tick_isr
+        (0x8C02E4E4, 2, 0x412B),    # mov.w @(16,r1),r0 -> jmp @r1 (delay slot: and #255,r0)
+    ]},
+]
+GAMES["sr2dx"] = dict(GAMES["mw2"], title="SEGA RALLY 2 DX", pads="wheel", vmu=True, groups=_SR2JP)
+GAMES["sr2eu"] = dict(GAMES["sr2dx"], title="SEGA RALLY 2 DX EUROPEAN")
+
 
 # Yu Suzuki Game Works split into one image per game (2026-11-11). The menu program (YSC, in 1ST_READ.BIN) runs
 # "scenes" from a table (0x8c2505c4, 12 bytes each, started by 0x8c0dc7e0(scene, arg)): 1 = boot, 4 = logos + title +
@@ -750,6 +776,10 @@ GAMES["mk64"] = {
 # The same with CONSOLE=1: the game's own printf drawn on the screen as text. Its loader prints the
 # asset it is reading and a progress bar, and KallistiOS prints its init, so a hang says where it is.
 GAMES["mk64_dbg"] = dict(GAMES["mk64"], title="MARIO KART 64 DBG", flags=0x1C0C)  # + DIAG: restores the loader's 31 kHz timings
+
+# In Spanish: the same game built from the ROM with blade133bo's patch (ESPATCH=... homebrew/mk64/build_mk64.sh,
+# the text moved into the source by homebrew/mk64/mk64_es.py).
+GAMES["mk64es"] = dict(GAMES["mk64"], title="MARIO KART 64 ES")
 
 # RoboCop for Neo Geo CD (Teo Tormo's port of Data East's arcade game, https://teo-tormo.itch.io/robocop-neogeo) running
 # in IMR Technology's DreamNeo CD 4.0 (Ian Michael), the release "[DNCD - 4.0 ROBOCOP][RELEASE]" (2026-10-21): a

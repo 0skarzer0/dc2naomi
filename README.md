@@ -109,6 +109,7 @@ con partidas con todo desbloqueado de cientos de juegos):
 | Namco Museum (USA) | experimental | ✅ probado (Pole Position: acelerador = A, freno = B, palanca = cambio) |
 | Yu Suzuki Game Works Vol. 1 (Japón) | experimental | ✅ probado (Power Drift: salir con B deja negro) |
 | Yu Suzuki GW, un juego por imagen (OutRun, Hang-On, Power Drift, After Burner II, Space Harrier) | — | ✅ probados OutRun, Hang-On, Power Drift (su música petardeaba en la NAOMI: resuelto) y After Burner II (disparo automático, acelerador = gases, freno = misil, START + acelerador = frenar, START + freno = quitar/poner el disparo automático; las luces del arcade, en el botón START); Space Harrier (acelerador = disparo rápido); se crean con `tools/mkgz.py` |
+| Sega Rally 2 "DX Edition" y "DX European" (traducción al castellano de PITITO; perfiles `sr2dx` / `sr2eu`) | — | experimental (en emulador llegan a la carrera; música de los menús a 22 kHz para que quepan; sin música de carreras: CD-DA) |
 | The Last Blade 2 Final Edition (Japón) con el parche VGA de la comunidad (perfil `lb2fe`; vídeos recodificados) | experimental (llega a la intro, al título y al menú en emulador) | experimental |
 | KOF Dream Match 1999, Last Blade 2, SF III 3rd Strike, KOF 2002, Mark of the Wolves | experimental (llegan al título en emulador) | experimental |
 | Super Puzzle Fighter II X | experimental (en placa se colgaba tras los logos; rehecho con el residente actual, sin volver a probar) | experimental |
@@ -225,6 +226,10 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
     nuestro parche `NAOMI_HOST` para que funcione dentro de dc2naomi.
   - **blade133bo**, autor de la traducción al español (v1.1) que nos pasó el usuario para una versión en castellano
     (pendiente; el parche no se incluye).
+- **PITITO** (con Wesker, Zapatoman, Zurin Akira y los colaboradores que nombra su readme): su traducción al
+  castellano "DX Edition" v2.0 de Sega Rally 2 (y la variante "DX European"), que el usuario convierte para su mueble
+  de Crazy Taxi (perfiles `sr2dx` y `sr2eu`; el parche no se incluye: hay que conseguirlo de su autor).
+- **[NumPy](https://numpy.org)**: el filtro con el que `tools/wavhalf.py` baja la frecuencia de las músicas WAV.
 - **ComradeSnarky**: su traducción al inglés de Super Street Fighter II X for Matching Service, que el usuario
   convierte y juega en la placa (el parche no se incluye: hay que conseguirlo de su autor).
 - **[WiPi Netbooter](https://github.com/chunksin/WiPiNetbooter)** (chunksin y colaboradores): el netbooter con el

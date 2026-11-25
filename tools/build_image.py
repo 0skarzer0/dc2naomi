@@ -400,6 +400,11 @@ def main():
         game["flags"] = game["flags"] | 0x4000
     if os.environ.get("NOUBC"):  # no user break controller hook
         game["flags"] = game["flags"] | 0x0004
+    if os.environ.get("WITHFILES"):  # disc files replaced by the smaller ones in this folder (tools/withfiles.py)
+        import gdi
+        import withfiles
+        global open_disc
+        gdi.open_disc = open_disc = withfiles.replaced_disc(os.environ["WITHFILES"])
     build(name, game, source, work, open(prog, "rb").read(), out)
 
 
