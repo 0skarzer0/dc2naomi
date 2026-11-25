@@ -202,7 +202,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |
 | Airline Pilots (NAOMI original) | CAUTION 51: ponerlo a 1 PLAYER(S) en el test; mandos pendientes | Crazy Taxi |
-| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida | Crazy Taxi |
+| Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado en placa (tirones en carrera del 3,8 % al 2,8 %, menús a 0), sin subir aún como imagen principal: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE v1.1 `nesterse` | sin probar (binario KOS 1.1.8 sin `NAOMI_HOST`) | Crazy Taxi |
@@ -231,6 +231,10 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   (`homebrew/orc2cdc/issue_arkretro_fuentes29b.md`, comentario en ArkRetro/ORC2CDC#2 publicado por el usuario):
   esperar respuesta antes de rebasar.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback; versión en castellano de Mario Kart 64.
+- Mario Kart 64: queda un 2-3 % de imágenes fuera de ritmo en carrera sin causa conocida (siguiente paso en
+  [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). Compilar en WSL (Ubuntu 22.04): desde un clon con
+  saltos LF (el de Windows tiene CRLF), dc-chain con `toolchain_profile=15.1.1-dev`, y el loader con una KallistiOS
+  `master` (la 680d1862 no tiene `dcache_wback_range`). Flycast con la BIOS NAOMI 1: `naomi.zip` en `~/.local/share/flycast/`.
 
 ## Historial: dónde está cada cosa
 
@@ -246,6 +250,7 @@ cita "HANDOFF, sección X", está en:
 | Sega Rally 2 (Windows CE) | [docs/historial/sega-rally-2-wince.md](docs/historial/sega-rally-2-wince.md) |
 | Lista de juegos del mueble estándar, lotes para la .250, `isosdream`, Bangai-O, criba de CD-DA, coches para el Crazy Taxi, Descartados por los mandos | [docs/historial/lotes.md](docs/historial/lotes.md) |
 | Soporte de `.cdi`, Soulcalibur, Rainbow Cotton, Toy Story 2, Last Blade 2 (ripeo), coches con vídeos recodificados, MSR y Rush 2049 adelgazados | [docs/historial/cdi-y-recortes.md](docs/historial/cdi-y-recortes.md) |
+| Mario Kart 64: medidas de fps y cambios de ritmo | [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) |
 | OutRun demo v37 y v24 (`or37`, `or2006`), Mario Kart 64, OutRun C2C (`orc2c3`…`orc2c8`), NesterDC y NesterDC SE | [docs/historial/homebrew-kallistios.md](docs/historial/homebrew-kallistios.md) |
 | CD-DA en NAOMI y RoboCop (DreamNeo CD 4.0) | [docs/historial/cdda-robocop.md](docs/historial/cdda-robocop.md) |
 

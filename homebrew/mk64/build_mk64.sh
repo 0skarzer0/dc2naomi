@@ -56,6 +56,10 @@ fi
 # mk64-dc's own environ.sh, pointed at these trees, plus -DNAOMI_HOST (KOS itself and the game see it)
 [ -d "$WORK/mk64-dc/.git" ] || git clone -q "$MK64_URL" "$WORK/mk64-dc"
 git -C "$WORK/mk64-dc" checkout -q "$MK64_REV"
+# the game's NAOMI changes (frame pacing and the naomi_med measurements, all under NAOMI_HOST;
+# see docs/juegos/mario-kart-64.md), applied once
+git -C "$WORK/mk64-dc" apply -R --check "$HERE/mk64-dc-naomi.patch" 2>/dev/null ||
+    git -C "$WORK/mk64-dc" apply "$HERE/mk64-dc-naomi.patch"
 sed -e "s#KOS_BASE=\"/opt/toolchains/dc/kos\"#KOS_BASE=\"$KOS\"#" \
     -e "s#KOS_PORTS=\"\${KOS_BASE}/../kos-ports\"#KOS_PORTS=\"$WORK/kos-ports-mk64\"#" \
     "$WORK/mk64-dc/environ.sh" > "$KOS/environ.sh"
@@ -103,6 +107,8 @@ make IP.BIN loader.bin mk64.bin
 for f in build/mario-kart.elf loader.elf; do
     printf "%-22s naomi_live at 0x%s\n" "$f" "$("$KOS_CC_BASE/bin/$KOS_CC_PREFIX-nm" "$f" | awk '/ _naomi_live$/{print $1}')"
 done
+printf "%-22s naomi_med  at 0x%s (med_mk64.py)\n" build/mario-kart.elf \
+    "$("$KOS_CC_BASE/bin/$KOS_CC_PREFIX-nm" build/mario-kart.elf | awk '/ _naomi_med$/{print $1}')"
 
 # 5. the disc as files (dc2naomi's "rebuild" layout): IP.BIN, 1ST_READ.BIN = loader.bin (not scrambled),
 #    mk64.bin, the icons and dc_data/

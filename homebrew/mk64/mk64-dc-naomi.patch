@@ -1,0 +1,256 @@
+diff --git a/src/gfx/gfx_dc.c b/src/gfx/gfx_dc.c
+index 3212e82e..d6aa7282 100644
+--- a/src/gfx/gfx_dc.c
++++ b/src/gfx/gfx_dc.c
+@@ -18,6 +18,43 @@ int force_30fps = 1;   // 0 = uncapped (real vsync, 60Hz-capable) — only 1P ra
+                        // change; race_logic_loop re-asserts per mode every frame.
+ static unsigned int last_time = 0;
+ 
++#ifdef NAOMI_HOST
++/* naomi_med: medidas por ventanas de 30 cuadros, leidas desde la Raspberry por la NetDIMM
++   (homebrew/mk64/med_mk64.py). Solo cronometra: no cambia nada del juego. Campos (u32):
++   marca 'MK64', n (ventana), estado, circuito, jugadores, cuadros, vblanks, tarde (cuadros de mas de 2 vblanks,
++   acumulado), peor_vbl, peor_us (CPU del peor cuadro), us de logica / recorrido de la lista / espera a la GPU
++   (medias), KB de texturas subidas, histograma de vblanks por cuadro (1, 2, 3, 4, 5+), force_30fps, us de espera a que la GPU acabe el cuadro anterior
++   (pvr_wait_ready, dentro del recorrido). */
++#include <arch/timer.h>
++volatile uint32_t naomi_med[40] = { 0x34364b4d };
++/* v3 (32..39): histograma de vblanks entre cambios de imagen en pantalla (1..5+), us de render de la GPU (media,
++   maximo) y cambios de imagen de la ventana. */
++extern volatile uint32_t naomi_flip_h[5], naomi_rnd_sum, naomi_rnd_max, naomi_flips;
++/* v2 (21..31): retraso medio / maximo al despertar tras el vblank del ritmo, us de audio por llamada (media,
++   maximo, llamadas), y del peor cuadro de la ventana: CPU, retraso al despertar antes de el, hueco hasta
++   empezar, logica y recorrido; hueco maximo. */
++extern volatile uint64_t naomi_vbl_us;
++extern volatile uint32_t naomi_aud_sum, naomi_aud_max, naomi_aud_n;
++static uint64_t med_t4;
++static uint32_t med_lat, med_lat_s, med_lat_n, med_lat_m, med_gap, med_gap_m, med_w[5];
++extern uint32_t naomi_up_bytes, naomi_wait_us;
++extern int32_t gGamestate, gPlayerCountSelection1;
++extern int16_t gCurrentCourseId;
++static uint64_t med_t0, med_t1, med_t2, med_last_vbl;
++static uint32_t med_fr, med_vbl, med_lg, med_wk, med_fn, med_up, med_pv, med_pu, med_h[5], med_late, med_wt;
++static void med_frame_start(void) {
++    med_t0 = timer_us_gettime64();
++    med_gap = med_t4 ? (uint32_t) (med_t0 - med_t4) : 0;
++    if (med_gap > med_gap_m) med_gap_m = med_gap;
++}
++static void med_logic_done(void) { med_t1 = timer_us_gettime64(); }
++static void med_walk_done(void) { med_t2 = timer_us_gettime64(); }
++static void med_frame_end(void);
++#define MED(x) x()
++#else
++#define MED(x)
++#endif
++
+ extern uint64_t timer_ms_gettime64(void);
+ 
+ unsigned int GetSystemTimeLow(void) {
+@@ -57,6 +94,7 @@ static void gfx_dc_get_dimensions(uint32_t *width, uint32_t *height) {
+ 
+ /* What events should we be handling? */
+ static void gfx_dc_handle_events(void) {
++    MED(med_frame_start);
+     /* Lets us yield to other threads*/
+     //DelayThread(100);
+ }
+@@ -65,6 +103,7 @@ uint8_t skip_debounce = 0;
+ const unsigned int FRAME_TIME_MS = 33; // hopefully get right on target @ 33.3
+ 
+ static uint8_t gfx_dc_start_frame(void) {
++    MED(med_logic_done);
+     // The old ms-based frame-skip is GONE (2026-08-18). It depended on last_time being
+     // refreshed by the old sleep-cap in swap_buffers_end; with that replaced by vblank
+     // pacing, last_time froze at boot, elapsed was always > 33ms, and every OTHER frame
+@@ -76,11 +115,56 @@ static uint8_t gfx_dc_start_frame(void) {
+ }
+ 
+ static void gfx_dc_swap_buffers_begin(void) {
++    MED(med_walk_done);
+ }
+ 
+ extern volatile uint64_t vblticker;
+ static uint64_t last_ticker = 0;
++
++#ifdef NAOMI_HOST
++extern volatile uint64_t vblticker;
++static void med_frame_end(void) {
++    uint64_t t3 = timer_us_gettime64();
++    uint64_t v = vblticker;
++    uint32_t dv = med_last_vbl ? (uint32_t) (v - med_last_vbl) : 2;
++    uint32_t cpu = (uint32_t) (t3 - med_t0);
++    med_last_vbl = v;
++    med_fr++; med_vbl += dv;
++    med_lg += (uint32_t) (med_t1 - med_t0); med_wk += (uint32_t) (med_t2 - med_t1); med_fn += (uint32_t) (t3 - med_t2);
++    med_up += naomi_up_bytes; med_wt += naomi_wait_us;
++    if (dv >= med_pv) {   /* el peor cuadro (el ultimo si empatan) */
++        med_w[0] = cpu; med_w[1] = med_lat; med_w[2] = med_gap;
++        med_w[3] = (uint32_t) (med_t1 - med_t0); med_w[4] = (uint32_t) (med_t2 - med_t1);
++    }
++    if (dv > med_pv) med_pv = dv;
++    if (cpu > med_pu) med_pu = cpu;
++    med_h[dv <= 1 ? 0 : dv >= 5 ? 4 : dv - 1]++;
++    if (dv > 2) med_late++;
++    if (med_fr >= 30) {
++        volatile uint32_t *m = naomi_med;
++        m[2] = gGamestate; m[3] = gCurrentCourseId; m[4] = gPlayerCountSelection1;
++        m[5] = med_fr; m[6] = med_vbl; m[7] = med_late; m[8] = med_pv; m[9] = med_pu;
++        m[10] = med_lg / med_fr; m[11] = med_wk / med_fr; m[12] = med_fn / med_fr; m[13] = med_up >> 10;
++        for (int i = 0; i < 5; i++) m[14 + i] = med_h[i];
++        m[19] = force_30fps; m[20] = med_wt / med_fr;
++        m[21] = med_lat_n ? med_lat_s / med_lat_n : 0; m[22] = med_lat_m;
++        { uint32_t an = naomi_aud_n; m[23] = an ? naomi_aud_sum / an : 0; m[24] = naomi_aud_max; m[25] = an;
++          naomi_aud_sum = naomi_aud_max = naomi_aud_n = 0; }
++        for (int i = 0; i < 5; i++) m[26 + i] = med_w[i];
++        m[31] = med_gap_m;
++        { uint32_t nf = naomi_flips;
++          for (int i = 0; i < 5; i++) { m[32 + i] = naomi_flip_h[i]; naomi_flip_h[i] = 0; }
++          m[37] = nf ? naomi_rnd_sum / nf : 0; m[38] = naomi_rnd_max; m[39] = nf;
++          naomi_rnd_sum = naomi_rnd_max = naomi_flips = 0; }
++        m[1]++;   /* la ventana nueva, lo ultimo */
++        med_fr = med_vbl = med_lg = med_wk = med_fn = med_up = med_pv = med_pu = med_wt = 0;
++        med_lat_s = med_lat_n = med_lat_m = med_gap_m = 0;
++        for (int i = 0; i < 5; i++) med_h[i] = 0;
++    }
++}
++#endif
+ static void gfx_dc_swap_buffers_end(void) {
++    MED(med_frame_end);
+     // 30fps pacing on the real 60Hz vblank: hold each frame to a CONSTANT 2-vblank beat.
+     // NEVER pace on gTickSpeed/sNumVBlanks — those MEASURE the frame we're pacing, so a
+     // one-frame hiccup ratchets the wait up permanently (wait 3 -> measures 3 -> wait 3...).
+@@ -89,8 +173,16 @@ static void gfx_dc_swap_buffers_end(void) {
+     // wake_one only ever woke one of us per vblank (starving the other).
+     if (force_30fps) {
+         const uint64_t target = last_ticker + 2;
++#ifdef NAOMI_HOST
++        int med_espera = vblticker < target;
++#endif
+         while (vblticker < target)
+             genwait_wait((void*)&vblticker, NULL, 0, NULL);
++#ifdef NAOMI_HOST
++        med_t4 = timer_us_gettime64();
++        med_lat = med_espera ? (uint32_t) (med_t4 - naomi_vbl_us) : 0;
++        if (med_espera) { med_lat_s += med_lat; med_lat_n++; if (med_lat > med_lat_m) med_lat_m = med_lat; }
++#endif
+         last_ticker = (vblticker > target) ? vblticker : target;
+     }
+ }
+diff --git a/src/gfx/gfx_pvr.c b/src/gfx/gfx_pvr.c
+index 74c3ffdf..09135b84 100644
+--- a/src/gfx/gfx_pvr.c
++++ b/src/gfx/gfx_pvr.c
+@@ -471,6 +471,9 @@ int gfx_pvr_texture_resident(uint32_t id) {
+ // (not per boot — the old 12-per-boot caps went silent exactly when the menu OOM finally hit).
+ static uint32_t sFrameNum = 0;
+ static uint32_t sStatEvicts = 0, sStatOoms = 0, sStatFlushes = 0;
++#ifdef NAOMI_HOST
++uint32_t naomi_up_bytes, naomi_wait_us;
++#endif
+ static uint32_t sUpN = 0, sUpBytes = 0, sUpFails = 0;              // current frame
+ static uint32_t sUpNLast = 0, sUpBytesLast = 0, sUpFailsLast = 0;  // previous frame (printed)
+ 
+@@ -868,9 +871,17 @@ static void gfx_pvr_on_resize(void) { }
+ extern void reset_texcache(void);
+ 
+ static void gfx_pvr_start_frame(void) {
++#ifdef NAOMI_HOST
++    { extern uint32_t naomi_wait_us; uint64_t w0 = timer_us_gettime64(); pvr_wait_ready();
++      naomi_wait_us = (uint32_t) (timer_us_gettime64() - w0); }
++#else
+     pvr_wait_ready();
++#endif
+     sFrameNum++;
+     sUpNLast = sUpN; sUpBytesLast = sUpBytes; sUpFailsLast = sUpFails;
++#ifdef NAOMI_HOST
++    { extern uint32_t naomi_up_bytes; naomi_up_bytes = sUpBytes; }
++#endif
+     sUpN = sUpBytes = sUpFails = 0;
+     // One greppable VRAM health line per second (GFX_VRAM_LOG) — plus every frame that had a
+     // failed upload REGARDLESS, so a flush->re-OOM loop is visible as consecutive-frame lines.
+diff --git a/src/gfx/gfx_retro_dc.c b/src/gfx/gfx_retro_dc.c
+index 1a8657a2..6c2bf7dc 100644
+--- a/src/gfx/gfx_retro_dc.c
++++ b/src/gfx/gfx_retro_dc.c
+@@ -4097,11 +4097,23 @@ void gfx_end_frame(void) {
+ #if GFX_PROF
+ 		uint64_t t3 = PROF_NOW();
+ #endif
++#ifdef NAOMI_HOST
++		/* NAOMI: el ritmo (swap_buffers_end espera al vblank par) va ANTES de mandar el cuadro a la GPU. KallistiOS
++		   cambia la imagen en el primer vblank tras acabar el render; esperando despues, la imagen salia 1 o 3
++		   vblanks tras la anterior segun lo que tardasen CPU + GPU (tirones a 30 fps). Asi la GPU arranca en el
++		   vblank del ritmo, la imagen sale en el siguiente y la CPU del cuadro siguiente va a la vez que la GPU. */
++		gfx_wapi->swap_buffers_end();
++		gfx_rapi->finish_render();
++#if GFX_PROF
++		prof_t_finish = PROF_NOW() - t3;
++#endif
++#else
+ 		gfx_rapi->finish_render();
+ #if GFX_PROF
+ 		prof_t_finish = PROF_NOW() - t3;
+ #endif
+ 		gfx_wapi->swap_buffers_end();
++#endif
+ 	}
+ #if GFX_PROF
+ 	prof_frame++;
+diff --git a/src/main.c b/src/main.c
+index e14a951f..c434d171 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -2472,17 +2472,39 @@ void update_gamestate(void) {
+ void SPINNING_THREAD(UNUSED void *arg);
+ 
+ /* static */ volatile uint64_t vblticker=0;
++#ifdef NAOMI_HOST
++#include <arch/timer.h>
++volatile uint64_t naomi_vbl_us;   /* cuando llego el ultimo vblank (medidas, gfx_dc.c) */
++volatile uint32_t naomi_aud_sum, naomi_aud_max, naomi_aud_n;
++volatile uint32_t naomi_flip_h[5], naomi_rnd_sum, naomi_rnd_max, naomi_flips;
++#endif
+ 
+ void vblfunc(uint32_t c, void *d) {
+ 	(void)c;
+ 	(void)d;
+     vblticker++;
++#ifdef NAOMI_HOST
++    naomi_vbl_us = timer_us_gettime64();
++    {   /* cambios de imagen en pantalla: el contador de la PVR sube al cambiar de buffer en el vblank */
++        static size_t med_fc; static uint64_t med_fv; pvr_stats_t st;
++        if (pvr_get_stats(&st) == 0 && st.frame_count != med_fc) {
++            uint32_t d = med_fv ? (uint32_t) (vblticker - med_fv) : 2, r = (uint32_t) (st.rnd_last_time / 1000);
++            med_fc = st.frame_count; med_fv = vblticker;
++            naomi_flip_h[d <= 1 ? 0 : d >= 5 ? 4 : d - 1]++;
++            naomi_rnd_sum += r; naomi_flips++; if (r > naomi_rnd_max) naomi_rnd_max = r;
++        }
++    }
++#endif
+     /* Drive the game's vblank timing from the real 60Hz DC vblank.
+        On N64 these advanced in handle_vblank() (the VI interrupt handler),
+        which is dead on DC (#if 0 thread3_video), so they were stuck. */
+     gVBlankTimer += V_BlANK_TIMER_ITER;
+     sNumVBlanks++;
+     genwait_wake_all((void *)&vblticker);
++#ifdef NAOMI_HOST
++    /* NAOMI: cambiar de hilo ya (desde la interrupcion, como pvr_irq.c), no en el siguiente tic */
++    thd_schedule(1, 0);
++#endif
+ }
+ 
+ void thread5_game_loop(UNUSED void* arg) {
+@@ -2569,6 +2591,13 @@ void SPINNING_THREAD(UNUSED void *arg) {
+         /* AICA hardware mixing: create_next_audio_buffer drives the AICA voices
+            directly (AicaSynth_Update inside synthesis_execute). No software mix
+            buffer is produced, so the KOS stream is no longer pushed/used. */
++#ifdef NAOMI_HOST
++        uint64_t med_a = timer_us_gettime64();
++#endif
+         create_next_audio_buffer(audio_buffer, SAMPLES_HIGH);
++#ifdef NAOMI_HOST
++        { uint32_t d = (uint32_t) (timer_us_gettime64() - med_a);
++          naomi_aud_sum += d; naomi_aud_n++; if (d > naomi_aud_max) naomi_aud_max = d; }
++#endif
+     }
+ }
