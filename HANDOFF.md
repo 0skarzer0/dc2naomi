@@ -213,7 +213,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): ✅ **probado en placa** (2026-11-26): arranca, suena y START + volante derecha vuelve al explorador. `h-nesterse_naomi.bin.gz` en la .251 | Crazy Taxi |
-| Gens4All 4.3 (Mega Drive, repo `gens4all-naomi`) `gens4all` / `gens4all_ct` | ✅ en placa sonido y mandos (2026-11-26); fondos arreglados (m4-single-only), sin reprobar. `dc-gens4all_dc2naomict` en la .251 | Crazy Taxi |
+| Gens4All 4.3 (Mega Drive, repo `gens4all-naomi`) `gens4all` / `gens4all_ct` | ✅ en placa sonido y mandos (2026-11-26); fondos arreglados (m4-single-only) y START en la lista sin efecto, sin reprobar. `dc-gens4all_dc2naomict` en la .251 | Crazy Taxi |
 | Ikaruga (JP) `dc-ikaruga` | ✅ con VMU desbloqueada (mandos `joy`) | estándar |
 | SF3 Double Impact `dc-sf3di` | ✅ menú y los dos juegos, con VMU | estándar |
 | SSF2X (inglés, ComradeSnarky) `dc-ssf2x_en` | ✅ con VMU | estándar |
@@ -254,7 +254,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   (55 MB) desde su `roms.zip`: coches de la raíz en la lista principal y `top/` en otra, enlazadas
   (`tools/mklists.py` del repo, títulos sacados del nombre de fichero, 6 ROMs repetidas fuera). Versión para el mueble del Crazy Taxi (perfil `gens4all_ct`, mandos `nes`)
   `dc-gens4all_dc2naomict.bin.gz` en la .251 con su fila del CSV (copia `romsinfo.csv.bak_gens4all`), sin probar.
-  START en la lista sale de Gens4All (la NAOMI se reinicia): así lo hizo TapamN.
+  START en la lista ya no hace nada (en el original salía con exit() y la NAOMI se reiniciaba; quitado con `#ifndef NAOMI_HOST`).
   En placa (2026-11-26): sonido y mandos bien, pero sin planos de fondo (solo sprites). Causa: el ensamblador de
   TapamN espera los float en orden (`-m4-single-only`) y la KOS 2.2 compila con `-m4-single` (los pasa cruzados):
   ahora todo se compila en `-m4-single-only` y en Flycast salen los fondos; imagen nueva subida a la .251 con el
