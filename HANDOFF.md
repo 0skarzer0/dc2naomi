@@ -230,7 +230,10 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   los commits `25f60d0`/`7dfe8a9` (nuestro parche entra salvo el trozo de `arranque_hold`). Pedidas las fuentes
   (`homebrew/orc2cdc/issue_arkretro_fuentes29b.md`, comentario en ArkRetro/ORC2CDC#2 publicado por el usuario):
   esperar respuesta antes de rebasar.
-- Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback; versión en castellano de Mario Kart 64.
+- Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
+- Mario Kart 64 en español (`mk64es`, traducción de blade133bo: `ESPATCH=… build_mk64.sh` + `mk64_es.py`): bien en
+  Flycast y cargada en la .251 (`dc-mk64es_dc2naomict.bin.gz`); falta que el usuario la pruebe en el mueble. Detalle
+  en [historial/homebrew-kallistios.md](docs/historial/homebrew-kallistios.md).
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
   [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`
   (lo comparten NesterDC y OutRun C2C, que no lo llaman). `app/loader.bin` sigue con el residente anterior

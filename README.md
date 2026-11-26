@@ -224,8 +224,9 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
     la biblioteca de matemáticas del SH-4 que usa el juego (vía [kos-ports](https://github.com/KallistiOS/kos-ports)).
   - **[KallistiOS](https://github.com/KallistiOS/KallistiOS)** otra vez: el juego va sobre su versión `680d1862`, con
     nuestro parche `NAOMI_HOST` para que funcione dentro de dc2naomi.
-  - **blade133bo**, autor de la traducción al español (v1.1) que nos pasó el usuario para una versión en castellano
-    (pendiente; el parche no se incluye).
+  - **blade133bo**, autor de la traducción al español (v1.1) con la que hacemos la versión en castellano (perfil
+    `mk64es`: `mk64_es.py` lleva sus textos y gráficos al código del port). Su parche no se incluye: se usa la copia
+    de cada uno.
 - **PITITO** (con Wesker, Zapatoman, Zurin Akira y los colaboradores que nombra su readme): su traducción al
   castellano "DX Edition" v2.0 de Sega Rally 2 (y la variante "DX European"), que el usuario convierte para su mueble
   de Crazy Taxi (perfiles `sr2dx` y `sr2eu`; el parche no se incluye: hay que conseguirlo de su autor).

@@ -19,11 +19,16 @@
 #   KOS_NAOMI_ENV environ.sh of the KOS_SUBARCH=naomi tree     (default: /opt/toolchains/dc/kos/environ.sh)
 #   JOBS          parallel jobs                                 (default: 3)
 #   PROFILE       dc2naomi profile: mk64, or mk64_dbg (on-screen log and diagnostics)
+#   ESPATCH       blade133bo's Spanish patch, "Mario Kart 64 (ES).xdelta" (v1.1, needs xdelta3): builds the
+#                 Spanish version (profile mk64es, WORK $HOME/mk64-build-es). See mk64_es.py.
 set -eo pipefail   # (not -u: KallistiOS's environ.sh reads unset variables)
 
 BASEROM=$(realpath "${1:?usage: build_mk64.sh BASEROM.z64 [OUT.bin]}")
 HERE=$(cd "$(dirname "$0")" && pwd)
 D2N=$(cd "$HERE/../.." && pwd)
+if [ -n "$ESPATCH" ]; then
+    ESPATCH=$(realpath "$ESPATCH"); PROFILE=${PROFILE:-mk64es}; WORK=${WORK:-$HOME/mk64-build-es}
+fi
 PROFILE=${PROFILE:-mk64}
 OUT=$(realpath -m "${2:-$D2N/build/${PROFILE}_dc2naomict.bin}")
 WORK=${WORK:-$HOME/mk64-build}
@@ -93,7 +98,15 @@ fi
 make -C tools
 
 # 4. assets from your ROM, then the game
+if [ -n "$ESPATCH" ]; then
+    # the Spanish ROM takes the US ROM's place; its text goes into the source (mk64_es.py)
+    say "Spanish: $ESPATCH"
+    xdelta3 -d -f -s "$BASEROM" "$ESPATCH" "$WORK/baserom.es.z64"
+    python3 "$HERE/mk64_es.py" "$BASEROM" "$WORK/baserom.es.z64" .
+    cp "$WORK/baserom.es.z64" baserom.us.z64
+else
 cp "$BASEROM" baserom.us.z64
+fi
 source "$KOS/environ.sh"
 if [ ! -d dc_data ] || [ ! -f assets/character_select/mario/mario_face_00.png ]; then
     say "assets"

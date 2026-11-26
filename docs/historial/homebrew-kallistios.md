@@ -83,9 +83,46 @@ palanca adelante → gatillo R y atrás → gatillo L.
 
 **Pendiente:** VMU (ahora `flags` sin `0x8000`: no guarda récords ni opciones; el juego guarda en la VMU con su propio
 formato, así que no hay partida que buscar en bucanero/dreamcast-saves: nunca hubo un Mario Kart 64 comercial de
-Dreamcast); versión en **español** con el parche de **blade133bo** (v1.1, `Mario Kart 64 (ES).xdelta`, se aplica a la
-misma ROM: comprobado que da 12.582.912 bytes, mismo tamaño, 1,4 % de bytes cambiados en 82 zonas, nada movido de
-sitio; habría que saltarse la comprobación de MD5 de la compilación y ver si Torch extrae bien los assets cambiados).
+Dreamcast).
+
+### Versión en español (`mk64es`, 2026-11-25)
+
+Con el parche de **blade133bo** (v1.1, `Mario Kart 64 (ES).xdelta`, sobre la misma ROM US; MD5 de la ROM parcheada
+`79743743904eea727cb82725be765ec6`, SHA1 `93c63590…`). Un comando:
+
+```sh
+ESPATCH="Mario Kart 64 (ES).xdelta" WORK=/root/mk64-es KOS_NAOMI_ENV=/opt/toolchains/dc/kos-naomi/environ.sh \
+  homebrew/mk64/build_mk64.sh baserom.us.z64      # -> build/mk64es_dc2naomict.bin(.gz)
+```
+
+Lo que cambia el parche y cómo llega a la decompilación:
+- **Gráficos** (texturas de menús y títulos, la paleta de las onomatopeyas `gTLUTOnomatopoeia`; ROM `0x132B50`–`0x145470`,
+  `0x642xxx`–`0x6A04E3`, `0x7DBxxx`–`0x809449`): los extrae **Torch** de la ROM, así que basta con darle la española. Torch
+  reconoce la ROM por su SHA1 en `config.yml`: `mk64_es.py` duplica el bloque US con la clave de la española.
+- **Textos**: están en los datos del código del N64, que la decompilación **recompila desde C**, no los saca de la ROM.
+  En la ROM, cadenas terminadas en 0 en `0xF0300`–`0xF1900` (308: copas, circuitos, menús, Controller Pak, resultados)
+  y `0x12A100`–`0x12A700` (62: créditos); las de las dos ROMs emparejan una a una. En el fuente están en
+  `src/menu_items.c`, `src/ending/credits.c` y, los nombres de circuito, en `yamls/courses/*_metadata.yml`
+  (`name`, `debug_name`). `mk64_es.py` alinea los literales del C con las cadenas US en orden (difflib), así que una
+  frase inglesa repetida con dos traducciones ("N64 CONTROLLER PAK", "    th" → ro/do/to/mo/vo) recibe cada una la
+  suya. Resultado: 189 literales y 40 nombres de circuito.
+- **Textos del port** (los mensajes de la VMU que sustituyen a los del Controller Pak, `D_800E7940`, `D_800E7980`): no
+  están en ninguna ROM; traducción nuestra en `PORT_ES` (`mk64_es.py`).
+- Los trucos de fuente del traductor ("yu2uru", "kei2o", "disezo" = diseño) se copian tal cual: la fuente también sale
+  de su ROM. Errata suya que se queda: "A SIDO GUARDADO".
+
+- `extract_assets.py` (los gráficos que no pasan por Torch) también comprueba el SHA1 de `baserom.us.z64`, contra
+  `mk64.us.sha1`: `mk64_es.py` escribe ahí el de la española.
+
+El script no guarda ningún texto traducido: lee las dos ROMs del usuario. Restaura con git los archivos que toca, así
+que se puede repetir.
+
+**Estado (2026-11-26):** compilada desde main `851fb98`, con el ritmo de imagen final y los mandos nuevos de `mk64`. En
+Flycast (`naomi.zip`): menús, copas, circuitos y marcador de carrera ("VUELTA", "TIEMPO", "8vo") en español; acelerador
+= A, freno = B, START + freno = L (leído en `gControllers`, que en esta compilación está en `0x8c95880c`). Subida a la
+.251 como ROM aparte (`dc-mk64es_dc2naomict.bin.gz`, fila "Mario Kart 64 (Dreamcast, espanol)") y cargada en el mueble;
+**sin probar en placa**. Si `cmake` de Torch falla al bajar sus dependencias (DNS de WSL), basta con repetir: copiar
+`cmake-build-release` de otro WORK no sirve (su caché guarda la ruta).
 
 ### Lo que hubo que arreglar en KallistiOS (todo en `kos-680d1862-naomi_host.patch`, bajo `#ifdef NAOMI_HOST`)
 
