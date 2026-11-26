@@ -235,7 +235,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   los commits `25f60d0`/`7dfe8a9` (nuestro parche entra salvo el trozo de `arranque_hold`). Pedidas las fuentes
   (`homebrew/orc2cdc/issue_arkretro_fuentes29b.md`, comentario en ArkRetro/ORC2CDC#2 publicado por el usuario):
   esperar respuesta antes de rebasar.
-- Diddy Kong Racing (port DC de Bruceleeto, `c405d21d`): repo aparte `C:\GitHub\dkr-naomi` (`build_dkr.sh`, perfiles
+- Diddy Kong Racing (port DC de Bruceleeto, `c405d21d`): repo aparte [dkr-naomi](https://github.com/0skarzer0/dkr-naomi) (público desde 2026-11-26) (`build_dkr.sh`, perfiles
   `dkr`/`dkr_dbg`). Pide KOS master: el parche `NAOMI_HOST` está llevado a KOS 9926b70a en
   `dkr-naomi/kos/kos-9926b70a-naomi_host.patch` (+ sin streams de CD en `fs_iso9660`). En placa (2026-11-26) llega a
   la demo de presentación a 60 vblanks/s y, según el usuario, "se ve y suena bien" (AICAflow, su firmware de sonido

@@ -1525,7 +1525,18 @@ static void mie_parse(void) {
         u32 *keep = (u32 *)(RES_MAPLE + 0x800);
         for (u32 i = 0; i < 32; i++) keep[i] = my_recv[i];
     }
-    if (d[0] == MIE_EMPTY || words < 8) return; /* not ready: fetch again */
+    /* Not ready (MIE_EMPTY): fetch again, but not for ever. A short answer that is not MIE_EMPTY is NOT "not
+       ready": on the board (Sega Rally 2 DX under Windows CE, 2026-11-26) the MIE once gave a 5-word MIE_RESP and
+       then the same 5 words to every fetch; we kept fetching and the cabinet's inputs stayed at rest (the game
+       running, music playing) until a lucky answer. Setting mie_state to 0 over the NetDIMM brought them back at
+       once: so a short answer, or 30 fetches in a row, mean a new request. */
+    static u32 fetches;
+    if (d[0] == MIE_EMPTY && words >= 1 && ++fetches < 30) return;
+    fetches = 0;
+    if (words < 8) {
+        mie_state = 0;
+        return;
+    }
     if (words * 4 >= 54 && d[0] == MIE_RESP && (d[18] & 0x80) && d[26] == 1) {
         jvs.p1 = (u16)read_be16(d + 28);
         jvs.p2 = (u16)read_be16(d + 30);
@@ -1684,7 +1695,9 @@ static u32 hook_out;
    it), which then reads it over the NetDIMM. This is how the VMU's address error was found.
    [0] "BOX!" [1] exceptions [2] maple hooks entered [3] left [4] VMU frames [5] bad lists [6] TMU2 samples
    [8..] 16 exceptions x 8 words: EXPEVT, SPC, SSR, TEA, r15, PR at the time, hooks, 0
-   [0x100..] the first 32 VMU frames x 4 words; [0x200..0x20f] the last 16 sampled PCs */
+   [0x100..] the first 32 VMU frames x 4 words; [0x200..0x20f] the last 16 sampled PCs;
+   [0x400..0x5ff] the last 128 VMU frames (frame n at 0x400 + (n & 127) * 4, n < [4]): header, first two data
+   words (function, location), the answer's header */
 #define BOX ((volatile u32 *)0xadda0000u)
 static int box_on;
 void exc_record(void) {
@@ -1776,8 +1789,15 @@ u32 maple_hook(u32 list) {
                 e[3] = hook_calls | (len > 1 ? in[4] & 0xffff0000u : 0);
             }
             if (box_on) BOX[4] = vmu_trace_n + 1;
-            vmu_trace_n++;
             olen = vmu_frame(cmd, dst, in + 3, len, out);
+            if (box_on) {                                 /* ring of the last 128: frame header, 2 data words, answer */
+                volatile u32 *e = &BOX[0x400 + (vmu_trace_n & 127) * 4];
+                e[0] = hdr;
+                e[1] = len ? in[3] : 0;
+                e[2] = len > 1 ? in[4] : 0;
+                e[3] = out[0];
+            }
+            vmu_trace_n++;
         } else if (answer) {
             u32 rcmd = 7; /* ACK */
             if (cmd == 1 || cmd == 2) { /* DEVINFO / ALLINFO */
@@ -2533,7 +2553,7 @@ void boot(const struct dimm_header *h) {
     }
     box_on = (H.flags & DIMM_BLACKBOX) != 0;
     if (box_on) {
-        for (u32 i = 0; i < 0x220; i++) BOX[i] = 0;
+        for (u32 i = 0; i < 0x600; i++) BOX[i] = 0;
         BOX[0] = 0x21584f42u;
     }
     if (H.flags & DIMM_CONSOLE) {
