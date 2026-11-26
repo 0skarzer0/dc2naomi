@@ -211,7 +211,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): ✅ **probado en placa** (2026-11-26): arranca, suena y START + volante derecha vuelve al explorador. `h-nesterse_naomi.bin.gz` en la .251 | Crazy Taxi |
-| Gens4All 4.3 (Mega Drive, repo `gens4all-naomi`) `gens4all` | en Flycast: lista de juegos y 3 Ninjas Kick Back jugable (2026-11-26); **sin probar en placa** | estándar |
+| Gens4All 4.3 (Mega Drive, repo `gens4all-naomi`) `gens4all` / `gens4all_ct` | en Flycast: listas y juegos (2026-11-26); `dc-gens4all_dc2naomict` en la .251, **sin probar en placa** | Crazy Taxi |
 | Ikaruga (JP) `dc-ikaruga` | ✅ con VMU desbloqueada (mandos `joy`) | estándar |
 | SF3 Double Impact `dc-sf3di` | ✅ menú y los dos juegos, con VMU | estándar |
 | SSF2X (inglés, ComradeSnarky) `dc-ssf2x_en` | ✅ con VMU | estándar |
@@ -250,7 +250,9 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   juegos, y 3 Ninjas Kick Back carga y se juega; sonido sin comprobar. **Sin probar en placa.** Pendiente: placa,
   mandos de 2 jugadores, volver a la lista, watchdog. Imagen para el usuario (2026-11-26): `megadrive/dc-gens4all_dc2naomi.bin.gz`
   (55 MB) desde su `roms.zip`: coches de la raíz en la lista principal y `top/` en otra, enlazadas
-  (`tools/mklists.py` del repo, títulos sacados del nombre de fichero, 6 ROMs repetidas fuera). Aún no está en ninguna Pi. Los paquetes (del hilo "Gens4All with Z80 Emulation" de
+  (`tools/mklists.py` del repo, títulos sacados del nombre de fichero, 6 ROMs repetidas fuera). Versión para el mueble del Crazy Taxi (perfil `gens4all_ct`, mandos `nes`)
+  `dc-gens4all_dc2naomict.bin.gz` en la .251 con su fila del CSV (copia `romsinfo.csv.bak_gens4all`), sin probar.
+  START en la lista sale de Gens4All (la NAOMI se reinicia): así lo hizo TapamN. Los paquetes (del hilo "Gens4All with Z80 Emulation" de
   Dreamcast-Talk, que corta a los bots) y el disco de Gens4Dreams están en `megadrive/` de la carpeta del usuario.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
