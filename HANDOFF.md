@@ -248,10 +248,11 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   (`C:\GitHub\fzerox-naomi`, público desde 2026-11-26). Decomp inspectredc/fzerox (CC0) + capa propia; para la PVR, el renderer
   de Diddy (CC0) con un decodificador F3DEX2 delante; KOS 9926b70a con el parche de dkr-naomi. `build_fzerox.sh ROM`
   (vale el `.zip`; ROM US rev0 en la carpeta del usuario, `fzerox/`) hace la imagen entera (perfiles `fzerox` /
-  `fzerox_dbg`, mandos `mk64` provisionales). **Fase 1 hecha (2026-11-26), solo Flycast:** arranca, llega al título
-  y con START al menú principal, sin imagen ni sonido. Clave: el juego reparte la RAM de N64 a mano, así que el
+  `fzerox_dbg`, mandos `mk64` provisionales). **Fase 2 hecha (2026-11-27), solo Flycast:** renderer F3DEX2 -> PVR propio; se
+  ven título, menús, selección de nave en 3D y la carrera de Mute City (HUD, cuenta atrás), y la nave responde. Sin
+  sonido. Clave: el juego reparte la RAM de N64 a mano, así que el
   port reproduce la RDRAM en una ventana de 4 MB y carga la "ROM" (`ROM.BIN`, 5,25 MB) y las muestras
-  (`AUDIOTBL.BIN`, 10,7 MB) del disco; `1ST_READ.BIN` = 217 KB. Siguiente: fase 2 (renderer). Detalle y trampas:
+  (`AUDIOTBL.BIN`, 10,7 MB) del disco; `1ST_READ.BIN` = 217 KB. Siguiente: fase 3 (audio) y probar en placa. Detalle y trampas (muchas de big-endian en el juego):
   `fzerox-naomi/docs/plan.md`.
 - Gens4All (Mega Drive, de TapamN): repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi)
   (`C:\GitHub\gens4all-naomi`). `main` = una versión de TapamN por commit (2021-08 → **4.3, 2022-01-24, base del
