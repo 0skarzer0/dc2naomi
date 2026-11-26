@@ -244,6 +244,13 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   la demo de presentación a 60 vblanks/s y, según el usuario, "se ve y suena bien" (AICAflow, su firmware de sonido
   propio, funciona). Pendiente: probarlo jugando (mapa de mandos `mk64` provisional), la VMU y medir el ritmo de
   imagen. En el menú de la .251 (`dc-dkr_dc2naomict.bin.gz`, copia del CSV en `romsinfo.csv.bak_dkr`). Plan: `dkr-naomi/docs/plan.md`.
+- F-Zero X (decomp de N64, sin port previo a Dreamcast): repo aparte `fzerox-naomi` (`C:\GitHub\fzerox-naomi`,
+  **solo local, sin subir a GitHub**). Plan: decomp inspectredc/fzerox (CC0) + renderer de la capa Dreamcast de Diddy
+  (CC0) con un decodificador F3DEX2 delante; KOS 9926b70a con el parche de dkr-naomi. **Fase 0 hecha (2026-11-26):**
+  `build_fzerox.sh ROM` (vale el `.zip`; ROM US rev0 en la carpeta del usuario, `fzerox/`) saca los assets con splat +
+  Torch y compila todo el juego para SH-4 sin errores; quedan 350 símbolos por dar (segmentos, libultra `os*`, 64DD).
+  Trampas: Torch necesita CMake ≥ 3.24 (lo instala el script en un venv) y la decomp, `binutils-mips-linux-gnu`.
+  Siguiente: fase 1 (libultra sobre KOS, segmentos, arrancar en Flycast). Detalle: `fzerox-naomi/docs/plan.md`.
 - Gens4All (Mega Drive, de TapamN): repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi)
   (`C:\GitHub\gens4all-naomi`). `main` = una versión de TapamN por commit (2021-08 → **4.3, 2022-01-24, base del
   port**: su `1ST_READ.BIN` es idéntico al de Gens4Dreams RC3) y encima nuestros cambios; rama `megavolt85-hdd` = su
