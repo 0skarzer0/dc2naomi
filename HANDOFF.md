@@ -245,7 +245,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   TapamN por commit (2021-08 → **4.3, 2022-01-24, base del port**: su `1ST_READ.BIN` es idéntico al de Gens4Dreams
   RC3); rama `megavolt85-hdd` = su 4.3 con SD/disco duro. Plan en `docs/plan.md` (mismo método que NesterDC SE). Aún
   no compila. Los paquetes (sacados del hilo "Gens4All with Z80 Emulation" de Dreamcast-Talk, que corta a los bots)
-  están en `megadrive/` de la carpeta del usuario. Sin publicar en GitHub todavía.
+  están en `megadrive/` de la carpeta del usuario. Publicado: https://github.com/0skarzer0/gens4all-naomi
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
   [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`
