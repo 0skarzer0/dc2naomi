@@ -150,6 +150,7 @@ Después, releer la imagen y comparar cada archivo (`tools/cmpimage.py`).
 
 **15. Un homebrew de KallistiOS compilado por nosotros (Mario Kart 64, OutRun C2C, NesterDC):** compilarlo con la
 KallistiOS parcheada de `homebrew/mk64/kos-680d1862-naomi_host.patch` y `-DNAOMI_HOST` en vez de parchear el binario
+(también NesterDC SE, `homebrew/nesterse/`: un programa de KOS 1.3 llevado a la KOS actual)
 como en `or2006`/`or37`. El parche arregla en el código fuente PCTRA, cima de memoria, maple, bus G1, FIFO G2 ×2, DMA
 del AICA, SR perdido en caché y vídeo, y mete un contestador de peeks propio con log y excepción en RAM (bloque `LIVE`
 de `pi/live.py`). Para usar los 28 MB: `-D__KOS_GCC_32MB__`. Para otra versión de KOS, los cambios están todos bajo
@@ -209,7 +210,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Diddy Kong Racing (homebrew, repo `dkr-naomi`) `dkr` | en placa la demo se ve y suena bien (2026-11-26); falta jugarlo, VMU y ritmo de imagen. `dc-dkr_dc2naomict.bin.gz` en el menú de la .251 | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
-| NesterDC SE v1.1 `nesterse` | sin probar (binario KOS 1.1.8 sin `NAOMI_HOST`) | Crazy Taxi |
+| NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): en Flycast llega al título, menú, explorador y juego (2026-11-26); **sin probar en placa** | Crazy Taxi |
 | Ikaruga (JP) `dc-ikaruga` | ✅ con VMU desbloqueada (mandos `joy`) | estándar |
 | SF3 Double Impact `dc-sf3di` | ✅ menú y los dos juegos, con VMU | estándar |
 | SSF2X (inglés, ComradeSnarky) `dc-ssf2x_en` | ✅ con VMU | estándar |

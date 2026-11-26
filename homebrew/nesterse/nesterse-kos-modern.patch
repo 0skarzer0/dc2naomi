@@ -1,0 +1,525 @@
+diff --git a/libdreamscript/core/image.c b/libdreamscript/core/image.c
+index a6aee86..ad714c5 100644
+--- a/libdreamscript/core/image.c
++++ b/libdreamscript/core/image.c
+@@ -3,6 +3,7 @@
+ #include <math.h>
+ #include "dc_utils.h"
+ 
++#include <imageload/jitterdefs.h>
+ #include "jitter_table.h"
+ 
+ // size of n*n poly
+@@ -94,7 +95,7 @@ int Image_Load_JPG(Image* img, const char* filename, pvr_list_t list, int filter
+ 
+ 	(void) jpeg_read_header(&cinfo, TRUE);
+ 	
+-	cinfo.scale_denom = 1;
++	cinfo.scale_num = 1; cinfo.scale_denom = 1;
+ 	  
+     (void) jpeg_start_decompress(&cinfo);
+     
+@@ -178,6 +179,69 @@ int Image_Load_JPG(Image* img, const char* filename, pvr_list_t list, int filter
+ 	
+ 	return 1;
+ }
++
++/* (modern KallistiOS) kos-ports' libimageload still calls libpng's readpng_* with their old signatures
++   (readpng_get_image without the state pointer: png_error jumps to garbage), so PNGs are read here with
++   libpng's current readpng_* and turned into the texture formats imageload gave: RGB565 (IMG_ALPHA_NONE),
++   ARGB1555 with the colour key (IMG_ALPHA_KEYED) or the alpha channel (IMG_ALPHA_MASK), ARGB4444 (IMG_ALPHA_FULL). */
++/* imageload.h (included above) declares the old signatures, so the current ones get other C names */
++extern void *nse_readpng_init(FILE *infile) __asm__("_readpng_init");
++extern uint8_t *nse_readpng_get_image(void *strs, uint32_t *pChannels, uint32_t *pRowbytes, uint32_t *pWidth,
++	uint32_t *pHeight) __asm__("_readpng_get_image");
++extern void nse_readpng_cleanup(void *strs) __asm__("_readpng_cleanup");
++static int nse_load_png(const char *filename, IMG_ALPHA alpha, uint32 key, kos_img_t *out)
++{
++	uint32_t ch, rb, w, h, x, yy;
++	uint8_t *buf;
++	uint16 *t;
++	void *strs;
++	FILE *f = fopen(filename, "rb");
++	if (!f)
++		return -1;
++	strs = nse_readpng_init(f);
++	if (!strs) { fclose(f); return -1; }
++	buf = nse_readpng_get_image(strs, &ch, &rb, &w, &h);
++	nse_readpng_cleanup(strs);
++	fclose(f);
++	if (!buf)
++		return -1;
++	t = (uint16 *) malloc(w * h * 2);
++	if (!t) { free(buf); return -1; }
++	for (yy = 0; yy < h; yy++)
++		for (x = 0; x < w; x++)
++		{
++			const uint8_t *q = buf + yy * rb + x * ch;
++			uint32 r = q[0], g = q[1], b = q[2], a = ch >= 4 ? q[3] : 255;
++			uint16 v;
++			switch (alpha)
++			{
++				case IMG_ALPHA_KEYED:
++					/* the key at ARGB1555 precision (the art has 252,2,252 as well as 255,0,255) or a
++					   transparent palette entry (tRNS) */
++					v = (a < 128 || ((((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)) ==
++						((((key >> 16) & 0xff) >> 3) << 10 | (((key >> 8) & 0xff) >> 3) << 5 | ((key & 0xff) >> 3)))) ? 0 :
++						(0x8000 | ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3));
++					break;
++				case IMG_ALPHA_MASK:
++					v = (a >= 128 ? 0x8000 : 0) | ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
++					break;
++				case IMG_ALPHA_FULL:
++					v = ((a >> 4) << 12) | ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
++					break;
++				default:
++					v = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
++					break;
++			}
++			t[yy * w + x] = v;
++		}
++	free(buf);
++	out->data = t;
++	out->w = w;
++	out->h = h;
++	out->byte_count = w * h * 2;
++	out->fmt = 0;
++	return 0;
++}
+ 
+ int Image_Load(Image* img, const char* filename, pvr_list_t list, int filtering, IMG_ALPHA alpha)
+ {
+@@ -197,7 +261,10 @@ int Image_Load(Image* img, const char* filename, pvr_list_t list, int filtering,
+ 	info.key = 0x00ff00ff;
+ 	kos_img_t kimg;
+ 	kimg.data = NULL;
+-	img_load_file(filename, &info, &kimg);
++	if (stricmp(filename + (strlen(filename)-4), ".png") == 0)
++		nse_load_png(filename, alpha, info.key, &kimg);
++	else
++		img_load_file(filename, &info, &kimg);
+ 	if (!kimg.data)
+ 		return 0;
+ 	
+diff --git a/libdreamscript/core/system_object.cpp b/libdreamscript/core/system_object.cpp
+index 7872de6..bf46397 100644
+--- a/libdreamscript/core/system_object.cpp
++++ b/libdreamscript/core/system_object.cpp
+@@ -47,7 +47,7 @@ Object g_TimerHandlerFunc;
+ Object g_TimerThisObj;
+ ExecState* g_TimerExec = NULL;
+ 
+-static void timer_handler(irq_t source, irq_context_t *context)
++static void timer_handler(void)
+ {
+ 	if (!g_TimerExec)
+ 		return;
+@@ -87,14 +87,14 @@ Value SystemFunctionImp::call(ExecState *exec, Object &thisObj, const List &args
+ 			unsigned int cycles_per_second = args[0].toUInt32(exec);
+ 			g_TimerHandlerFunc = args[1].toObject(exec);
+ 			
+-			timer_prime(TMU2, cycles_per_second, true);
+-			irq_set_handler(EXC_TMU2_TUNI2, timer_handler);
+-			timer_start(TMU2);
++			nse_timer_prime(cycles_per_second);
++			nse_timer_set_handler(timer_handler);
++			nse_timer_start();
+ 			break;
+ 		}
+ 		case SystemImp::E_stopTimer:
+ 		{
+-			timer_stop(TMU2);
++			nse_timer_stop();
+ 			g_TimerExec = NULL;
+ 			break;
+ 		}
+diff --git a/libdreamscript/core/vmufile_object.cpp b/libdreamscript/core/vmufile_object.cpp
+index d20c9d3..ccdbe34 100644
+--- a/libdreamscript/core/vmufile_object.cpp
++++ b/libdreamscript/core/vmufile_object.cpp
+@@ -44,7 +44,7 @@ VMUFileInstanceImp::VMUFileInstanceImp(ObjectImp* proto) : ObjectImp(proto)
+ VMUFileInstanceImp::~VMUFileInstanceImp()
+ {
+ 	if (pkg.data)
+-		free(pkg.data);
++		free((void*)pkg.data);
+ }
+ 
+ /*
+@@ -116,10 +116,10 @@ void VMUFileInstanceImp::putValueProperty(ExecState *exec, int token, const Valu
+ 		{
+ 			const char* data = value.toString(exec).cstring().c_str();
+ 			if (pkg.data)
+-				free(pkg.data);
++				free((void*)pkg.data);
+ 			pkg.data = (uint8*) malloc(strlen(data)+1);
+ 			strcpy((char*)pkg.data, data);
+-			pkg.data[strlen(data)] = 0;
++			// (modern KOS: data is const; strcpy already ends it)
+ 			break;
+ 		}
+ 	}
+@@ -219,17 +219,15 @@ Value VMUFileProtoFuncImp::call(ExecState* exec, Object& thisObj, const List &ar
+ 				fclose(fp);
+ 				rawData[rawFilesize] = 0;
+ 				vmu_pkg_t tempPkg;
+-				if (vmu_pkg_parse(rawData, &tempPkg) < 0)
++				if (vmu_pkg_parse(rawData, rawFilesize, &tempPkg) < 0)
+ 				{
+ 					free(rawData);
+ 					return Boolean(false);
+ 				}
+ 				if (f->pkg.data)
+-					free(f->pkg.data);
++					free((void*)f->pkg.data);
+ 				initVMUPkg(&f->pkg);
+-				f->pkg.data = (uint8*) malloc(tempPkg.data_len+1);
+-				memcpy(f->pkg.data, tempPkg.data, tempPkg.data_len);
+-				f->pkg.data[tempPkg.data_len] = 0;
++				{ uint8 *nd = (uint8*) malloc(tempPkg.data_len+1); memcpy(nd, tempPkg.data, tempPkg.data_len); nd[tempPkg.data_len] = 0; f->pkg.data = nd; }
+ 				strcpy(f->pkg.desc_short, tempPkg.desc_short);
+ 				strcpy(f->pkg.desc_long, tempPkg.desc_long);
+ 				strcpy(f->pkg.app_id, tempPkg.app_id);
+diff --git a/libdreamscript/kjs/dtoa.cpp b/libdreamscript/kjs/dtoa.cpp
+index f341ce2..188c2c7 100644
+--- a/libdreamscript/kjs/dtoa.cpp
++++ b/libdreamscript/kjs/dtoa.cpp
+@@ -177,6 +177,8 @@
+ #endif
+ #define INFNAN_CHECK
+ #include "dtoa.h"
++#include <stdlib.h>
++#include <string.h>
+ #define strtod kjs_strtod
+ #define dtoa kjs_dtoa
+ #define freedtoa kjs_freedtoa
+diff --git a/libdreamscript/kjs/port_kjs.h b/libdreamscript/kjs/port_kjs.h
+index e101535..9f3e49e 100644
+--- a/libdreamscript/kjs/port_kjs.h
++++ b/libdreamscript/kjs/port_kjs.h
+@@ -10,7 +10,7 @@
+ #  define MIN(a,b)  ((a) < (b)? (a) : (b))
+ #endif
+ 
+-#define uint32_t uint32
+-#define int32_t int32
++// (modern KOS) #define uint32_t uint32
++// (modern KOS) #define int32_t int32
+ 
+ #endif
+diff --git a/libdreamscript/kjs/ustring.cpp b/libdreamscript/kjs/ustring.cpp
+index a669f37..c6ec6c1 100644
+--- a/libdreamscript/kjs/ustring.cpp
++++ b/libdreamscript/kjs/ustring.cpp
+@@ -115,7 +115,7 @@ CString &CString::operator=(const CString &str)
+   return *this;
+ }
+ 
+-bool KJS::operator==(const KJS::CString& c1, const KJS::CString& c2)
++bool operator==(const KJS::CString& c1, const KJS::CString& c2)
+ {
+   int len = c1.size();
+   return len == c2.size() && (len == 0 || memcmp(c1.c_str(), c2.c_str(), len) == 0);
+@@ -897,7 +897,7 @@ void UString::release()
+   rep->deref();
+ }
+ 
+-bool KJS::operator==(const UString& s1, const UString& s2)
++bool operator==(const UString& s1, const UString& s2)
+ {
+   if (s1.rep->len != s2.rep->len)
+     return false;
+@@ -906,7 +906,7 @@ bool KJS::operator==(const UString& s1, const UString& s2)
+ 		 s1.rep->len * sizeof(UChar)) == 0);
+ }
+ 
+-bool KJS::operator==(const UString& s1, const char *s2)
++bool operator==(const UString& s1, const char *s2)
+ {
+   if (s2 == 0) {
+     return s1.isEmpty();
+@@ -924,7 +924,7 @@ bool KJS::operator==(const UString& s1, const char *s2)
+   return u == uend && *s2 == 0;
+ }
+ 
+-bool KJS::operator<(const UString& s1, const UString& s2)
++bool operator<(const UString& s1, const UString& s2)
+ {
+   const int l1 = s1.size();
+   const int l2 = s2.size();
+@@ -943,7 +943,7 @@ bool KJS::operator<(const UString& s1, const UString& s2)
+   return (l1 < l2);
+ }
+ 
+-int KJS::compare(const UString& s1, const UString& s2)
++int compare(const UString& s1, const UString& s2)
+ {
+   const int l1 = s1.size();
+   const int l2 = s2.size();
+diff --git a/new_nesterdcse/dc_sound_mgr.cpp b/new_nesterdcse/dc_sound_mgr.cpp
+index 5d3c3d0..4f31489 100644
+--- a/new_nesterdcse/dc_sound_mgr.cpp
++++ b/new_nesterdcse/dc_sound_mgr.cpp
+@@ -40,7 +40,7 @@ dc_sound_mgr::initialize ()
+   buffer_locked = false;
+   clear_buffer ();
+   dc_sound_init (SAMPLE_RATE, SAMPLE_BITS, SOUND_BUF_LEN);
+-  spu_dma_init();
++  // (modern KOS: spu_dma_transfer needs no spu_dma_init)
+   
+   return true;
+ }
+@@ -49,7 +49,7 @@ dc_sound_mgr::initialize ()
+ dc_sound_mgr::~dc_sound_mgr()
+ {
+ 	dc_sound_shutdown();
+-	spu_dma_shutdown();
++	// (modern KOS: no spu_dma_shutdown)
+ 	//free(buffer);
+ 	//free(buffer2);
+ 	free(buffers.rect0);
+@@ -85,7 +85,7 @@ bool8 dc_sound_mgr::lock(sound_buf_pos which, nes_buffers_t** bufs, uint32* buf_
+ 
+ static volatile uint32 curDMAbuf;
+ 
+-void dma_chain(ptr_t data)
++void dma_chain(void *data)
+ {
+ 	if (curDMAbuf >= 6)
+ 		return;
+@@ -93,7 +93,7 @@ void dma_chain(ptr_t data)
+ 	uint32 temp = curDMAbuf;
+ 	curDMAbuf++;
+ 	dcache_flush_range((uint32) p->aBufs[temp], MY_BUF_LEN);
+-	spu_dma_transfer(p->aBufs[temp], p->g_spuAddrs[temp] + MY_BUF_LEN * p->curbuffer, MY_BUF_LEN, 0, dma_chain, (ptr_t) p);
++	spu_dma_transfer(p->aBufs[temp], p->g_spuAddrs[temp] + MY_BUF_LEN * p->curbuffer, MY_BUF_LEN, 0, dma_chain, (void *) p);
+ }
+ 
+ void dc_sound_mgr::unlock()
+@@ -106,7 +106,7 @@ void dc_sound_mgr::unlock()
+ 	curDMAbuf = 1;
+ 
+ 	dcache_flush_range((uint32) buffers.rect0, MY_BUF_LEN);
+-	spu_dma_transfer(buffers.rect0, RECT0_ADDR + MY_BUF_LEN * curbuffer, MY_BUF_LEN, 0, dma_chain, (ptr_t) this);
++	spu_dma_transfer(buffers.rect0, RECT0_ADDR + MY_BUF_LEN * curbuffer, MY_BUF_LEN, 0, dma_chain, (void *) this);
+ 
+ 	//spu_memload(dc_sound_get_baseaddr () + MY_BUF_LEN * curbuffer, buffer, MY_BUF_LEN);
+ 	//spu_memload(dc_sound_get_baseaddr2 () + MY_BUF_LEN * curbuffer, buffer2, MY_BUF_LEN);
+diff --git a/new_nesterdcse/dc_sound_mgr.h b/new_nesterdcse/dc_sound_mgr.h
+index c654aa6..3547163 100644
+--- a/new_nesterdcse/dc_sound_mgr.h
++++ b/new_nesterdcse/dc_sound_mgr.h
+@@ -40,7 +40,7 @@ public:
+   
+   int16 getAvg(uint32 channelNum);
+   
+-  friend void dma_chain(ptr_t data);
++  friend void dma_chain(void *data);
+   friend class NesterImp;
+   
+ private:
+diff --git a/new_nesterdcse/main.cpp b/new_nesterdcse/main.cpp
+index 5af513d..4888adb 100644
+--- a/new_nesterdcse/main.cpp
++++ b/new_nesterdcse/main.cpp
+@@ -1,6 +1,6 @@
+ #include <kos.h>
+ #include "nes.h"
+-#include "/usr/local/dc/kos1.3/kos/kernel/arch/dreamcast/hardware/pvr/pvr_internal.h"
++#include <../hardware/pvr/pvr_internal.h>
+ #include "dc_saving.h"
+ #include "null_sound_mgr.h"
+ #include "dc_sound_mgr.h"
+@@ -366,13 +366,13 @@ void poll_input_family_keyboard(NES *emu)
+ 		uint32 i;
+ 		kstat = (kbd_state_t*) maple_dev_status(dc_maple_keyboard_info->dev);
+ 		cond = &(kstat->cond);
+-		if (cond->modifiers & KBD_MOD_LCTRL)
++		if (cond->modifiers.raw & KBD_MOD_LCTRL)
+ 			emu->NES_kbd.setkey(NES_device_kbd::NES_KEY_Control_L);
+-		if (cond->modifiers & KBD_MOD_LSHIFT)
++		if (cond->modifiers.raw & KBD_MOD_LSHIFT)
+ 			emu->NES_kbd.setkey(NES_device_kbd::NES_KEY_Shift_L);
+-		if (cond->modifiers & KBD_MOD_RSHIFT)
++		if (cond->modifiers.raw & KBD_MOD_RSHIFT)
+ 			emu->NES_kbd.setkey(NES_device_kbd::NES_KEY_Shift_R);
+-		if (cond->modifiers & KBD_MOD_LALT)
++		if (cond->modifiers.raw & KBD_MOD_LALT)
+ 			emu->NES_kbd.setkey(NES_device_kbd::NES_KEY_Grph);
+ 
+ 		for (i = 0; i < sizeof(cond->keys) / sizeof(cond->keys[0]); ++i)
+@@ -660,16 +660,16 @@ void display_nes_screen(NES* emu)
+ 
+ static volatile int rest_frames = 0;
+ 
+-static void timer_handler(irq_t source, irq_context_t *context)
++static void timer_handler(void)
+ {
+ 	++rest_frames;
+ }
+ 
+ static void do_autoloop(NES *emu)
+ {
+-	timer_prime (TMU2, 60, true);
+-	irq_set_handler (EXC_TMU2_TUNI2, timer_handler);
+-	timer_start (TMU2);
++	nse_timer_prime(60);
++	nse_timer_set_handler(timer_handler);
++	nse_timer_start();
+ 
+ 	rest_frames = 1;
+ 	for (;;)
+@@ -694,7 +694,7 @@ static void do_autoloop(NES *emu)
+ 			}
+ 		}
+ 	}
+-	timer_stop (TMU2);
++	nse_timer_stop();
+ }
+ 
+ void do_loop(NES *emu)
+@@ -765,7 +765,7 @@ void displayPreImage()
+ 	}
+ }
+ 
+-extern "C" int main()
++static int nse_main()
+ {	
+ 	//video_discover();
+ 	
+@@ -796,3 +796,19 @@ extern "C" int main()
+ 	return 0;
+ }
+ 
++static void *nse_main_thd(void *arg)
++{
++	(void)arg;
++	nse_main();
++	return NULL;
++}
++
++extern "C" int main(int argc, char **argv)
++{
++	const kthread_attr_t attr = { false, 1024 * 1024, NULL, PRIO_DEFAULT, "nesterdcse" };
++	kthread_t *t = thd_create_ex(&attr, nse_main_thd, NULL);
++	if (t)
++		thd_join(t, NULL);
++	return 0;
++}
++
+diff --git a/new_nesterdcse/nes.h b/new_nesterdcse/nes.h
+index 39d315b..15800b9 100644
+--- a/new_nesterdcse/nes.h
++++ b/new_nesterdcse/nes.h
+@@ -31,6 +31,7 @@
+ #include <stdio.h>
+ 
+ #include "types.h"
++class NES_mapper;
+ #include "nes_6502.h"
+ #include "mapper/nes_mapper_decl.h"
+ #include "nes_rom.h"
+diff --git a/new_nesterdcse/nes6502.c b/new_nesterdcse/nes6502.c
+index b155446..9eb9410 100644
+--- a/new_nesterdcse/nes6502.c
++++ b/new_nesterdcse/nes6502.c
+@@ -154,7 +154,7 @@ FILE* fp = NULL;
+ #define ZP_IND_X_ADDR(address) \
+ { \
+   ZERO_PAGE_ADDR(address); \
+-  ((uint8) address) += REG_X; \
++  address = (uint8)(address + REG_X); \
+ }
+ 
+ #define ZP_IND_X(address, value) \
+@@ -227,8 +227,8 @@ FILE* fp = NULL;
+ 
+ 
+ /* Stack push/pull */
+-#define  PUSH(value)             stack[((uint8)REG_S)--] = (value)
+-#define  PULL()                  stack[++((uint8)REG_S)]
++#define  PUSH(value)             (stack[(uint8)REG_S] = (value), REG_S = (uint8)(REG_S - 1))
++#define  PULL()                  stack[REG_S = (uint8)(REG_S + 1)]
+ 
+ 
+ /*
+diff --git a/new_nesterdcse/nester_object.cpp b/new_nesterdcse/nester_object.cpp
+index 2c8e0a6..bab9924 100644
+--- a/new_nesterdcse/nester_object.cpp
++++ b/new_nesterdcse/nester_object.cpp
+@@ -395,7 +395,7 @@ void NesterFunctionImp::drawTrue(NesterImp* imp, uint32 color, float z)
+ 
+ static volatile int rest_frames_obj = 0;
+ 
+-static void timer_handler_obj(irq_t source, irq_context_t *context)
++static void timer_handler_obj(void)
+ {
+ 	++rest_frames_obj;
+ 	updateFPS();
+@@ -404,7 +404,7 @@ static void timer_handler_obj(irq_t source, irq_context_t *context)
+ static volatile bool inbgNSF = false;
+ bool bgNSFon = false;
+ 
+-static void timer_handler_bgNSF(irq_t source, irq_context_t *context)
++static void timer_handler_bgNSF(void)
+ {
+ 	if (inbgNSF)
+ 		return;
+@@ -501,18 +501,18 @@ Value NesterFunctionImp::call(ExecState *exec, Object &thisObj, const List &args
+ 			refreshRate = (vid_mode->flags & VID_PAL)?50:60;
+ 			if (args.size() > 0)
+ 				refreshRate = args[0].toUInt32(exec);
+-			timer_prime (TMU2, refreshRate, true);
++			nse_timer_prime(refreshRate);
+ 			int sample_rate = main_emu->get_snd_mgr()->get_sample_rate();
+     		int sample_bits = main_emu->get_snd_mgr()->get_sample_bits();
+ 			apu_setparams(sample_rate, refreshRate, sample_bits);
+-			irq_set_handler (EXC_TMU2_TUNI2, timer_handler_obj);
+-			timer_start (TMU2);
++			nse_timer_set_handler(timer_handler_obj);
++			nse_timer_start();
+ 			rest_frames_obj = 1;
+ 			break;
+ 		}
+ 		case NesterImp::E_autoEnd:
+ 		{
+-			timer_stop (TMU2);
++			nse_timer_stop();
+ 			break;
+ 		}
+ 		case NesterImp::E_autoLoop:
+@@ -775,9 +775,9 @@ Value NesterFunctionImp::call(ExecState *exec, Object &thisObj, const List &args
+ 		}
+ 		case NesterImp::E_bgNSFStart:
+ 		{
+-			timer_prime(TMU2, 60, true);
+-			irq_set_handler(EXC_TMU2_TUNI2, timer_handler_bgNSF);
+-			timer_start(TMU2);
++			nse_timer_prime(60);
++			nse_timer_set_handler(timer_handler_bgNSF);
++			nse_timer_start();
+ 			bgNSFon = true;
+ 			break;
+ 		}
+@@ -785,7 +785,7 @@ Value NesterFunctionImp::call(ExecState *exec, Object &thisObj, const List &args
+ 		{
+ 			if (bgNSFon)
+ 			{
+-				timer_stop (TMU2);
++				nse_timer_stop();
+ 				while (inbgNSF);
+ 				bgNSFon = false;
+ 			}
+diff --git a/new_nesterdcse/snss.cpp b/new_nesterdcse/snss.cpp
+index b5bbc80..a85aa4e 100644
+--- a/new_nesterdcse/snss.cpp
++++ b/new_nesterdcse/snss.cpp
+@@ -32,7 +32,7 @@
+ #include "libsnss.h"
+ //SCHERZO#include "sys/param.h"
+ #ifdef __DREAMCAST__
+-#	include "endian.h"
++#	include <arpa/inet.h>
+ #else
+ #	include <winsock2.h>
+ #endif

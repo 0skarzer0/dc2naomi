@@ -287,3 +287,7 @@ Parte del proyecto [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-
 - **NesterDC** (`homebrew/nesterdc/`; arranca en placa, las últimas correcciones sin probar): emulador de NES. Núcleo Nester (GPL2, Darren Ranalli y
   colaboradores) y su port a Dreamcast [NesterDC](https://github.com/pqrs-org/NesterDC) de **tekezo** (pqrs-org); aquí
   solo se aprovecha el núcleo, con un frontend nuevo. Su código no se incluye: `build_nesterdc.sh` lo descarga.
+- **NesterDC SE** (`homebrew/nesterse/`; en Flycast va, sin probar en placa): NesterDC Special Edition de **Scherzo**
+  (2005, GPL; con libdreamscript/kjs, el motor JavaScript de KDE), sus menús v1.1 de **Christuserloeser**, y los
+  fuentes conservados en dcemulation.org. Recompilado con la KallistiOS actual y kos-ports (zlib, libpng, libjpeg,
+  parallax, imageload…); `build_nesterse.sh` descarga los fuentes de nuestro fork.

@@ -298,7 +298,33 @@ Probado en la placa: arranca, menú responde. Arreglado en la iteración siguien
 - **Carpetas**: `build_nesterdc.sh` genera `ROMS.TXT` con líneas `d|f<TAB>id<TAB>padre<TAB>nombre` y los ROMs como `/cd/ROMS/<id>.NES`; el menú navega carpetas (`[carpeta]`, `..`).
 - Zona muerta del volante en el perfil `nes` reducida al mínimo: izquierda x<116, derecha x>140 (centro 128; antes 16/239, luego 124/132 que el rebote del volante activaba solo).
 
-### NesterDC SE v1.1 (2026-11-20) — perfil `nesterse`
+### NesterDC SE recompilado (2026-11-26) — `homebrew/nesterse/`, perfil `nesterse`
+La imagen de abajo (binario original) daba **pantalla negra en la placa** (el usuario). Ahora se compila desde los
+fuentes de SE 1.0 (2005-12-24, en el fork [0skarzer0/NesterDC](https://github.com/0skarzer0/NesterDC), `NesterDCSE/`)
+contra KallistiOS 680d1862 + `NAOMI_HOST`: `build_nesterse.sh CARPETA_v1.1 CARPETA_ROMS [SALIDA.bin]`. El disco lleva
+los menús .js, fuentes y gráficos de la v1.1 (Christuserloeser: su `1ST_READ.BIN` es del 2005-12-09, igual que la
+1.0; solo cambian los .js) con nuestro `1ST_READ.BIN` sin cifrar, y las ROMs en `NES/` (carpetas conservadas,
+nombres sin paréntesis, ≤46 + `.nes`). Perfil `nesterse` con VMU emulada (`0x9404`; `nesterse_dbg` = `0x9C0C`).
+Qué hubo que cambiar (`nesterse-kos-modern.patch`, `nse_compat.h`, `nse_timer.c`):
+- kjs (motor JS de los menús) con g++ 15: `port_kjs.h` redefinía `uint32_t`, `dtoa.cpp` (`strtod`), `ustring.cpp`
+  (`KJS::operator` dentro del namespace); `vmu_pkg_t.data` ahora es `const` y `vmu_pkg_parse` pide el tamaño.
+- 6502 en C (`nes6502.c`): casts como lvalue (`((uint8)REG_S)--`), que gcc ya no admite.
+- **TMU2**: SE lo usaba como reloj de 50/60 Hz y en la KOS actual es el reloj de `timer_ms_*` (TMU1 es de
+  `timer_spin_sleep`): ahora va con `vblank_handler_add` (`nse_timer.c`; 60 Hz en la NAOMI, 50 salta uno de cada 6).
+- `spu_dma_init/shutdown` ya no existen (no hacen falta); `ptr_t` → `void *`; `pvr_internal.h` por su ruta en KOS.
+- **Cuelgue en el splash**: libjpeg 9 (kos-ports) tiene `scale_num` = 8 por defecto (1 en la 6b): con solo
+  `scale_denom = 1` cada JPEG salía a 1280×960, 300 trozos para `Image.polys[256]` (en la pila) y se colgaba.
+- **Pánico en el primer PNG**: libimageload de kos-ports llama a `readpng_*` de libpng con su firma antigua
+  (`png_error` salta a basura). Los PNG se leen en `image.c` con el `readpng_*` actual (nombres por `__asm__`) y
+  se pasan a RGB565/ARGB1555/ARGB4444; color clave a 5 bits por canal (el arte trae 252,2,252) o tRNS.
+- kos-ports: zlib.net ya no sirve 1.3.2; el script la baja de las releases de madler/zlib (mismo SHA-256).
+- El firmware del AICA es el `sound/aica_fw.h` precompilado de SE: no hace falta toolchain ARM. Arranca (el
+  handshake con el ARM pasa) pero **el sonido no se ha oído**: Flycast va sin audio en esta máquina.
+Depuración: con `nesterse_dbg` se ve el log de KOS; con el programa colgado, `naomi_live` (volcado de RAM de
+Flycast + `nm` del ELF) dio el PC del hilo principal y el log aunque no se viera.
+En Flycast (BIOS NAOMI): título con la rueda, menú principal, explorador de `/NES`, juego (Bomb Sweeper) jugable.
+
+### NesterDC SE v1.1 (2026-11-20) — perfil `nesterse` (binario original, NO arranca en placa)
 El usuario aportó NesterDC SE v1.1 (Christuserloeser, 2008-12-09; build modificada de NesterDC SE, binario + scripts .js; **no está en el repo**). Imagen sin recompilar: `1ST_READ.BIN` + `IP.BIN` del paquete tal cual, carpeta `NES/` con las ROMs del usuario (nombres ≤46+3 caracteres, sin paréntesis; estructura de carpetas conservada) y `REBUILD=1 ./build.sh nesterse DISCO SALIDA.bin`. Mismo perfil de mandos `nes` (START+acelerador = X = subir de carpeta; B = volver al menú principal). `1ST_READ.BIN` viene **scrambled**: se desbloquea con `scramble -d` (KOS utils) antes de meterlo en el disco. Imagen generada 2026-11-20 (143 ROMs, 28,4 MB; `h-nesterse_naomi.bin.gz`). ⚠️ Sin probar en placa: es un binario KOS 1.1.8 sin parche NAOMI_HOST, puede no arrancar.
 
 **Confirmado por el usuario (2026-11-25):** la última imagen de Mario Kart 64 (palanca adelante = salto, free play / attract mudo) sí llegó a subirse a la Pi del Crazy Taxi.
