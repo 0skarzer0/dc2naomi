@@ -241,6 +241,11 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   la demo de presentación a 60 vblanks/s y, según el usuario, "se ve y suena bien" (AICAflow, su firmware de sonido
   propio, funciona). Pendiente: probarlo jugando (mapa de mandos `mk64` provisional), la VMU y medir el ritmo de
   imagen. En el menú de la .251 (`dc-dkr_dc2naomict.bin.gz`, copia del CSV en `romsinfo.csv.bak_dkr`). Plan: `dkr-naomi/docs/plan.md`.
+- Gens4All (Mega Drive, de TapamN): repo aparte `C:\GitHub\gens4all-naomi` (2026-11-26), con el código v4 de TapamN
+  (2021-11, lista de juegos) importado tal cual y el plan en `docs/plan.md` (mismo método que NesterDC SE). Aún no
+  compila. Pedidos al usuario los adjuntos con código de la 4.1 (TapamN) y la 4.3 con disco duro (megavolt85) del
+  hilo "Gens4All with Z80 Emulation" de Dreamcast-Talk (el foro corta a los bots). El paquete Gens4Dreams RC3 y los
+  zips de código están en `megadrive/` de la carpeta del usuario. Sin publicar en GitHub todavía.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
   [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`
