@@ -914,3 +914,6 @@ GAMES["gens4all"] = {
     "groups": [],
 }
 GAMES["gens4all_dbg"] = dict(GAMES["gens4all"], title="GENS4ALL DBG", flags=0x9C0C)  # + DIAG and CONSOLE
+# Crazy Taxi cabinet: NesterDC's map (wheel = d-pad left/right, lever = up/down, gas = A = Genesis C, brake = B =
+# Genesis B; START held: brake = Y = Genesis A, lever forward = L = back to Gens4All's list)
+GAMES["gens4all_ct"] = dict(GAMES["gens4all"], pads="nes")
