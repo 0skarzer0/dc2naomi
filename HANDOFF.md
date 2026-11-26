@@ -206,7 +206,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Airline Pilots (NAOMI original) | CAUTION 51: ponerlo a 1 PLAYER(S) en el test; mandos pendientes | Crazy Taxi |
 | Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado (tirones en carrera del 3,8 % al 0 %, el usuario: "funciona perfecta") y mandos nuevos (freno = B; START + freno = L; acelerador + START = stick abajo): ROM principal desde el 2026-11-26, la anterior en `/boot/roms/_test/`: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
 | Mario Kart 64 en español (homebrew) `mk64es` | ✅ funciona en placa (el usuario: "funciona perfecto", 2026-11-26). Traducción de blade133bo: `ESPATCH=… build_mk64.sh` + `mk64_es.py`; misma base que `mk64`. ROM aparte `dc-mk64es_dc2naomict.bin.gz`: [historial/homebrew-kallistios.md](docs/historial/homebrew-kallistios.md) | Crazy Taxi |
-| Diddy Kong Racing (homebrew, repo `dkr-naomi`) `dkr` | en placa la demo se ve y suena bien (2026-11-26); falta jugarlo, VMU y ritmo de imagen. `dc-dkr_dc2naomict.bin.gz` en la .251, sin fila en el CSV | Crazy Taxi |
+| Diddy Kong Racing (homebrew, repo `dkr-naomi`) `dkr` | en placa la demo se ve y suena bien (2026-11-26); falta jugarlo, VMU y ritmo de imagen. `dc-dkr_dc2naomict.bin.gz` en el menú de la .251 | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE v1.1 `nesterse` | sin probar (binario KOS 1.1.8 sin `NAOMI_HOST`) | Crazy Taxi |
@@ -239,7 +239,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   `dkr-naomi/kos/kos-9926b70a-naomi_host.patch` (+ sin streams de CD en `fs_iso9660`). En placa (2026-11-26) llega a
   la demo de presentación a 60 vblanks/s y, según el usuario, "se ve y suena bien" (AICAflow, su firmware de sonido
   propio, funciona). Pendiente: probarlo jugando (mapa de mandos `mk64` provisional), la VMU y medir el ritmo de
-  imagen; fila en el CSV de la .251 (hoy solo está el archivo `dc-dkr_dc2naomict.bin.gz`). Plan: `dkr-naomi/docs/plan.md`.
+  imagen. En el menú de la .251 (`dc-dkr_dc2naomict.bin.gz`, copia del CSV en `romsinfo.csv.bak_dkr`). Plan: `dkr-naomi/docs/plan.md`.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
   [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`
