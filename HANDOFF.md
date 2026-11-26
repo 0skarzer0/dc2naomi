@@ -199,7 +199,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Daytona USA 2001 `daytona5` | ✅ con VMU (imagen hecha a mano; el programa aún no lo soporta) | Crazy Taxi |
 | F355 `f355b`, 18 Wheeler `18wheeler2` | ✅ terminados, con VMU | Crazy Taxi |
 | Sega Rally 2 (Windows CE) `sr2` | ✅ con VMU y modo de 30 FPS (sin música de carreras: CD-DA) | Crazy Taxi |
-| Sega Rally 2 DX / DX European (trad. PITITO, disco JP) `sr2dx` / `sr2eu` | en Flycast llegan a la carrera; **sin probar en placa** (músicas de menú a 22 kHz, VMU nuevas) | Crazy Taxi |
+| Sega Rally 2 DX / DX European (trad. PITITO, disco JP) `sr2dx` / `sr2eu` | en Flycast llegan a la carrera; **sin probar en placa** (músicas de menú a 22 kHz, VMU nuevas). `dc-sr2dx_dc2naomi` y `dc-sr2eu_dc2naomi` (.bin.gz + .vmu) en la .251 con su fila del CSV (2026-11-26) | Crazy Taxi |
 | Test Drive 6 | ✅ llega al menú (`read_chunk` 4, mandos `wheelud`) | Crazy Taxi |
 | MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |
