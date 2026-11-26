@@ -807,6 +807,24 @@ GAMES["dkr"] = {
 }
 GAMES["dkr_dbg"] = dict(GAMES["dkr"], title="DIDDY KONG RACING DBG", flags=0x9C0C)  # + DIAG and CONSOLE
 
+# F-Zero X (US rev0) built from the N64 decompilation by fzerox-naomi (https://github.com/0skarzer0/fzerox-naomi,
+# build_fzerox.sh), the same way as Mario Kart 64 and Diddy Kong Racing: KallistiOS 9926b70a + NAOMI_HOST (the
+# dkr-naomi patch). The disc holds IP.BIN, 1ST_READ.BIN (code and data), ASSETS.BIN and AUDIOTBL.BIN, which the
+# program reads into place at boot. Pads: the mk64 map for now.
+GAMES["fzerox"] = {
+    "title": "F-ZERO X",
+    "pads": "mk64",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "FZEROX",
+    "flags": 0x9404,      # as dkr: NO_UBC, GD DMA reads in one call, no IP.BIN bootstrap, emulated VMU
+    "hook_pc": [],
+    "groups": [],
+}
+GAMES["fzerox_dbg"] = dict(GAMES["fzerox"], title="F-ZERO X DBG", flags=0x9C0C)  # + DIAG and CONSOLE
+
 # RoboCop for Neo Geo CD (Teo Tormo's port of Data East's arcade game, https://teo-tormo.itch.io/robocop-neogeo) running
 # in IMR Technology's DreamNeo CD 4.0 (Ian Michael), the release "[DNCD - 4.0 ROBOCOP][RELEASE]" (2026-10-21): a
 # self-booting CDI, session 1 = 16 CD audio tracks (the music), session 2 = the emulator and the game's files. The

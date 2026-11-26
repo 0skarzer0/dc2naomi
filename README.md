@@ -233,6 +233,12 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
     ([DavidSM64/Diddy-Kong-Racing](https://github.com/DavidSM64/Diddy-Kong-Racing)) y sus colaboradores.
   - **[dfchil](https://github.com/dfchil)**: [enDjinn](https://github.com/dfchil/enDjinn) y
     [AICAflow](https://github.com/dfchil/aicaflow), el marco del port y su sonido (firmware propio del AICA).
+- **F-Zero X** (perfiles `fzerox`/`fzerox_dbg`; se compila con [fzerox-naomi](https://github.com/0skarzer0/fzerox-naomi),
+  en desarrollo):
+  - **[inspectredc](https://github.com/inspectredc/fzerox)** y los colaboradores de la **decompilación de F-Zero X**,
+    que compilamos para la NAOMI.
+  - **[Zorkats](https://github.com/Zorkats/G-Diffuser)** (G-Diffuser, port a PC) y
+    **[cruxxxxxx](https://github.com/cruxxxxxx/gdx-3ds)** (port a 3DS), de referencia.
 - **PITITO** (con Wesker, Zapatoman, Zurin Akira y los colaboradores que nombra su readme): su traducción al
   castellano "DX Edition" v2.0 de Sega Rally 2 (y la variante "DX European"), que el usuario convierte para su mueble
   de Crazy Taxi (perfiles `sr2dx` y `sr2eu`; el parche no se incluye: hay que conseguirlo de su autor).
