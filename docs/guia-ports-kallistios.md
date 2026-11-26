@@ -22,9 +22,12 @@ decompilación de N64, otro homebrew de KallistiOS). Es una lista de pasos y tra
     los cambios están bajo `#ifdef NAOMI_HOST` y se pueden pasar a mano;
   - el del loader de dc2naomi: `KOS_SUBARCH=naomi` (`KOS_NAOMI_ENV`). Hoy es KOS master `9926b70a`: `680d1862` no
     tiene `dcache_wback_range` ni `icache_sync_range`.
-- **Toolchain:** sh-elf-gcc 15 en `/opt/toolchains/dc/sh-elf`, compilando en WSL (Ubuntu 22.04).
+- **Toolchain:** sh-elf-gcc 15 en `/opt/toolchains/dc/sh-elf`, compilando en WSL (Ubuntu 22.04). Con dc-chain:
+  `toolchain_profile=15.1.1-dev` en `Makefile.cfg`, y primero `make -j1 fetch-sh-gcc fetch-newlib` (con `-j16` la
+  descarga de gcc por git choca consigo misma, `tmp_pack`).
 - **WSL, trampas que costaron tiempo:**
   - `wsl.exe` expande `$var` por su cuenta: lo que lleve variables va en un `.sh` (pasado por `tr -d '\r'`);
+  - desde el Bash de Git, `MSYS_NO_PATHCONV=1 wsl.exe ...`, o reescribe las rutas `/root/...`;
   - la copia de Windows tiene saltos CRLF (`core.autocrlf`): compilar desde un clon en Linux;
   - `pkill -f X` / `pgrep -f X` se encuentran a sí mismos si su orden contiene X (truco `[x]`);
   - los trabajos largos van en una tarea de fondo que mantenga `wsl.exe` vivo (con `setsid nohup` sueltos, a veces
@@ -94,6 +97,26 @@ probablemente cualquier port de KOS a 30 fps:
 2. `thd_schedule(1, 0)` en el vblank, para que el juego despierte a tiempo;
 3. `pvr_naomi_hold_flip(n)` (parche de KOS) para que la imagen salga siempre n vblanks después de mandarla.
 
+Por qué: KallistiOS cambia la imagen **en el primer vblank después de que la GPU acaba**. Entre `pvr_scene_finish` y
+la imagen nueva van el registro (la geometría entra en la GPU, 7-15 ms) y el render (7-18 ms); juntos rondaban los
+16,7 ms y la imagen salía a 1 o 2 vblanks según el cuadro, aunque el juego hiciera 30 fps justos. Y KallistiOS no
+cambia de hilo cuando una interrupción despierta a alguien: el juego esperaba al siguiente tic (0-3 ms).
+`pvr_naomi_hold_flip` cuesta hasta un vblank más de retraso del mando en escenas ligeras (en Mario Kart no se nota)
+y vale mientras registro + render quepan en n vblanks.
+
+Cómo se encontró, por si el siguiente juego tiene otra causa:
+- **Las medias no bastan.** Con CPU, render y despertar todos dentro de presupuesto seguía habiendo un 2-3 % de
+  tirones. Lo resolvió una **traza**: al ver en carrera una imagen fuera de ritmo, el juego guarda los 16 últimos
+  cuadros (inicio, fin de CPU, envío a la GPU) y los 16 últimos cambios de imagen con los tiempos de registro y render
+  (`naomi_traza`, lector `homebrew/mk64/traza_mk64.py`). Esos tiempos están en `pvr_state`: desde el juego,
+  `#include <../hardware/pvr/pvr_internal.h>`.
+- Los cambios de imagen se cuentan en un manejador de vblank con `pvr_get_stats()` (`frame_count`).
+- **Las lecturas de la Pi cortan las interrupciones del juego** (el contestador de peeks). Comprobar que no falsean
+  la medida: `med_mk64.py ... SEGUNDOS SALIDA.csv 10` lee solo una ventana cada 10 s (lo medimos: no eran la causa).
+- Lo que **no** era: el audio (menos de 1 ms por vblank), las subidas de texturas, la CPU (sobraba la mitad).
+- Flycast sirve para ver que un cambio no rompe nada y efectos grandes (el histograma pasó de 3/24/3 a 0/30/0), no
+  para medir.
+
 Los cambios del juego van en un parche aparte (`mk64-dc-naomi.patch`), todo bajo `NAOMI_HOST`.
 
 ## 6. Mandos
@@ -103,7 +126,13 @@ Los cambios del juego van en un parche aparte (`mk64-dc-naomi.patch`), todo bajo
 - El mapa del mueble va en el residente (`DIMM_PAD_MK64`, `pads: "mk64"`). Si falta un botón del N64, el parche del
   juego puede reasignar uno de Dreamcast que nadie use (mk64: C → L) y el residente lo manda con una combinación.
 - Comprobar en Flycast leyendo el estado del mando del juego en RAM (`gControllers`, dirección con `sh-elf-nm`: cambia
-  con cada compilación) con `FC_PEDALS=1` (`FC_PEDALS_BRK=1` = la tecla k frena) y `DUMP=1` de `run1.sh`.
+  con cada compilación) con `FC_PEDALS=1` (`FC_PEDALS_BRK=1` = la tecla k frena) y `DUMP=1` de `run1.sh`. Todo junto:
+  `tools/flycast/fcpad.sh IMAGEN DIR_gControllers NOMBRE KEYS` (p. ej. `'30:k:45,60:Return:12'` = acelerador desde el
+  segundo 30 y START desde el 60, aún pulsados al volcar la RAM) imprime el stick y los botones de N64 que recibe el
+  juego. Los dos parches locales de Flycast están en `tools/flycast/flycast-dc2naomi-debug.patch`.
+- Combinaciones con START: el residente manda START **al soltarlo** y solo si no se usó para otra cosa
+  (`start_used = 1` en cada combinación). El stick va en `joyy`: 255 = abajo.
+- Varios perfiles pueden compartir `pads` (Diddy Kong Racing usa `mk64`): cambiar uno cambia los demás.
 
 ## 7. Traducciones (parche xdelta sobre la ROM)
 
@@ -127,13 +156,29 @@ Receta de `mk64es` (`ESPATCH=… build_mk64.sh` + `homebrew/mk64/mk64_es.py`), v
 ## 8. Probar y subir
 
 1. **Flycast:**
-   - BIOS NAOMI 1 (`naomi.zip` en `~/.local/share/flycast/`; la de NAOMI 2 no arranca imágenes de netboot);
+   - BIOS NAOMI 1 (`naomi.zip` en `$FCTEST/home/.local/share/flycast/`: `run1.sh` pone `HOME=$FCTEST/home`; la de
+     NAOMI 2 no arranca imágenes de netboot);
    - `run1.sh IMAGEN SEGUNDOS NOMBRE` con `FC_SYSM_RAM=1 FC_PEDALS=1`;
    - `KEYS` para pasar menús (Return = START, k = acelerar, j/l = volante); las capturas salen en una rejilla.
 2. **Pi:**
    - `tools/board/piput.py` (desde Git Bash, `MSYS_NO_PATHCONV=1`, o convierte la ruta remota en una de Windows);
    - comprobar el MD5;
    - fila en `romsinfo.csv` (receta 12 del HANDOFF; copia `.bak` antes);
-   - cargar con `setsid nohup python3 /sbin/piforce/dc2naomi_send.py 10.0.0.4 /boot/roms/… &`.
+   - cargar con `setsid nohup python3 /sbin/piforce/dc2naomi_send.py 10.0.0.4 /boot/roms/… &`, o como la web:
+     `load.php?rom=…&name=…&dimm=10.0.0.4&mapping=…&ffb=…` con `User-Agent: Chrome` (`loadcheck.php` solo redirige:
+     `curl` sin `-L` no carga nada); progreso en `/var/log/progress_10.0.0.4` hasta `COMPLETE`;
+   - la carga arranca `timehack.py`: pararlo antes de leer memoria (`pkill -f "[t]imehack.py"`); vuelve con la
+     siguiente carga;
+   - las pruebas, con otro nombre de ROM (`dc-JUEGOmed…`) para no pisar la del usuario; al cambiar la principal,
+     copia de la anterior en `/boot/roms/_test/`; y borrar las de prueba al acabar.
 3. **"Probado" = el usuario lo confirma en el mueble.** Hasta entonces, en HANDOFF y en el historial, "sin probar en
    placa".
+
+## 9. Varias sesiones en la misma copia
+
+- Subir solo lo propio. Con cambios ajenos sin subir en el mismo archivo, no usar `git add`: preparar el índice con
+  el archivo de `HEAD` más los cambios propios (`git hash-object -w --stdin` + `git update-index --cacheinfo`).
+  `git apply --cached --unidiff-zero` coloca mal los trozos cuando el archivo tiene líneas ajenas.
+- Mirar `git log` antes de crear un documento: otra sesión puede estar escribiendo el mismo (esta guía la empezaron
+  dos a la vez).
+- Avisar a las otras sesiones cuando un cambio les afecta (un parche compartido, un perfil de mandos compartido).

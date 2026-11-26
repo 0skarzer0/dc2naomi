@@ -186,13 +186,17 @@ index d01240f94..74ab305ad 100644
  			reply(MDRS_JVSGetIdReply, 7);
  			wptr(ID, 28);
  
-@@ -2061,6 +2076,10 @@ u16 jvs_io_board::read_analog_axis(int player_num, int player_axis, bool inverte
+@@ -2061,6 +2076,14 @@ u16 jvs_io_board::read_analog_axis(int player_num, int player_axis, bool inverte
  		v = mapleInputState[player_num].fullAxes[player_axis] + 0x8000;
  	else
  		v = 0x8000;
 +	if (getenv("FC_PEDALS") && player_num == 0) {	// (local test patch) pedals idle at 0, K = full throttle
 +		if (player_axis == 1) v = mapleInputState[0].fullAxes[1] > 0 ? 0xffff : 0x2000;
 +		else if (player_axis == 2) v = 0x2000;
++		if (getenv("FC_PEDALS_BRK")) {	// (local test patch) K = full brake instead
++			if (player_axis == 2) v = mapleInputState[0].fullAxes[1] > 0 ? 0xffff : 0x2000;
++			else if (player_axis == 1) v = 0x2000;
++		}
 +	}
  	return inverted ? 0xffff - v : v;
  }
