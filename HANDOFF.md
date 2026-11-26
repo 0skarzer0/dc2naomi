@@ -210,7 +210,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Diddy Kong Racing (homebrew, repo `dkr-naomi`) `dkr` | en placa la demo se ve y suena bien (2026-11-26); falta jugarlo, VMU y ritmo de imagen. `dc-dkr_dc2naomict.bin.gz` en el menú de la .251 | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
-| NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): arranca y suena en placa (2026-11-26); START + volante derecha vuelve al explorador (parche; falta confirmarlo en placa). `h-nesterse_naomi.bin.gz` en la .251 | Crazy Taxi |
+| NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): ✅ **probado en placa** (2026-11-26): arranca, suena y START + volante derecha vuelve al explorador. `h-nesterse_naomi.bin.gz` en la .251 | Crazy Taxi |
 | Ikaruga (JP) `dc-ikaruga` | ✅ con VMU desbloqueada (mandos `joy`) | estándar |
 | SF3 Double Impact `dc-sf3di` | ✅ menú y los dos juegos, con VMU | estándar |
 | SSF2X (inglés, ComradeSnarky) `dc-ssf2x_en` | ✅ con VMU | estándar |
@@ -224,7 +224,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 
 ## Pendiente
 
-- Confirmar en placa: SPF2X rehecha, NesterDC corregido, NesterDC SE (volver al explorador con START + volante derecha).
+- Confirmar en placa: SPF2X rehecha, NesterDC corregido.
 - Rush 2049 (menú lento), mandos de Airline Pilots.
 - Si otra imagen vieja de la .250 se cuelga como SPF2X: `newloader.py` (dcop_es, kof02, motw, rcotton_en, sf3ts,
   soulcal, ysgw, buzz_es, ikaruga, ssf2x_en, toystory2_es llevan cargadores anteriores).

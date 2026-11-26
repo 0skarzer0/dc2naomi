@@ -328,7 +328,7 @@ stick a la izquierda (`poll_input` en `main.cpp`; con la cruceta en modo analóg
 hay menú emergente), pero el perfil `nes` del residente sólo manda START mantenido junto con el volante a tope a la
 derecha (el combo de nuestro NesterDC 7.1); START + izquierda no se cambió en el residente porque en 7.1 llegaría al
 juego como START de NES. El parche añade START + cruceta derecha a las dos condiciones de SE: **START + volante a la
-derecha vuelve al explorador**, como en 7.1 (aquí al instante, sin los 300 ms).
+derecha vuelve al explorador**, como en 7.1 (aquí al instante, sin los 300 ms). Confirmado en placa por el usuario el mismo día.
 
 ### NesterDC SE v1.1 (2026-11-20) — perfil `nesterse` (binario original, NO arranca en placa)
 El usuario aportó NesterDC SE v1.1 (Christuserloeser, 2008-12-09; build modificada de NesterDC SE, binario + scripts .js; **no está en el repo**). Imagen sin recompilar: `1ST_READ.BIN` + `IP.BIN` del paquete tal cual, carpeta `NES/` con las ROMs del usuario (nombres ≤46+3 caracteres, sin paréntesis; estructura de carpetas conservada) y `REBUILD=1 ./build.sh nesterse DISCO SALIDA.bin`. Mismo perfil de mandos `nes` (START+acelerador = X = subir de carpeta; B = volver al menú principal). `1ST_READ.BIN` viene **scrambled**: se desbloquea con `scramble -d` (KOS utils) antes de meterlo en el disco. Imagen generada 2026-11-20 (143 ROMs, 28,4 MB; `h-nesterse_naomi.bin.gz`). ⚠️ Sin probar en placa: es un binario KOS 1.1.8 sin parche NAOMI_HOST, puede no arrancar.
