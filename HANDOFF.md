@@ -248,7 +248,9 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   4.3 con SD/disco duro. `build_gens4all.sh DISCO [SALIDA]` (KOS 680d1862 + `NAOMI_HOST`, SDL[DH] incluido, perfiles
   `gens4all`/`gens4all_dbg`, mandos `joy`). En Flycast (2026-11-26), con el disco de Gens4Dreams: título, lista de
   juegos, y 3 Ninjas Kick Back carga y se juega; sonido sin comprobar. **Sin probar en placa.** Pendiente: placa,
-  mandos de 2 jugadores, volver a la lista, watchdog. Los paquetes (del hilo "Gens4All with Z80 Emulation" de
+  mandos de 2 jugadores, volver a la lista, watchdog. Imagen para el usuario (2026-11-26): `megadrive/dc-gens4all_dc2naomi.bin.gz`
+  (55 MB) desde su `roms.zip`: coches de la raíz en la lista principal y `top/` en otra, enlazadas
+  (`tools/mklists.py` del repo, títulos sacados del nombre de fichero, 6 ROMs repetidas fuera). Aún no está en ninguna Pi. Los paquetes (del hilo "Gens4All with Z80 Emulation" de
   Dreamcast-Talk, que corta a los bots) y el disco de Gens4Dreams están en `megadrive/` de la carpeta del usuario.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
