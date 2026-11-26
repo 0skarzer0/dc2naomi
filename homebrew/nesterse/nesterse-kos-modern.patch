@@ -319,7 +319,7 @@ index c654aa6..3547163 100644
    
  private:
 diff --git a/new_nesterdcse/main.cpp b/new_nesterdcse/main.cpp
-index 5af513d..4888adb 100644
+index 5af513d..642fcc6 100644
 --- a/new_nesterdcse/main.cpp
 +++ b/new_nesterdcse/main.cpp
 @@ -1,6 +1,6 @@
@@ -348,6 +348,24 @@ index 5af513d..4888adb 100644
  			emu->NES_kbd.setkey(NES_device_kbd::NES_KEY_Grph);
  
  		for (i = 0; i < sizeof(cond->keys) / sizeof(cond->keys[0]); ++i)
+@@ -449,7 +449,7 @@ int poll_input(NES* emu)
+ 		pad = emu->get_pad(k & 0x03);
+ 		if (use_analog[k])
+ 		{
+-			if (k == 0 && DCController_IsPressed(controller, CONT_DPAD_LEFT))
++			if (k == 0 && (DCController_IsPressed(controller, CONT_DPAD_LEFT) || DCController_IsPressed(controller, CONT_DPAD_RIGHT)))
+ 			{
+ 				if (DCController_IsPressed(controller, CONT_START))
+ 					return 1;
+@@ -462,7 +462,7 @@ int poll_input(NES* emu)
+ 		}
+ 		else
+ 		{
+-			if (k == 0 && (controller->state.joyx < -ANALOG_THRESHOLD))
++			if (k == 0 && (controller->state.joyx < -ANALOG_THRESHOLD || DCController_IsPressed(controller, CONT_DPAD_RIGHT)))
+ 			{
+ 				if (DCController_IsPressed(controller, CONT_START))
+ 					return 1;
 @@ -660,16 +660,16 @@ void display_nes_screen(NES* emu)
  
  static volatile int rest_frames = 0;
