@@ -782,6 +782,28 @@ GAMES["mk64_dbg"] = dict(GAMES["mk64"], title="MARIO KART 64 DBG", flags=0x1C0C)
 # the text moved into the source by homebrew/mk64/mk64_es.py).
 GAMES["mk64es"] = dict(GAMES["mk64"], title="MARIO KART 64 ES")
 
+# Diddy Kong Racing for Dreamcast (Bruceleeto/Diddy-Kong-Racing, commit c405d21d, 2026-11-24), built from the N64
+# decompilation against KallistiOS 680d1862 with homebrew/mk64/kos-680d1862-naomi_host.patch by the dkr-naomi
+# repository (build_dkr.sh). Same rebuilt disc as Mario Kart 64: IP.BIN from makeip, 1ST_READ.BIN = the game
+# (unscrambled) and the port's cdrom/ tree (assets/, build/dc/: lower-case names, so Rock Ridge). Sound is the port's
+# own AICA firmware (AICAflow). Saves go to the emulated VMU. Controls: Mario Kart 64's map for now (gas = A, brake =
+# B, lever = R hop / Z item). Not tried yet, not even in Flycast.
+GAMES["dkr"] = {
+    "title": "DIDDY KONG RACING",
+    "pads": "mk64",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "DIDDYKONGRACING",
+    # NO_UBC, GD DMA reads in one call, no IP.BIN bootstrap, emulated VMU (as Mario Kart 64; the KallistiOS patch turns
+    # off fs_iso9660's CD streams, whose 32-byte pieces wait for a G1 DMA end interrupt the resident does not give)
+    "flags": 0x9404,
+    "hook_pc": [],
+    "groups": [],
+}
+GAMES["dkr_dbg"] = dict(GAMES["dkr"], title="DIDDY KONG RACING DBG", flags=0x9C0C)  # + DIAG and CONSOLE
+
 # RoboCop for Neo Geo CD (Teo Tormo's port of Data East's arcade game, https://teo-tormo.itch.io/robocop-neogeo) running
 # in IMR Technology's DreamNeo CD 4.0 (Ian Michael), the release "[DNCD - 4.0 ROBOCOP][RELEASE]" (2026-10-21): a
 # self-booting CDI, session 1 = 16 CD audio tracks (the music), session 2 = the emulator and the game's files. The
@@ -857,7 +879,11 @@ GAMES["nesterdc"] = {
     "hook_pc": [],
     "groups": [],
 }
-# NesterDC SE v1.1 (Christuserloeser, 2008, a modified build of NesterDC SE; binary, NOT in this repo): same pads and flags.
+# NesterDC SE (Scherzo, 2005; sources 2005-12-24 in 0skarzer0/NesterDC, NesterDCSE/), rebuilt by
+# homebrew/nesterse/build_nesterse.sh against KallistiOS 680d1862 + homebrew/mk64's NAOMI_HOST patch (SE's own
+# binary, KallistiOS 1.3 without that patch, gave a black screen on the board). Disc = the v1.1 release files
+# (Christuserloeser, 2008: only its .js scripts differ from 1.0) with our 1ST_READ.BIN (unscrambled), the ROMs in
+# NES/. Its menus and settings use the VMU: emulated VMU, as Mario Kart 64.
 GAMES["nesterse"] = {
     "title": "NESTERSE",
     "pads": "nes",
@@ -866,7 +892,8 @@ GAMES["nesterse"] = {
     "layout": "rebuild",
     "rock_ridge": True,
     "volume": "NESTERSE",
-    "flags": 0x1404,      # same as mk64: no user break, GD DMA reads in one call, no IP.BIN bootstrap
+    "flags": 0x9404,      # as mk64: no user break, GD DMA reads in one call, no IP.BIN bootstrap, emulated VMU
     "hook_pc": [],
     "groups": [],
 }
+GAMES["nesterse_dbg"] = dict(GAMES["nesterse"], title="NESTERSE DBG", flags=0x9C0C)  # + DIAG and CONSOLE
