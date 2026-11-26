@@ -120,9 +120,10 @@ que se puede repetir.
 **Estado (2026-11-26):** compilada desde main `851fb98`, con el ritmo de imagen final y los mandos nuevos de `mk64`. En
 Flycast (`naomi.zip`): menús, copas, circuitos y marcador de carrera ("VUELTA", "TIEMPO", "8vo") en español; acelerador
 = A, freno = B, START + freno = L (leído en `gControllers`, que en esta compilación está en `0x8c95880c`). Subida a la
-.251 como ROM aparte (`dc-mk64es_dc2naomict.bin.gz`, fila "Mario Kart 64 (Dreamcast, espanol)") y cargada en el mueble;
-**sin probar en placa**. Si `cmake` de Torch falla al bajar sus dependencias (DNS de WSL), basta con repetir: copiar
-`cmake-build-release` de otro WORK no sirve (su caché guarda la ruta).
+.251 como ROM aparte (`dc-mk64es_dc2naomict.bin.gz`, fila "Mario Kart 64 (Dreamcast, espanol)") y cargada en el mueble:
+**funciona en placa** (el usuario, 2026-11-26: "funciona perfecto"). Si `cmake` de Torch falla al bajar sus
+dependencias (DNS de WSL), basta con repetir: copiar `cmake-build-release` de otro WORK no sirve (su caché guarda la
+ruta). Lo aprendido para el siguiente port: [../guia-ports-kallistios.md](../guia-ports-kallistios.md).
 
 ### Lo que hubo que arreglar en KallistiOS (todo en `kos-680d1862-naomi_host.patch`, bajo `#ifdef NAOMI_HOST`)
 
