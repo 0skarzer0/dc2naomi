@@ -211,6 +211,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): ✅ **probado en placa** (2026-11-26): arranca, suena y START + volante derecha vuelve al explorador. `h-nesterse_naomi.bin.gz` en la .251 | Crazy Taxi |
+| Gens4All 4.3 (Mega Drive, repo `gens4all-naomi`) `gens4all` | en Flycast: lista de juegos y 3 Ninjas Kick Back jugable (2026-11-26); **sin probar en placa** | estándar |
 | Ikaruga (JP) `dc-ikaruga` | ✅ con VMU desbloqueada (mandos `joy`) | estándar |
 | SF3 Double Impact `dc-sf3di` | ✅ menú y los dos juegos, con VMU | estándar |
 | SSF2X (inglés, ComradeSnarky) `dc-ssf2x_en` | ✅ con VMU | estándar |
@@ -241,11 +242,14 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   la demo de presentación a 60 vblanks/s y, según el usuario, "se ve y suena bien" (AICAflow, su firmware de sonido
   propio, funciona). Pendiente: probarlo jugando (mapa de mandos `mk64` provisional), la VMU y medir el ritmo de
   imagen. En el menú de la .251 (`dc-dkr_dc2naomict.bin.gz`, copia del CSV en `romsinfo.csv.bak_dkr`). Plan: `dkr-naomi/docs/plan.md`.
-- Gens4All (Mega Drive, de TapamN): repo aparte `C:\GitHub\gens4all-naomi` (2026-11-26). `main` = una versión de
-  TapamN por commit (2021-08 → **4.3, 2022-01-24, base del port**: su `1ST_READ.BIN` es idéntico al de Gens4Dreams
-  RC3); rama `megavolt85-hdd` = su 4.3 con SD/disco duro. Plan en `docs/plan.md` (mismo método que NesterDC SE). Aún
-  no compila. Los paquetes (sacados del hilo "Gens4All with Z80 Emulation" de Dreamcast-Talk, que corta a los bots)
-  están en `megadrive/` de la carpeta del usuario. Publicado: https://github.com/0skarzer0/gens4all-naomi
+- Gens4All (Mega Drive, de TapamN): repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi)
+  (`C:\GitHub\gens4all-naomi`). `main` = una versión de TapamN por commit (2021-08 → **4.3, 2022-01-24, base del
+  port**: su `1ST_READ.BIN` es idéntico al de Gens4Dreams RC3) y encima nuestros cambios; rama `megavolt85-hdd` = su
+  4.3 con SD/disco duro. `build_gens4all.sh DISCO [SALIDA]` (KOS 680d1862 + `NAOMI_HOST`, SDL[DH] incluido, perfiles
+  `gens4all`/`gens4all_dbg`, mandos `joy`). En Flycast (2026-11-26), con el disco de Gens4Dreams: título, lista de
+  juegos, y 3 Ninjas Kick Back carga y se juega; sonido sin comprobar. **Sin probar en placa.** Pendiente: placa,
+  mandos de 2 jugadores, volver a la lista, watchdog. Los paquetes (del hilo "Gens4All with Z80 Emulation" de
+  Dreamcast-Talk, que corta a los bots) y el disco de Gens4Dreams están en `megadrive/` de la carpeta del usuario.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
   [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`

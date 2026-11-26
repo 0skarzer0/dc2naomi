@@ -291,3 +291,7 @@ Parte del proyecto [naomi-wheel-games](https://github.com/0skarzer0/naomi-wheel-
   (2005, GPL; con libdreamscript/kjs, el motor JavaScript de KDE), sus menús v1.1 de **Christuserloeser**, y los
   fuentes conservados en dcemulation.org. Recompilado con la KallistiOS actual y kos-ports (zlib, libpng, libjpeg,
   parallax, imageload…); `build_nesterse.sh` descarga los fuentes de nuestro fork.
+- **Gens4All** (perfil `gens4all`, repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi); en Flycast va,
+  sin probar en placa): el emulador de Mega Drive de **TapamN** (4.3, 2022) sobre Gens (**Stéphane Dallongeville**) y
+  los ports a Dreamcast de **Chui** y **Daniel Lancha**; núcleos FAME (**Oscar Orallo**) y RAZE; SDL[DH]; la 4.3 con
+  disco duro de **megavolt85** y la recopilación Gens4Dreams de **WedgeStratos** (lista de juegos para probar).

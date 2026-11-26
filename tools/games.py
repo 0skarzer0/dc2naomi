@@ -897,3 +897,20 @@ GAMES["nesterse"] = {
     "groups": [],
 }
 GAMES["nesterse_dbg"] = dict(GAMES["nesterse"], title="NESTERSE DBG", flags=0x9C0C)  # + DIAG and CONSOLE
+
+# Gens4All 4.3 (TapamN, Mega Drive) from github.com/0skarzer0/gens4all-naomi (build_gens4all.sh: KallistiOS 680d1862
+# + NAOMI_HOST, SDL[DH]). Disc = gamelist.bin + ROMs (.bin/.zip, e.g. the Gens4Dreams disc) + our 1ST_READ.BIN
+# (unscrambled). Standard cabinet: buttons 1-6 = A B X Y L R (Genesis C = A, B = B/X, A = Y). SRAM in the emulated VMU.
+GAMES["gens4all"] = {
+    "title": "GENS4ALL",
+    "pads": "joy",
+    "region": 1,
+    "language": 1,
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "GENS4ALL",
+    "flags": 0x9404,      # as nesterse: no user break, GD DMA reads in one call, no IP.BIN bootstrap, emulated VMU
+    "hook_pc": [],
+    "groups": [],
+}
+GAMES["gens4all_dbg"] = dict(GAMES["gens4all"], title="GENS4ALL DBG", flags=0x9C0C)  # + DIAG and CONSOLE
