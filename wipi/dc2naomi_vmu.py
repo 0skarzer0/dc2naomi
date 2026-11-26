@@ -43,8 +43,10 @@ def blank():
     v = bytearray(SIZE)
     root = 255 * 512
     v[root:root + 16] = b'\x55' * 16
+    v[root + 0x10:root + 0x15] = b'\x01\xff\xff\xff\x64'
     v[root + 0x30:root + 0x38] = bytes([0x20, 0x26, 0x11, 0x09, 0, 0, 0, 0])
-    struct.pack_into('<12H', v, root + 0x40, 0xff, 0, 0xff, 0xfe, 1, 0xfd, 13, 0, 200, 0x1f, 0, 0)
+    # icon 5 and 0x80 at +0x56 as a real card: Windows CE (Sega Rally 2) does not save without them
+    struct.pack_into('<12H', v, root + 0x40, 0xff, 0, 0xff, 0xfe, 1, 0xfd, 13, 5, 200, 0x1f, 0, 0x80)
     for b in range(256):
         e = 0xfffc
         if 242 <= b <= 253:

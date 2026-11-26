@@ -46,11 +46,13 @@ class Vmu:
         b = bytearray(NBLOCKS * BLOCK)
         r = ROOT * BLOCK
         b[r:r + 16] = b"\x55" * 16
-        b[r + 0x10] = 1                                  # custom colour off
+        b[r + 0x10:r + 0x15] = b"\x01\xff\xff\xff\x64"   # colour, as a card formatted by a real VMU
         now = datetime.datetime.now()
         b[r + 0x30:r + 0x38] = bytes([bcd(now.year // 100), bcd(now.year % 100), bcd(now.month), bcd(now.day),
                                       bcd(now.hour), bcd(now.minute), bcd(now.second), now.weekday()])
-        struct.pack_into("<12H", b, r + 0x40, ROOT, 0, ROOT, FAT, 1, DIR, DIR_N, 0, USER, 31, 0, 0)
+        # icon 5 and 0x80 at +0x56 as a real card: without them Windows CE (Sega Rally 2) reads the card and
+        # refuses to save in it ("error"); Katana games did not mind (2026-11-26)
+        struct.pack_into("<12H", b, r + 0x40, ROOT, 0, ROOT, FAT, 1, DIR, DIR_N, 5, USER, 31, 0, 0x80)
         fat = [FREE] * NBLOCKS
         fat[ROOT] = fat[FAT] = END
         for blk in range(DIR, DIR - DIR_N, -1):

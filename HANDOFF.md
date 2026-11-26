@@ -68,6 +68,8 @@ parche de un segundo programa del juego: `tools/addprograms.py IMAGEN.bin.gz DIS
 `watching …` y, cuando el juego guarda, `saved … blocks […]`. El vigilante nuevo (sale si el fichero de estado ya no
 lleva su PID) está instalado en las dos Pi (2026-11-19).
 
+**Tarjeta vacía como la de una VMU real (2026-11-26):** bloque raíz con color `01 ff ff ff 64` en +0x10, icono 5 en +0x4e y `0x80` en +0x56; sin eso Windows CE (Sega Rally 2) lee la tarjeta y no guarda (error). Lo hacen así `vmutool.py format`, `dc2naomi_vmu.py blank` y `vmu_format` del residente; las `.vmu` vacías anteriores se arreglan con esos tres bytes (las que ya tienen partidas de juegos Katana no lo necesitan). `vmutool.exe` sigue con el formato viejo hasta recompilarlo. Ojo: `pk.py` a la vez que el vigilante lo dejó colgado esperando la red (sin `saved`); se recupera con `dc2naomi_vmu.py stop IP`, que baja lo pendiente (una tarjeta casi llena tarda ~2 min).
+
 **6b. Partidas en la VMU (`tools/vmutool.py`, también `vmutool.exe`):** `vmutool.py import JUEGO.vmu PARTIDA.vmi`
 (el `.VMS` al lado), `export`, `list`, `format`. **Regla del usuario: al crear un juego nuevo, buscar en
 [bucanero/dreamcast-saves](https://github.com/bucanero/dreamcast-saves) una partida con todo desbloqueado de la misma
@@ -200,7 +202,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Daytona USA 2001 `daytona5` | ✅ con VMU (imagen hecha a mano; el programa aún no lo soporta) | Crazy Taxi |
 | F355 `f355b`, 18 Wheeler `18wheeler2` | ✅ terminados, con VMU | Crazy Taxi |
 | Sega Rally 2 (Windows CE) `sr2` | ✅ con VMU y modo de 30 FPS (sin música de carreras: CD-DA) | Crazy Taxi |
-| Sega Rally 2 DX / DX European (trad. PITITO, disco JP) `sr2dx` / `sr2eu` | en Flycast llegan a la carrera; **sin probar en placa** (músicas de menú a 22 kHz, VMU nuevas). `dc-sr2dx_dc2naomi` y `dc-sr2eu_dc2naomi` (.bin.gz + .vmu) en la .251 con su fila del CSV (2026-11-26) | Crazy Taxi |
+| Sega Rally 2 DX / DX European (trad. PITITO, disco JP) `sr2dx` / `sr2eu` | **en placa (2026-11-26): guarda en la VMU** (tras arreglar la tarjeta vacía) y el corte de mandos está arreglado (MIE en el residente; probado en placa a mano, falta confirmarlo jugando un rato con la imagen nueva). Músicas de menú a 22 kHz. `dc-sr2dx_dc2naomi` y `dc-sr2eu_dc2naomi` (.bin.gz + .vmu) en la .251 con su fila del CSV | Crazy Taxi |
 | Test Drive 6 | ✅ llega al menú (`read_chunk` 4, mandos `wheelud`) | Crazy Taxi |
 | MSR v2, Test Drive Le Mans, Wacky Races (otros programas) | ✅ funcionan (confirmado por el usuario el 2026-11-25) | Crazy Taxi |
 | SF Rush 2049 | ❌ menú lento tras START, sin resolver | Crazy Taxi |
@@ -255,6 +257,9 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   START en la lista sale de Gens4All (la NAOMI se reinicia): así lo hizo TapamN. Los paquetes (del hilo "Gens4All with Z80 Emulation" de
   Dreamcast-Talk, que corta a los bots) y el disco de Gens4Dreams están en `megadrive/` de la carpeta del usuario.
 - Ideas del usuario: un aviso visible de "guardado"; vibración → force feedback.
+- `app/loader.bin` tampoco lleva los arreglos del 2026-11-26 (MIE que se quedaba en fetch con una respuesta corta, y la
+  tarjeta vacía como la de una VMU real): los juegos convertidos con el programa los tendrán al reconstruirlo (receta 1).
+  Las imágenes de Sega Rally 2 DX / European ya los llevan (hechas con `build.sh`).
 - Mario Kart 64: probar en el mueble los mandos nuevos (solo probados en Flycast; ver
   [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md)). El parche de KallistiOS tiene `pvr_naomi_hold_flip`
   (lo comparten NesterDC y OutRun C2C, que no lo llaman). `app/loader.bin` sigue con el residente anterior

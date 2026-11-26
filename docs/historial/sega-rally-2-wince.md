@@ -194,3 +194,27 @@ En las dos el `0WINCEOS.BIN` y el `TITLE.DLL` son idénticos; 30 FPS fijos de se
   `.vmu`. Rehacerlas (WSL, `~/dc2naomi`, con `kos-naomi/environ.sh`):
   `WITHFILES=.../rally/sr2_wav22 ./build.sh sr2dx ".../SR2_DX_PITITO_ES [GDI]/disc.gdi" /tmp/sr2dx.bin` (y `sr2eu`),
   con `sr2_wav22/MISC/*.WAV` hechos con `python3 tools/wavhalf.py ORIG.WAV sr2_wav22/MISC/X.WAV`.
+
+### Dos fallos en placa y su arreglo (2026-11-26)
+
+- **Los mandos dejaban de responder** al rato en los menús (el juego y la música seguían; una vez volvieron solos).
+  Leído en la placa con `pk.py` mientras pasaba: el gancho de maple seguía contestando el GETCOND de CE en cada
+  vblank, pero con todo en reposo; la última respuesta del MIE (copia en `RES_MAPLE + 0x800`) era un `MIE_RESP` de
+  solo 5 palabras, y `mie_state` estaba en 2 (fetch): el residente tomaba la respuesta corta por "aún no está" y
+  repetía el fetch para siempre, y el MIE devolvía las mismas 5 palabras. Poner `mie_state` a 0 por la NetDIMM
+  (`pp.py`, dirección sacada del residente de la propia imagen: el `.elf` de WSL era de otra compilación, -0x40)
+  devolvió los mandos al momento. **Arreglo en `mie_parse`** (vale para todos los juegos): respuesta corta o 30
+  `MIE_EMPTY` seguidos = petición nueva.
+- **Error al guardar los ajustes en la VMU.** Perfiles de depuración `sr2dx_box` / `sr2eu_box` (DIMM_BLACKBOX, que
+  ahora guarda además las 128 últimas tramas de VMU con su respuesta en `0x8dda1000`). La traza en placa: CE lee
+  raíz, FAT y directorio (cada BLOCKREAD seguido de un 0x0d, contestado con ACK) y da el error **sin escribir
+  nada**; las respuestas son las mismas que da la VMU de Flycast. La diferencia estaba en la tarjeta: comparada con
+  la VMU vacía de Flycast (formateada por una VMU real) a la nuestra le faltaban color (+0x11..0x14), icono (+0x4e =
+  5) y `0x80` en +0x56 del bloque raíz. Con esos bytes en las dos `.vmu` (y recargando, porque CE lee la raíz solo
+  al arrancar) el juego guarda: 61 bloques `SG_RALLY2DXE` + 20 del minijuego `SG_RALLY2VME`. Arreglados los tres
+  formateadores (`vmutool.py`, `dc2naomi_vmu.py blank`, `vmu_format`).
+- En Flycast se llega a los menús con `run1.sh` y `KEYS` (mapa `wheel`: palanca adelante/atrás = flecha arriba/abajo
+  = B/A; con START (Return) pulsado = arriba/abajo; volante = `j`/`l`). MEMORIA VM se salta en el menú principal
+  mientras no haya partida, también con el disco original en modo Dreamcast: es normal.
+- Las fechas de los archivos salen como 1952: la hora que da el residente a la VMU (BLOCKREAD del reloj) no la
+  entiende CE igual que un juego Katana; sin arreglar (solo afecta a la fecha mostrada).
