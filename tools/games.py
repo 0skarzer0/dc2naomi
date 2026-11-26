@@ -697,9 +697,6 @@ _SR2JP = [
 ]
 GAMES["sr2dx"] = dict(GAMES["mw2"], title="SEGA RALLY 2 DX", pads="wheel", vmu=True, groups=_SR2JP)
 GAMES["sr2eu"] = dict(GAMES["sr2dx"], title="SEGA RALLY 2 DX EUROPEAN")
-# (debug) with the black box (DIMM_BLACKBOX): the last 128 VMU frames and their answers, read over the NetDIMM
-GAMES["sr2dx_box"] = dict(GAMES["sr2dx"], flags=GAMES["sr2dx"]["flags"] | 0x20000)
-GAMES["sr2eu_box"] = dict(GAMES["sr2eu"], flags=GAMES["sr2eu"]["flags"] | 0x20000)
 
 
 # Yu Suzuki Game Works split into one image per game (2026-11-11). The menu program (YSC, in 1ST_READ.BIN) runs
