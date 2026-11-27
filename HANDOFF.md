@@ -210,6 +210,7 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
 | Mario Kart 64 (homebrew) `mk64` | ✅ funciona; la última imagen (palanca = salto) está subida. Ritmo de imagen arreglado (tirones en carrera del 3,8 % al 0 %, el usuario: "funciona perfecta") y mandos nuevos (freno = B; START + freno = L; acelerador + START = stick abajo): ROM principal desde el 2026-11-26, la anterior en `/boot/roms/_test/`: [docs/juegos/mario-kart-64.md](docs/juegos/mario-kart-64.md) | Crazy Taxi |
 | Mario Kart 64 en español (homebrew) `mk64es` | ✅ funciona en placa (el usuario: "funciona perfecto", 2026-11-26). Traducción de blade133bo: `ESPATCH=… build_mk64.sh` + `mk64_es.py`; misma base que `mk64`. ROM aparte `dc-mk64es_dc2naomict.bin.gz`: [historial/homebrew-kallistios.md](docs/historial/homebrew-kallistios.md) | Crazy Taxi |
 | Diddy Kong Racing (homebrew, repo `dkr-naomi`) `dkr` | en placa la demo se ve y suena bien (2026-11-26); falta jugarlo, VMU y ritmo de imagen. `dc-dkr_dc2naomict.bin.gz` en el menú de la .251 | Crazy Taxi |
+| F-Zero X (homebrew, repo `fzerox-naomi`) `fzerox` | en placa (2026-11-27) arrancó y se jugó, lento y sin sonido; los arreglos de esa noche (sonido, física, rendimiento, VMU) solo en Flycast: la imagen nueva, en la carpeta del usuario, falta subirla. `dc-fzerox_dc2naomict.bin.gz` en el menú de la .251 (la vieja) | Crazy Taxi |
 | OutRun C2C (homebrew de ArkRetro) `h-orc2c8_dc2naomict` | ✅ versión final aprobada en el mueble | Crazy Taxi |
 | NesterDC `nesterdc` | arranca y el menú responde; las correcciones (letra, sonido, carpetas) sin probar | Crazy Taxi |
 | NesterDC SE `nesterse` | el binario original daba negro en placa; **recompilado** desde los fuentes (`homebrew/nesterse/build_nesterse.sh`, KOS 680d1862 + `NAOMI_HOST`, menús .js de la v1.1): ✅ **probado en placa** (2026-11-26): arranca, suena y START + volante derecha vuelve al explorador. `h-nesterse_naomi.bin.gz` en la .251 | Crazy Taxi |
@@ -245,20 +246,20 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   propio, funciona). Pendiente: probarlo jugando (mapa de mandos `mk64` provisional), la VMU y medir el ritmo de
   imagen. En el menú de la .251 (`dc-dkr_dc2naomict.bin.gz`, copia del CSV en `romsinfo.csv.bak_dkr`). Plan: `dkr-naomi/docs/plan.md`.
 - F-Zero X (decomp de N64, sin port previo a Dreamcast): repo aparte [fzerox-naomi](https://github.com/0skarzer0/fzerox-naomi)
-  (`C:\GitHub\fzerox-naomi`, público desde 2026-11-26). Decomp inspectredc/fzerox (CC0) + capa propia; para la PVR, el renderer
-  de Diddy (CC0) con un decodificador F3DEX2 delante; KOS 9926b70a con el parche de dkr-naomi. `build_fzerox.sh ROM`
-  (vale el `.zip`; ROM US rev0 en la carpeta del usuario, `fzerox/`) hace la imagen entera (perfiles `fzerox` /
-  `fzerox_dbg`). **Fases 2 y 3 hechas (2026-11-27), solo Flycast:** renderer F3DEX2 -> PVR propio (título, menús,
-  naves en 3D, la carrera de Mute City) y **sonido** (HLE propio del microcódigo de audio, `audio_hle.c`; salida por
-  `snd_stream` en modo directo, sin la DMA de G2 que en la NAOMI no acaba). Mandos: mapa nuevo **`fzx`**
-  (`DIMM_PAD_FZX` en el residente, el esquema del usuario: START al soltar, palanca abajo = A, arriba = B+A, freno =
-  Z, acelerador = R, combinaciones con START = stick arriba/abajo, C-abajo, Z+R, C-derecha, C-arriba), **sin probar**.
-  Clave: el juego reparte la RAM de N64 a mano, así que el port reproduce la RDRAM en una ventana de 4 MB y carga la
-  "ROM" (`ROM.BIN`, 5,3 MB) y las muestras (`AUDIOTBL.BIN`, 10,7 MB) del disco; `1ST_READ.BIN` = 260 KB. Pendiente:
-  probar en placa (**subida a la .251 el 2026-11-27**: `dc-fzerox_dc2naomict.bin.gz` con su fila del CSV, copia
-  `romsinfo.csv.bak_fzerox`; sonido, mandos, medir `gPortAudioUs`), la demo del título sale sin circuito, "BAC9D" en el
-  cartel de la carrera. Detalle y trampas (muchas de big-endian en el juego, `.bss`, un `return` que falta):
-  `fzerox-naomi/docs/plan.md`.
+  (`C:\GitHub\fzerox-naomi`, público desde 2026-11-26). Decomp inspectredc/fzerox (CC0) + capa propia (renderer F3DEX2 -> PVR,
+  HLE de audio, libultra sobre KOS 9926b70a con el parche de dkr-naomi). `build_fzerox.sh ROM` (vale el `.zip`; ROM US
+  rev0 en la carpeta del usuario, `fzerox/`) hace la imagen entera (perfiles `fzerox` / `fzerox_dbg`, mandos **`fzx`**:
+  `DIMM_PAD_FZX`, el esquema del usuario). En el disco: `1ST_READ.BIN`, `ROM.BIN` (5,3 MB), `AUDIOTBL.BIN` (10,7 MB) y
+  `BOOT.BIN` (los 4 KB de arranque del cartucho, de donde el juego lee la física de las naves).
+  **Placa (2026-11-27, .251):** la primera imagen arrancó y se jugó, pero lenta (~14 cuadros/s en el título), sin
+  sonido y con la nave que no pasaba de ~17 km/h (y desaparecía con un turbo). Arreglado esa noche, **solo en
+  Flycast**: sonido (las órdenes de audio se perdían al arrancar: orden de los hilos), física (`ROM_READ` del
+  arranque del cartucho), demo del título, menú de pausa (cadenas en EUC-JP), rendimiento del renderer (hash de
+  texturas, combinador, copias: en Flycast la carrera queda con un 60 % libre) y partidas en la VMU (`FZEROX.SRM`).
+  **La imagen nueva no se pudo subir** (el mueble estaba apagado): está en la carpeta del usuario,
+  `fzerox/dc-fzerox_dc2naomict.bin.gz`; subirla a `/boot/roms/` con el
+  mismo nombre (la fila del CSV ya existe). Luego: leer `naomi_live` y el perfil del log (`fzx: perfil`), y
+  `tools/pcprof.py` para el muestreo de PC. Detalle y trampas: `fzerox-naomi/docs/plan.md`.
 - Gens4All (Mega Drive, de TapamN): repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi)
   (`C:\GitHub\gens4all-naomi`). `main` = una versión de TapamN por commit (2021-08 → **4.3, 2022-01-24, base del
   port**: su `1ST_READ.BIN` es idéntico al de Gens4Dreams RC3) y encima nuestros cambios; rama `megavolt85-hdd` = su
