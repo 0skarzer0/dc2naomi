@@ -65,6 +65,12 @@
                                          is used as a shift), wheel = d-pad left/right at the ends (and the analog stick),
                                          gas = A, brake = B, lever forward/back = d-pad up/down; with START held: gas = X,
                                          brake = Y, lever forward = L trigger, lever back = R trigger */
+#define DIMM_PAD_FZX    11            /* F-Zero X (fzerox-naomi, 2026-11-27, the user's scheme; the port turns the Dreamcast pad
+                                         into the N64 one: A = A, B = B, X = C-down, Y = C-up, C = C-right, L/R triggers =
+                                         Z/R): START sent on release, only if nothing else was used while held; lever back
+                                         = A, lever forward = A+B; brake = L trigger, gas = R trigger; wheel = analog stick X
+                                         (2.5x around the centre, as MK64). Held START: lever forward/back = stick up/down,
+                                         brake = X, gas = both triggers (N64 Z+R), wheel right/left (half its travel) = C/Y */
 #define DIMM_PAD_AB2    7             /* After Burner II on its own: DIMM_PAD_PLANE with its own buttons and throttle (resident.c) */
 #define DIMM_PAD_WHEELUD 9            /* DIMM_PAD_WHEEL with the lever's two uses swapped: lever = up/down, START + lever =
                                          B/A (Test Drive 6, gears on the d-pad: the user's choice, 2026-11-19) */

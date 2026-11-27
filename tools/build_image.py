@@ -458,7 +458,7 @@ def build(name, game, source, work, image, out, log=print):
     chl, chr_ = game.get("cdda_channels", (62, 63))
     cdda = struct.pack("<5I", audio_offset, audio[0] if audio else 0, audio[1] if audio else 0,
                        (chl | chr_ << 8) if audio else 0, game.get("cdda_ring", 0x1f0000) if audio else 0)
-    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5, "plane": 6, "ab2": 7, "mk64": 8, "wheelud": 9, "nes": 10}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + struct.pack("<I", game.get("read_chunk", 0)) + cdda
+    hdr += struct.pack("<2I", *hook[:2]) + struct.pack("<I", {"ct": 0, "menu": 1, "joy": 2, "pole": 3, "wheel": 4, "ysgw": 5, "plane": 6, "ab2": 7, "mk64": 8, "wheelud": 9, "nes": 10, "fzx": 11}[game.get("pads", "ct")]) + struct.pack("<I", vmu_offset) + struct.pack("<I", game.get("read_chunk", 0)) + cdda
     for p in patches:
         hdr += struct.pack("<4I", *p)
     hdr += b"\0" * (16 * (DIMM_PATCHES - len(patches)))

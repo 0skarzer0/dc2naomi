@@ -809,11 +809,12 @@ GAMES["dkr_dbg"] = dict(GAMES["dkr"], title="DIDDY KONG RACING DBG", flags=0x9C0
 
 # F-Zero X (US rev0) built from the N64 decompilation by fzerox-naomi (https://github.com/0skarzer0/fzerox-naomi,
 # build_fzerox.sh), the same way as Mario Kart 64 and Diddy Kong Racing: KallistiOS 9926b70a + NAOMI_HOST (the
-# dkr-naomi patch). The disc holds IP.BIN, 1ST_READ.BIN (code and data), ASSETS.BIN and AUDIOTBL.BIN, which the
-# program reads into place at boot. Pads: the mk64 map for now.
+# dkr-naomi patch). The disc holds IP.BIN, 1ST_READ.BIN (code), ROM.BIN (the cartridge data) and AUDIOTBL.BIN
+# (the sound samples), which the program reads into place at boot. Pads: "fzx", the user's scheme (2026-11-27,
+# resident.h DIMM_PAD_FZX).
 GAMES["fzerox"] = {
     "title": "F-ZERO X",
-    "pads": "mk64",
+    "pads": "fzx",
     "region": 1,          # USA
     "language": 1,        # English
     "layout": "rebuild",

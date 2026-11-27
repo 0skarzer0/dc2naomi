@@ -1384,7 +1384,34 @@ nes_done:;
         acc = acc < 15 ? 0 : acc;
         brk = brk < 15 ? 0 : brk;
         u32 start = jvs.p1 & 0x8000, fwd = jvs.p1 & 0x2000, back = jvs.p1 & 0x1000;
-        if (H.pad_map == DIMM_PAD_MENU || H.pad_map == DIMM_PAD_POLE || H.pad_map == DIMM_PAD_MK64) {
+        if (H.pad_map == DIMM_PAD_FZX) {
+            /* F-Zero X (fzerox-naomi, 2026-11-27, the user's scheme in N64 terms; the port reads DC A/B/X/Y/C and the
+               triggers as N64 A/B/C-down/C-up/C-right and Z/R): START = START on release (if nothing else was used),
+               lever back = A, lever forward = B+A, brake = Z, gas = R; with START held: lever = stick up/down,
+               brake = C-down, gas = Z+R, wheel right = C-right, wheel left = C-up. */
+            u32 wx = x;
+            if (start) {
+                if (fwd) y = 0;
+                if (back) y = 255;
+                if (brk > 64) b |= DC_X;
+                if (acc > 64) { acc = 255; brk = 255; } else { acc = 0; brk = 0; }
+                if (wx > 191) b |= DC_C;
+                if (wx < 64) b |= DC_Y;
+                if (fwd || back || (b & (DC_X | DC_C | DC_Y)) || acc) start_used = 1;
+                start_frames = 1;
+            } else {
+                if (start_frames && !start_used) start_pulse = 30;
+                start_frames = 0;
+                start_used = 0;
+                if (back) b |= DC_A;
+                if (fwd) b |= DC_A | DC_B;
+            }
+            if (start_pulse) { start_pulse--; b |= DC_START; }
+            {
+                int sx = 128 + ((int)x - 128) * 5 / 2;
+                x = sx < 0 ? 0 : sx > 255 ? 255 : sx;
+            }
+        } else if (H.pad_map == DIMM_PAD_MENU || H.pad_map == DIMM_PAD_POLE || H.pad_map == DIMM_PAD_MK64) {
             /* Yu Suzuki Game Works (2026-11-08): START is a plain START, but it is sent when released, and only if
                the lever was not used while it was held: START + lever forward = up, START + lever back = down
                (the menu needs clean up/down). Lever alone = B/A; wheel at the end of its travel = left/right. */

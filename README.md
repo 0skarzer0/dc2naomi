@@ -239,6 +239,8 @@ Este proyecto se apoya en el trabajo de mucha gente. Gracias a:
     que compilamos para la NAOMI.
   - **[Zorkats](https://github.com/Zorkats/G-Diffuser)** (G-Diffuser, port a PC) y
     **[cruxxxxxx](https://github.com/cruxxxxxx/gdx-3ds)** (port a 3DS), de referencia.
+  - **[mupen64plus-rsp-hle](https://github.com/mupen64plus/mupen64plus-rsp-hle)**: referencia de cómo funciona el
+    microcódigo de audio de N64 (el HLE de fzerox-naomi está escrito de nuevo).
 - **PITITO** (con Wesker, Zapatoman, Zurin Akira y los colaboradores que nombra su readme): su traducción al
   castellano "DX Edition" v2.0 de Sega Rally 2 (y la variante "DX European"), que el usuario convierte para su mueble
   de Crazy Taxi (perfiles `sr2dx` y `sr2eu`; el parche no se incluye: hay que conseguirlo de su autor).

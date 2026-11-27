@@ -182,7 +182,7 @@ Un parche VGA de la comunidad puede traer fallos propios (`lb2fe`: posición ver
 
 `pad_map` (`resident/resident.h`, `"pads"` en el perfil): 0 `ct` (Crazy Taxi 2, doble toque = salto), 1 `menu`,
 2 `joy` (mueble estándar), 3 `pole` (Namco Museum), 4 `wheel` (**por defecto del mueble Crazy Taxi**), 5 `ysgw`,
-6 `plane` (Space Harrier), 7 `ab2` (After Burner II), 8 `mk64`, 9 `wheelud` (TD6: palanca = arriba/abajo), 10 `nes`.
+6 `plane` (Space Harrier), 7 `ab2` (After Burner II), 8 `mk64`, 9 `wheelud` (TD6: palanca = arriba/abajo), 10 `nes`, 11 `fzx` (F-Zero X).
 
 Flags más usados: `0x0004 NO_UBC` (**todos los perfiles**: el UBC cuelga la placa), `0x0008 DIAG`, `0x0200 PCSAMPLE`,
 `0x0400 SYNCREAD` y `0x1000 NOIPBOOT` (KallistiOS), `0x0040 DMA` (lecturas por DMA G1: sirve en KallistiOS),
@@ -248,11 +248,15 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   (`C:\GitHub\fzerox-naomi`, público desde 2026-11-26). Decomp inspectredc/fzerox (CC0) + capa propia; para la PVR, el renderer
   de Diddy (CC0) con un decodificador F3DEX2 delante; KOS 9926b70a con el parche de dkr-naomi. `build_fzerox.sh ROM`
   (vale el `.zip`; ROM US rev0 en la carpeta del usuario, `fzerox/`) hace la imagen entera (perfiles `fzerox` /
-  `fzerox_dbg`, mandos `mk64` provisionales). **Fase 2 hecha (2026-11-27), solo Flycast:** renderer F3DEX2 -> PVR propio; se
-  ven título, menús, selección de nave en 3D y la carrera de Mute City (HUD, cuenta atrás), y la nave responde. Sin
-  sonido. Clave: el juego reparte la RAM de N64 a mano, así que el
-  port reproduce la RDRAM en una ventana de 4 MB y carga la "ROM" (`ROM.BIN`, 5,25 MB) y las muestras
-  (`AUDIOTBL.BIN`, 10,7 MB) del disco; `1ST_READ.BIN` = 217 KB. Siguiente: fase 3 (audio) y probar en placa. Detalle y trampas (muchas de big-endian en el juego):
+  `fzerox_dbg`). **Fases 2 y 3 hechas (2026-11-27), solo Flycast:** renderer F3DEX2 -> PVR propio (título, menús,
+  naves en 3D, la carrera de Mute City) y **sonido** (HLE propio del microcódigo de audio, `audio_hle.c`; salida por
+  `snd_stream` en modo directo, sin la DMA de G2 que en la NAOMI no acaba). Mandos: mapa nuevo **`fzx`**
+  (`DIMM_PAD_FZX` en el residente, el esquema del usuario: START al soltar, palanca abajo = A, arriba = B+A, freno =
+  Z, acelerador = R, combinaciones con START = stick arriba/abajo, C-abajo, Z+R, C-derecha, C-arriba), **sin probar**.
+  Clave: el juego reparte la RAM de N64 a mano, así que el port reproduce la RDRAM en una ventana de 4 MB y carga la
+  "ROM" (`ROM.BIN`, 5,3 MB) y las muestras (`AUDIOTBL.BIN`, 10,7 MB) del disco; `1ST_READ.BIN` = 260 KB. Pendiente:
+  probar en placa (sonido, mandos, medir: `gPortAudioUs`), la demo del título sale sin circuito, "BAC9D" en el
+  cartel de la carrera. Detalle y trampas (muchas de big-endian en el juego, `.bss`, un `return` que falta):
   `fzerox-naomi/docs/plan.md`.
 - Gens4All (Mega Drive, de TapamN): repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi)
   (`C:\GitHub\gens4all-naomi`). `main` = una versión de TapamN por commit (2021-08 → **4.3, 2022-01-24, base del
