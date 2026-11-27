@@ -255,7 +255,8 @@ la causa de los primeros cuelgues; [historial/placa-inicial.md](docs/historial/p
   Z, acelerador = R, combinaciones con START = stick arriba/abajo, C-abajo, Z+R, C-derecha, C-arriba), **sin probar**.
   Clave: el juego reparte la RAM de N64 a mano, así que el port reproduce la RDRAM en una ventana de 4 MB y carga la
   "ROM" (`ROM.BIN`, 5,3 MB) y las muestras (`AUDIOTBL.BIN`, 10,7 MB) del disco; `1ST_READ.BIN` = 260 KB. Pendiente:
-  probar en placa (sonido, mandos, medir: `gPortAudioUs`), la demo del título sale sin circuito, "BAC9D" en el
+  probar en placa (**subida a la .251 el 2026-11-27**: `dc-fzerox_dc2naomict.bin.gz` con su fila del CSV, copia
+  `romsinfo.csv.bak_fzerox`; sonido, mandos, medir `gPortAudioUs`), la demo del título sale sin circuito, "BAC9D" en el
   cartel de la carrera. Detalle y trampas (muchas de big-endian en el juego, `.bss`, un `return` que falta):
   `fzerox-naomi/docs/plan.md`.
 - Gens4All (Mega Drive, de TapamN): repo aparte [gens4all-naomi](https://github.com/0skarzer0/gens4all-naomi)
