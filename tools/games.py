@@ -826,6 +826,24 @@ GAMES["fzerox"] = {
 }
 GAMES["fzerox_dbg"] = dict(GAMES["fzerox"], title="F-ZERO X DBG", flags=0x9C0C)  # + DIAG and CONSOLE
 
+# Virtua Racing Deluxe (32X, USA) by vr32x-naomi (https://github.com/0skarzer0/vr32x-naomi, build_vr.sh): the core of
+# PokaMilkTea's VirtuaRacingDeluxeEnhanced (PicoDrive + the race's 3D rewritten in C) on KallistiOS 9926b70a +
+# NAOMI_HOST (the dkr-naomi patch). The disc holds IP.BIN, 1ST_READ.BIN and the user's ROM (VR.32X), which the program
+# loads at boot. Pads: "wheel" (the cabinet's default) for now; the port reads the wheel and pedals in analog.
+GAMES["vr32x"] = {
+    "title": "VIRTUA RACING DELUXE",
+    "pads": "wheel",
+    "region": 1,          # USA
+    "language": 1,        # English
+    "layout": "rebuild",
+    "rock_ridge": True,
+    "volume": "VR32X",
+    "flags": 0x1404,      # NO_UBC, GD DMA reads in one call, no IP.BIN bootstrap (the game saves nothing)
+    "hook_pc": [],
+    "groups": [],
+}
+GAMES["vr32x_dbg"] = dict(GAMES["vr32x"], title="VIRTUA RACING DBG", flags=0x1C0C)  # + DIAG and CONSOLE
+
 # RoboCop for Neo Geo CD (Teo Tormo's port of Data East's arcade game, https://teo-tormo.itch.io/robocop-neogeo) running
 # in IMR Technology's DreamNeo CD 4.0 (Ian Michael), the release "[DNCD - 4.0 ROBOCOP][RELEASE]" (2026-10-21): a
 # self-booting CDI, session 1 = 16 CD audio tracks (the music), session 2 = the emulator and the game's files. The
